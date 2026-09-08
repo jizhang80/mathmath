@@ -1,0 +1,26 @@
+# OS
+.DS_Store
+
+# Node (Phase 5+)
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Claude Code local (per-machine) settings
+.claude/settings.local.json
+
+# Playwright
+playwright-report/
+test-results/
