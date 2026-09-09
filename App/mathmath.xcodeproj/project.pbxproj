@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A100000000000000000000A1 /* Core in Frameworks */ = {isa = PBXBuildFile; productRef = P100000000000000000000P1 /* Core */; };
 		A100000000000000000000A2 /* SwiftMath in Frameworks */ = {isa = PBXBuildFile; productRef = P100000000000000000000P2 /* SwiftMath */; };
+		A100000000000000000000A3 /* Rendering in Frameworks */ = {isa = PBXBuildFile; productRef = P100000000000000000000P3 /* Rendering */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 			files = (
 				A100000000000000000000A1 /* Core in Frameworks */,
 				A100000000000000000000A2 /* SwiftMath in Frameworks */,
+				A100000000000000000000A3 /* Rendering in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,6 +72,7 @@
 			packageProductDependencies = (
 				P100000000000000000000P1 /* Core */,
 				P100000000000000000000P2 /* SwiftMath */,
+				P100000000000000000000P3 /* Rendering */,
 			);
 			productName = mathmath;
 			productReference = F100000000000000000000F1 /* mathmath.app */;
@@ -102,6 +105,7 @@
 			packageReferences = (
 				L100000000000000000000L1 /* XCLocalSwiftPackageReference "../Packages/Core" */,
 				L100000000000000000000L2 /* XCRemoteSwiftPackageReference "SwiftMath" */,
+				L100000000000000000000L3 /* XCLocalSwiftPackageReference "../Packages/Rendering" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = R100000000000000000000R1 /* Products */;
@@ -275,6 +279,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../Packages/Core;
 		};
+		L100000000000000000000L3 /* XCLocalSwiftPackageReference "../Packages/Rendering" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Packages/Rendering;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -297,6 +305,10 @@
 			isa = XCSwiftPackageProductDependency;
 			package = L100000000000000000000L2 /* XCRemoteSwiftPackageReference "SwiftMath" */;
 			productName = SwiftMath;
+		};
+		P100000000000000000000P3 /* Rendering */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Rendering;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

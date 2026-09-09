@@ -47,4 +47,4 @@ EPIC, and flag the commit scope (`contract(<name>)`) so the ripple is auditable.
 
 | Contract | Drafted | Owner sign-off |
 |---|---|---|
-| all of the above | 2026-09-09 (Fable session, Phase 6) | pending |
+| all of the above | 2026-09-09 (Fable session, Phase 6) | **signed off 2026-09-09** (owner, in conversation; lock-first set locked; `interaction-contract` stays v0.9 until the Demo wraps) |

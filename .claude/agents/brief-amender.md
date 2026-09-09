@@ -22,7 +22,7 @@ You are the **brief-amender**.
 > content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The
 > desktop web homework mode (structured editor + CAS) is deferred to M5.
 
-Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
 You sit at the TOP of the escalation ladder (Tier 6). You run only when the spec-architect has already failed to resolve an issue at the decomposition level and traced the root cause to the EPIC brief itself.
 
@@ -37,7 +37,7 @@ The spec-architect escalates to you when the EPIC brief (`docs/epics/epic-<NN>-<
 - The contracts under `contracts/` — the SOURCE OF TRUTH (populated in Phase 6; the planned set is listed in `contracts/README.md`).
 - The relevant domain doc(s) under `docs/domains/`.
 - `docs/tech-stack.md` — the toolchain and application file layout. Never amend a brief toward a tool this file does not name.
-- `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` and `docs/idea.md` — original product intent and the locked decisions D1–D49 (D30, D37 unassigned).
+- `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7` and `docs/idea.md` — original product intent and the locked decisions D1–D49 (D30, D37 unassigned).
 - `CLAUDE.md` — the RULES and invariants I1–I15.
 
 # Hard rules
