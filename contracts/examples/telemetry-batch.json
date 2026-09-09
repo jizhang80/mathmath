@@ -1,0 +1,62 @@
+{
+  "format_version": "0.0.0",
+  "app_version": "0.1.0",
+  "bundle_versions": {
+    "graph": "0.0.0",
+    "spine": "0.0.0",
+    "objects": "0.0.0"
+  },
+  "day": "2026-09-09",
+  "events": [
+    {
+      "kind": "session",
+      "count": 1
+    },
+    {
+      "kind": "expedition",
+      "started": 1,
+      "completed": 1,
+      "abandoned": 0,
+      "unit_scoped": 0
+    },
+    {
+      "kind": "item_result",
+      "node_id": "exponential-functions",
+      "correct": false,
+      "retry": false,
+      "tier": 0
+    },
+    {
+      "kind": "edge_observation",
+      "edge_id": "exponent-laws-->-exponential-functions",
+      "upstream_state": "cleared",
+      "downstream_result": "fail"
+    },
+    {
+      "kind": "marker",
+      "course_code": "MCR3U",
+      "unit_id": "MCR3U.u1",
+      "moves": 0
+    },
+    {
+      "kind": "landmark_tap",
+      "landmark_id": "canadian-mortgage-compounding",
+      "count": 1
+    },
+    {
+      "kind": "diagnosis",
+      "origin_node": "exponential-functions",
+      "candidate_id": "exponent-laws",
+      "outcome": "refuted",
+      "tier": 0
+    },
+    {
+      "kind": "capability",
+      "tier1_available": false
+    },
+    {
+      "kind": "return",
+      "day_bucket": "1"
+    }
+  ]
+}

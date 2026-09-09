@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mathmath.local/contracts/sources.schema.json",
+  "title": "sources",
+  "type": "object",
+  "properties": {
+    "format_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "openstax",
+              "mit-ocw"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "edition": {
+            "type": "string",
+            "minLength": 1
+          },
+          "licence": {
+            "type": "string",
+            "enum": [
+              "CC BY 4.0",
+              "CC BY-NC-SA 4.0"
+            ]
+          },
+          "attribution": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://"
+          }
+        },
+        "required": [
+          "source",
+          "title",
+          "edition",
+          "licence",
+          "attribution",
+          "url"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "format_version",
+    "sources"
+  ],
+  "additionalProperties": false
+}

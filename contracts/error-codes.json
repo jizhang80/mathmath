@@ -1,0 +1,71 @@
+{
+  "contract_version": "1.0.0",
+  "prefixes": {
+    "MAP": "map", "EXP": "expedition", "DIAG": "diagnosis", "GRAPH": "concept-graph", "LO": "learning-objects",
+    "SPINE": "curriculum-spine", "GEN": "content-generation", "PLATFORM": "platform", "TELEM": "telemetry",
+    "TIER": "runtime-tiers", "VERIFY": "verification"
+  },
+  "codes": [
+    {"code": "MAP_LAYOUT_MISSING", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "MAP_REGION_UNKNOWN", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "MAP_MARKER_OFF_TRAIL", "recoverable": true, "surface": "student", "user_text": "The marker stays where it was; pick a unit from the list."},
+    {"code": "MAP_LANDMARK_UNSOURCED", "recoverable": true, "surface": "internal", "user_text": null},
+
+    {"code": "EXP_NO_FRINGE", "recoverable": true, "surface": "student", "user_text": "You've cleared everything up to here. Move your class marker forward, or explore the map."},
+    {"code": "EXP_TRAIL_INVALID", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "EXP_ITEM_POOL_EMPTY", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "EXP_STATE_WRITE_FAILED", "recoverable": true, "surface": "student", "user_text": "Your progress could not be saved just now; it will be retried."},
+    {"code": "EXP_NODE_NOT_IN_GRAPH", "recoverable": true, "surface": "internal", "user_text": null},
+
+    {"code": "DIAG_NO_PREREQUISITE", "recoverable": true, "surface": "student", "user_text": "Nothing upstream to check — here's a hint."},
+    {"code": "DIAG_PROBE_UNAVAILABLE", "recoverable": true, "surface": "student", "user_text": "No quick check is available for this one yet; here's a hint instead."},
+    {"code": "DIAG_STATE_WRITE_FAILED", "recoverable": true, "surface": "student", "user_text": "Your progress could not be saved just now; it will be retried."},
+
+    {"code": "GRAPH_L0_FAILED", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "GRAPH_NO_PREREQUISITE", "recoverable": true, "surface": "internal", "user_text": null},
+
+    {"code": "LO_INCOMPLETE_BUNDLE", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "LO_BAD_PREREQ_MAPPING", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "LO_HINT_TIER_MISSING", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "LO_PROBE_UNCHECKABLE", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "LO_BAD_DISTRACTOR_TAG", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "LO_ITEM_UNRENDERABLE", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "LO_LANDMARK_UNSOURCED", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "LO_HINT_NOT_FOUND", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "LO_PROBE_POOL_EMPTY", "recoverable": true, "surface": "internal", "user_text": null},
+
+    {"code": "SPINE_PARSE_INCOMPLETE", "recoverable": true, "surface": "owner", "user_text": null},
+    {"code": "SPINE_PARAPHRASE_REJECTED", "recoverable": true, "surface": "owner", "user_text": null},
+    {"code": "SPINE_VERBATIM_TEXT_DETECTED", "recoverable": true, "surface": "owner", "user_text": null},
+    {"code": "SPINE_LINK_UNRESOLVED", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "SPINE_UNIT_EMPTY", "recoverable": true, "surface": "owner", "user_text": null},
+    {"code": "SPINE_SOURCE_REF_UNRESOLVED", "recoverable": true, "surface": "owner", "user_text": null},
+
+    {"code": "GEN_SCHEMA_INVALID", "recoverable": true, "surface": "owner", "user_text": null},
+    {"code": "GEN_INTERSECTION_EMPTY", "recoverable": true, "surface": "owner", "user_text": null},
+    {"code": "GEN_BUDGET_EXCEEDED", "recoverable": true, "surface": "owner", "user_text": null},
+
+    {"code": "PLATFORM_BUNDLE_FETCH_FAILED", "recoverable": true, "surface": "student", "user_text": "Could not refresh content; still using the installed version."},
+    {"code": "PLATFORM_BUNDLE_INTEGRITY_FAILED", "recoverable": true, "surface": "student", "user_text": "Could not refresh content; still using the installed version."},
+    {"code": "PLATFORM_STATE_WRITE_FAILED", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "PLATFORM_STATE_UNREADABLE", "recoverable": true, "surface": "student", "user_text": "Earlier progress could not be read; it has been kept."},
+    {"code": "PLATFORM_SYNC_UNAVAILABLE", "recoverable": true, "surface": "internal", "user_text": null},
+
+    {"code": "TELEM_CONSENT_ABSENT", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "TELEM_FIELD_NOT_ALLOWED", "recoverable": false, "surface": "internal", "user_text": null},
+    {"code": "TELEM_ENDPOINT_UNREACHABLE", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "TELEM_BATCH_REJECTED", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "TELEM_ENDPOINT_MISCONFIGURED", "recoverable": true, "surface": "owner", "user_text": null},
+
+    {"code": "TIER_UNAVAILABLE", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "TIER_GUARDRAIL_REFUSED", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "TIER_BELOW_THRESHOLD", "recoverable": true, "surface": "internal", "user_text": null},
+    {"code": "TIER_TIMEOUT", "recoverable": true, "surface": "internal", "user_text": null},
+
+    {"code": "VERIFY_CAS_UNAVAILABLE", "recoverable": true, "surface": "student", "user_text": "The checker could not start."},
+    {"code": "VERIFY_PARSE_FAILED", "recoverable": true, "surface": "student", "user_text": "This step could not be read; please re-enter it."},
+    {"code": "VERIFY_TIMEOUT", "recoverable": true, "surface": "student", "user_text": "This step could not be decided in time; the rest of the check stands."},
+    {"code": "VERIFY_UNSUPPORTED", "recoverable": false, "surface": "student", "user_text": "Step checking is not available for this kind of problem; the answer is shown."},
+    {"code": "VERIFY_DOMAIN_UNDECIDABLE", "recoverable": true, "surface": "internal", "user_text": null}
+  ]
+}

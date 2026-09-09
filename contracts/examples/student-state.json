@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "format_version_seen": "0.0.0",
+  "syllabi": [
+    "MCR3U"
+  ],
+  "marker": {
+    "course_code": "MCR3U",
+    "unit_id": "MCR3U.u1"
+  },
+  "nodes": {
+    "exponent-laws": {
+      "mastery": "cleared",
+      "correct_count": 2,
+      "last_probe": "2026-09-08",
+      "next_due": "2026-09-09",
+      "ladder_rung": 0
+    },
+    "exponential-functions": {
+      "mastery": "fog",
+      "correct_count": 1,
+      "ladder_rung": 0
+    }
+  },
+  "trail": {
+    "segments": [
+      {
+        "kind": "course",
+        "course_code": "MCR3U",
+        "node_ids": [
+          "exponential-functions"
+        ]
+      }
+    ]
+  },
+  "expedition_log": [
+    {
+      "day": "2026-09-08",
+      "item_count": 5,
+      "cleared": 1,
+      "blocked": 0,
+      "abandoned": false,
+      "diagnosis_events": 0
+    }
+  ],
+  "probe_log": [
+    {
+      "day": "2026-09-08",
+      "node_id": "exponent-laws",
+      "item_id": "exp-1",
+      "correct": true,
+      "retry": false
+    }
+  ],
+  "install_day": "2026-09-08",
+  "consent_on": true
+}

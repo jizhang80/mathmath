@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mathmath.local/contracts/courses.schema.json",
+  "title": "courses",
+  "type": "object",
+  "properties": {
+    "format_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "courses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "course_code": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}[1-4][A-Z]$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "vintage": {
+            "type": "string",
+            "pattern": "^[0-9]{4}(\\+[0-9]{4})?$"
+          },
+          "strands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "code",
+                "name"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "expectations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "overall",
+                    "specific"
+                  ]
+                },
+                "paraphrase": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 140
+                },
+                "official_url": {
+                  "type": "string",
+                  "pattern": "^https://(dcp\\.edu\\.gov\\.on\\.ca|www\\.edu\\.gov\\.on\\.ca|edu\\.gov\\.on\\.ca)/"
+                },
+                "unit_id": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}[1-4][A-Z]\\.u[1-9][0-9]*$"
+                }
+              },
+              "required": [
+                "code",
+                "kind",
+                "paraphrase",
+                "official_url",
+                "unit_id"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "unit_id": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}[1-4][A-Z]\\.u[1-9][0-9]*$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "expectation_codes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "unit_id",
+                "name",
+                "expectation_codes"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "unit_source": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "edition": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "title",
+              "edition"
+            ],
+            "additionalProperties": false
+          },
+          "next_courses": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}[1-4][A-Z]$"
+            }
+          }
+        },
+        "required": [
+          "course_code",
+          "name",
+          "vintage",
+          "strands",
+          "expectations",
+          "units",
+          "next_courses"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "format_version",
+    "courses"
+  ],
+  "additionalProperties": false
+}

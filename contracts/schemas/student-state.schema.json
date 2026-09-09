@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mathmath.local/contracts/student-state.schema.json",
+  "title": "student-state",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "format_version_seen": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "syllabi": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{3}[1-4][A-Z]$"
+      }
+    },
+    "marker": {
+      "type": "object",
+      "properties": {
+        "course_code": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}[1-4][A-Z]$"
+        },
+        "unit_id": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}[1-4][A-Z]\\.u[1-9][0-9]*$"
+        }
+      },
+      "required": [
+        "course_code",
+        "unit_id"
+      ],
+      "additionalProperties": false
+    },
+    "nodes": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "mastery": {
+            "type": "string",
+            "enum": [
+              "fog",
+              "cleared",
+              "blocked"
+            ]
+          },
+          "correct_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_probe": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          "next_due": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          "ladder_rung": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          }
+        },
+        "required": [
+          "mastery",
+          "correct_count",
+          "ladder_rung"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "trail": {
+      "type": "object",
+      "properties": {
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "course",
+                  "extension"
+                ]
+              },
+              "course_code": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}[1-4][A-Z]$"
+              },
+              "node_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "kind",
+              "node_ids"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "segments"
+      ],
+      "additionalProperties": false
+    },
+    "expedition_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          "item_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cleared": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "blocked": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "abandoned": {
+            "type": "boolean"
+          },
+          "diagnosis_events": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "day",
+          "item_count",
+          "cleared",
+          "blocked",
+          "abandoned",
+          "diagnosis_events"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "probe_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          "node_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "item_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "correct": {
+            "type": "boolean"
+          },
+          "retry": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "day",
+          "node_id",
+          "item_id",
+          "correct",
+          "retry"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "install_day": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "consent_on": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "schema_version",
+    "format_version_seen",
+    "syllabi",
+    "marker",
+    "nodes",
+    "trail",
+    "expedition_log",
+    "probe_log",
+    "install_day",
+    "consent_on"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,397 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mathmath.local/contracts/nodes.schema.json",
+  "title": "nodes",
+  "type": "object",
+  "properties": {
+    "format_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "region_id": {
+            "type": "string",
+            "enum": [
+              "number-operations",
+              "algebra",
+              "functions",
+              "geometry-measurement",
+              "trigonometry",
+              "calculus",
+              "linear-algebra",
+              "differential-equations",
+              "probability-statistics",
+              "discrete"
+            ]
+          },
+          "strand": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expectation_codes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "course_code": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}[1-4][A-Z]$"
+                },
+                "code": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "course_code",
+                "code"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "source_ref": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "enum": [
+                  "openstax",
+                  "mit-ocw"
+                ]
+              },
+              "edition": {
+                "type": "string",
+                "minLength": 1
+              },
+              "locator": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "source",
+              "edition",
+              "locator"
+            ],
+            "additionalProperties": false
+          },
+          "courses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "course_code": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}[1-4][A-Z]$"
+                },
+                "depth": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "course_code",
+                "depth"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "position": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          },
+          "layout_hint": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          },
+          "paraphrase": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "worked_examples": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                },
+                "steps_latex": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "id",
+                "steps_latex"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "error_types": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "implies_prerequisite": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                }
+              },
+              "required": [
+                "id",
+                "label"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "hint_tree": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 3,
+              "maxItems": 3
+            }
+          },
+          "probe_items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "numeric",
+                    "mc"
+                  ]
+                },
+                "prompt_latex": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "why": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "render_fallback": {
+                  "type": "string",
+                  "enum": [
+                    "katex"
+                  ]
+                },
+                "answer": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "pattern": "^-?[0-9]+(\\.[0-9]+)?(/[1-9][0-9]*)?$"
+                    },
+                    "tolerance": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "value"
+                  ],
+                  "additionalProperties": false
+                },
+                "wrong_answers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "error_type_id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "error_type_id"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "choices": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                      },
+                      "latex": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "error_type_id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "latex"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 2
+                },
+                "correct_choice_id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                }
+              },
+              "required": [
+                "id",
+                "type",
+                "prompt_latex",
+                "why"
+              ],
+              "additionalProperties": false,
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "numeric"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "answer"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "type": {
+                        "const": "mc"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "choices",
+                      "correct_choice_id"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "region_id",
+          "courses",
+          "position",
+          "paraphrase",
+          "error_types",
+          "hint_tree",
+          "probe_items"
+        ],
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "expectation_codes"
+            ]
+          },
+          {
+            "required": [
+              "source_ref"
+            ]
+          }
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "format_version",
+    "nodes"
+  ],
+  "additionalProperties": false
+}

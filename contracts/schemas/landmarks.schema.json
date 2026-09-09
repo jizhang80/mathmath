@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mathmath.local/contracts/landmarks.schema.json",
+  "title": "landmarks",
+  "type": "object",
+  "properties": {
+    "format_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "landmarks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "what_it_is": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_url": {
+            "type": "string",
+            "pattern": "^https://"
+          },
+          "node_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+            },
+            "minItems": 1
+          },
+          "region_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "number-operations",
+                "algebra",
+                "functions",
+                "geometry-measurement",
+                "trigonometry",
+                "calculus",
+                "linear-algebra",
+                "differential-equations",
+                "probability-statistics",
+                "discrete"
+              ]
+            },
+            "minItems": 1
+          },
+          "position": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "what_it_is",
+          "source_url",
+          "node_ids",
+          "region_ids",
+          "position"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "format_version",
+    "landmarks"
+  ],
+  "additionalProperties": false
+}
