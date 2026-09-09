@@ -24,10 +24,15 @@ struct CoreTests {
             .deletingLastPathComponent()  // Tests
             .deletingLastPathComponent()  // package root
             .appendingPathComponent("Sources/Core")
-        let files = try FileManager.default.contentsOfDirectory(
-            at: sourcesDir, includingPropertiesForKeys: nil
+        let enumerator = FileManager.default.enumerator(
+            at: sourcesDir, includingPropertiesForKeys: [.isDirectoryKey]
         )
-        .filter { $0.pathExtension == "swift" }
+        var files: [URL] = []
+        while let url = enumerator?.nextObject() as? URL {
+            if url.pathExtension == "swift" {
+                files.append(url)
+            }
+        }
         #expect(!files.isEmpty, "no Core source files found — empty scan is a FAIL")
         for file in files {
             let text = try String(contentsOf: file, encoding: .utf8)
