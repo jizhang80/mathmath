@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Owner: graph L0/L1 report</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="pass:Pass (bundle published),fail:Fail (GRAPH_L0_FAILED),spinemismatch:Spine version mismatch"><b>route</b> <span class="route">/owner/graph-report</span> · <b>domain</b> concept-graph W1 W2 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <span class="chip chip-outline">owner · local only</span>
+  </div></header>
+
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Run complete</span></div>
+
+  <main class="shell-main wide stack">
+    <h1>Concept-graph report: L0 structural checks + L1 source tagging</h1>
+    <p class="muted">Written by an Owner-run CLI. Not shipped in the PWA — read on this device only.</p>
+
+    <div class="card stack">
+      <div class="section-label">Run</div>
+      <dl class="kv">
+        <dt>Command</dt><dd><code>pnpm graph:l0 --candidate graph@2026.09-3 --spine spine@2026.09-1 --tag-sources</code></dd>
+        <dt>Candidate bundle</dt><dd><code>graph@2026.09-3</code> — 9 nodes, 9 edges</dd>
+        <dt>Spine bundle targeted</dt><dd><code>spine@2026.09-1</code></dd>
+        <dt>In-degree percentile (advisory)</dt><dd>95th [ESTIMATE: flags a handful of nodes]</dd>
+        <dt>Started</dt><dd>2026-09-08 09:12 · <span class="muted">duration not tracked in this prototype</span></dd>
+      </dl>
+      <div class="proto-note">CLI name and flags are placeholders — Phase 5/6 names the real tool. concept-graph W1 pre: a candidate node/edge set plus the Spine bundle it targets.</div>
+    </div>
+
+    <section data-variant="spinemismatch">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Stopped before checking: spine_version mismatch</div>Candidate bundle targets <code>spine@2026.09-1</code>; the spine bundle on disk is <code>spine@2026.08-4</code>. None of the five L0 checks ran. <span class="code">GRAPH_L0_FAILED</span></div></div>
+      <div class="proto-note">W1 step 1: "stop on a spine_version mismatch" — this is a distinct failure mode from a failing check, so the report shows nothing below.</div>
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Verdict: refused</div>Re-export the spine bundle the candidate was built against, or re-run generation against <code>spine@2026.08-4</code>. The graph bundle is not accepted; no L1 tagging runs.</div></div>
+    </section>
+
+    <section data-variant="pass fail">
+      <div class="card stack">
+        <div class="section-label">L0 — five structural checks (§5)</div>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Check</th><th>Result</th><th>Violating ids</th></tr></thead>
+          <tbody>
+            <tr><td>Acyclic</td><td><span class="chip chip-ok">pass</span></td><td>—</td></tr>
+            <tr><td>No later→earlier course edge</td><td><span class="chip chip-ok">pass</span></td><td>—</td></tr>
+            <tr><td>Every code ↔ ≥ 1 node, both ways</td><td><span class="chip chip-ok">pass</span></td><td>—</td></tr>
+            <tr><td>In-degree outliers flagged (advisory)</td><td><span class="chip chip-warn">flagged</span></td><td><code>n-log-eq</code> (in-degree 2, at the 95th percentile of this bundle)</td></tr>
+            <tr data-variant="pass"><td>D14 starting chain connected end-to-end</td><td><span class="chip chip-ok">pass</span></td><td>—</td></tr>
+            <tr data-variant="fail"><td>D14 starting chain connected end-to-end</td><td><span class="chip chip-bad">fail</span></td><td><code>n-fn-transform</code> — isolated, no accepted edge in or out</td></tr>
+          </tbody>
+        </table></div>
+        <div class="proto-note">concept-graph W1 step 2. The in-degree row is advisory only (never blocks) — the Owner sets the real threshold empirically at M2 (brief §5, §11).</div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">In-degree distribution</div>
+        <div class="table-wrap"><table class="table num">
+          <thead><tr><th class="num" style="text-align:left">Node</th><th class="num">In-degree</th></tr></thead>
+          <tbody>
+            <tr><td>n-lin-rel</td><td class="num">0</td></tr>
+            <tr><td>n-exp-laws</td><td class="num">1</td></tr>
+            <tr><td>n-poly-factor</td><td class="num">0</td></tr>
+            <tr><td>n-quad-fn</td><td class="num">1</td></tr>
+            <tr><td>n-fn-transform</td><td class="num">0</td></tr>
+            <tr><td>n-exp-fn</td><td class="num">2</td></tr>
+            <tr><td>n-log-inverse</td><td class="num">1</td></tr>
+            <tr><td>n-log-laws</td><td class="num">1</td></tr>
+            <tr><td>n-log-eq</td><td class="num"><strong>2</strong> — ≥ 95th percentile</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">graph-Q1 — confidence formula (summary)</div>
+        <p class="prose">A bounded additive prior: a fixed weight per independent source tag, plus a smaller weight for <code>generation_agreement</code>, clamped to [ESTIMATE: 0.1, 0.9]; then a Beta-style update once <code>probe_stats</code> arrives (concept-graph W4). Ratified 2026-09-08 as the default — transparent, but the weights are arbitrary until L3 data exists.</p>
+      </div>
+    </section>
+
+    <section data-variant="pass">
+      <div class="card stack">
+        <div class="section-label">L1 — per-edge sources, agreement, initial confidence</div>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Edge</th><th>Sources</th><th>generation_agreement</th><th class="num">Confidence</th><th>Marker</th></tr></thead>
+          <tbody>
+            <tr><td>n-poly-factor → n-quad-fn</td><td>ministry_prereq, textbook_order, model_generated</td><td>3/3</td><td class="num">0.88</td><td><span class="chip chip-ok">accepted</span></td></tr>
+            <tr><td>n-exp-fn → n-log-inverse</td><td>ministry_prereq, textbook_order, model_generated</td><td>3/3</td><td class="num">0.86</td><td><span class="chip chip-ok">accepted</span></td></tr>
+            <tr><td>n-log-laws → n-log-eq</td><td>ministry_prereq, third_party_structure, model_generated</td><td>3/3</td><td class="num">0.84</td><td><span class="chip chip-ok">accepted</span></td></tr>
+            <tr><td>n-exp-laws → n-exp-fn</td><td>ministry_prereq, model_generated</td><td>3/3</td><td class="num">0.82</td><td><span class="chip chip-ok">accepted</span></td></tr>
+            <tr><td>n-log-inverse → n-log-laws</td><td>ministry_prereq, model_generated</td><td>3/3</td><td class="num">0.79</td><td><span class="chip chip-ok">accepted</span></td></tr>
+            <tr><td>n-log-inverse → n-log-eq</td><td>textbook_order, model_generated</td><td>2/3</td><td class="num">0.70</td><td><span class="chip chip-ok">accepted</span></td></tr>
+            <tr><td>n-fn-transform → n-exp-fn</td><td>textbook_order, model_generated</td><td>2/3</td><td class="num">0.61</td><td><span class="chip chip-ok">accepted</span></td></tr>
+            <tr><td>n-quad-fn → n-log-eq</td><td>model_generated (one source only)</td><td>2/3</td><td class="num">0.42</td><td><span class="chip chip-warn">disputed</span></td></tr>
+            <tr><td>n-lin-rel → n-exp-laws</td><td>model_generated (one source only)</td><td>1/3</td><td class="num">0.35</td><td><span class="chip chip-warn">disputed</span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="proto-note">concept-graph W2: an edge with ≥ 2 independent sources is accepted (§6 L1); same-origin duplicates collapse before counting, so "model_generated however many runs agreed" counts once. The two disputed rows below are the M2 deliverable — kept, not deleted (D13, graph-Q4).</div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">Disputed-edge list (M2 deliverable)</div>
+        <ul class="menu">
+          <li><span>n-quad-fn → n-log-eq — one source only, confidence 0.42</span><span class="chip chip-warn">disputed</span></li>
+          <li><span>n-lin-rel → n-exp-laws — one source only, confidence 0.35</span><span class="chip chip-warn">disputed</span></li>
+        </ul>
+        <div class="proto-note">graph-Q4: disputed edges are invisible to Student and Parent, still walked and probed; this list is Owner-report only. Settled later by probe data via W4.</div>
+      </div>
+
+      <div class="banner banner-ok"><div class="banner-body"><div class="banner-title">Verdict: accepted</div>All five L0 checks pass (in-degree flag is advisory); L1 tagging complete. Bundle <code>graph@2026.09-3</code> is frozen against <code>spine@2026.09-1</code> and published. Next: hand to <code>learning-objects</code> W1 and <code>tutoring-session</code> W3 queries. Emits <code>graph.bundle_published</code>.</div></div>
+    </section>
+
+    <section data-variant="fail">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Verdict: refused</div><code>n-fn-transform</code> is isolated, breaking the D14 starting chain. <span class="code">GRAPH_L0_FAILED</span>. The bundle is never accepted (I8). No L1 tagging runs on a failing candidate. Next: regenerate the candidate edge set for <code>n-fn-transform</code> — never hand-patch the bundle (I9) — and re-run this checker.</div></div>
+      <div class="proto-note">GAP: content-generation's Q3 default is "emit nothing and let concept-graph's connectivity check catch the isolated node" — this is that catch, cross-referenced from owner-generation-report.html's GEN_INTERSECTION_EMPTY variant.</div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

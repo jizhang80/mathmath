@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — prototype route map</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar"><b>Phase 4b prototype</b> · static HTML, mocked data, no logic · variant buttons on each page switch states · <a href="../design-system/gallery.html">design-system gallery</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+  </div></header>
+  <main class="shell-main wide stack-lg route-map">
+    <section>
+      <h1>Prototype route map</h1>
+      <p class="muted">Every route named in a domain doc's <em>UI surfaces</em> section, plus the owner's offline report surfaces. Routes marked <span class="chip chip-warn">proposed</span> differ from the placeholder in the domain doc and need owner ratification (see <code>CHECKLIST.md</code>).</p>
+    </section>
+
+    <section class="stack">
+      <h2>Walk-through A — the §7 flow (start here)</h2>
+      <ol class="stack-sm">
+        <li><a href="student-session.html#tier0">Enter a problem</a> (Tier 0 menu) → <a href="student-session-steps.html#firstfail">steps checked, first failure</a> → <a href="student-session-classify.html#tier0">what went wrong</a> → <a href="student-session-hint.html#tier1hint">hint + a guess to check</a> → <a href="student-session-probe.html#items">2-question check</a> → <a href="student-session-probe.html#fail">failed → confirmed</a> → <a href="student-session-remediation.html#explanation">the small piece</a> → back to the problem → <a href="student-session-steps.html#allok">all steps follow</a> → <a href="student-session-answer.html#resolved">answer and diagnosis</a>.</li>
+        <li>Same flow, probe <a href="student-session-probe.html#pass">passed → "not the issue"</a>; probe <a href="student-session-probe.html#declined">declined</a>; <a href="student-session-hint.html#capped">backtrack capped</a> (I4); <a href="student-session-classify.html#tier1">Tier 1 proposes</a>; <a href="student-session-hint.html#generic">"none of these"</a>.</li>
+        <li>Then the parent: <a href="parent.html">where the student is stuck</a> → <a href="parent-gap.html">a gap</a> → <a href="parent-trend.html">the trend</a>.</li>
+      </ol>
+    </section>
+
+    <section class="stack">
+      <h2>Student</h2>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Route</th><th>Page</th><th>Domain · workflows</th><th>States</th></tr></thead>
+        <tbody>
+          <tr><td>/student/session</td><td><a href="student-session.html">student-session.html</a></td><td>tutoring-session W1 · runtime-tiers W3/W5 · verification W1</td><td>Tier 0 · Tier 1 suggests · below threshold · resume · checker loading · checker failed</td></tr>
+          <tr><td>/student/session (trace)</td><td><a href="student-session-steps.html">student-session-steps.html</a></td><td>tutoring-session W2 · verification W2/W3</td><td>first failure · all follow · domain violation · unreadable · timeout · unsupported · checker died</td></tr>
+          <tr><td>/student/session (classify)</td><td><a href="student-session-classify.html">student-session-classify.html</a></td><td>tutoring-session W3 · runtime-tiers W2/W5</td><td>Tier 0 pick · Tier 1 proposed · below threshold · model says none</td></tr>
+          <tr><td>/student/session/hint</td><td><a href="student-session-hint.html">student-session-hint.html</a></td><td>tutoring-session W4/W5/W8 · learning-objects W2 · concept-graph W3 · runtime-tiers W4</td><td>hint 1 + hypothesis · all hints · generic · capped · nothing upstream · reworded · lookup miss</td></tr>
+          <tr><td>/student/session/probe</td><td><a href="student-session-probe.html">student-session-probe.html</a></td><td>tutoring-session W5 · learning-objects W3 · concept-graph W4</td><td>items · passed · failed · declined · unavailable</td></tr>
+          <tr><td>/student/session (remediation) <span class="chip chip-warn">proposed</span></td><td><a href="student-session-remediation.html">student-session-remediation.html</a></td><td>tutoring-session W6</td><td>explanation · worked example · level 2</td></tr>
+          <tr><td>/student/session/answer</td><td><a href="student-session-answer.html">student-session-answer.html</a></td><td>tutoring-session W7 · verification W3</td><td>answered · resolved · no steps · answer-only · no answer · write failed · abandoned</td></tr>
+          <tr><td>/student/history</td><td><a href="student-history.html">student-history.html</a></td><td>tutoring-session (SessionRecord)</td><td>default · empty</td></tr>
+          <tr><td>/student/browse</td><td><a href="student-browse.html">student-browse.html</a></td><td>curriculum-spine</td><td>courses · strands · expectations · link off</td></tr>
+          <tr><td>/student/node/:nodeId</td><td><a href="student-node.html">student-node.html</a></td><td>concept-graph · curriculum-spine</td><td>—</td></tr>
+        </tbody></table></div>
+    </section>
+
+    <section class="stack">
+      <h2>Parent</h2>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Route</th><th>Page</th><th>Domain · workflows</th><th>States</th></tr></thead>
+        <tbody>
+          <tr><td>/parent (absorbs /parent/graph) <span class="chip chip-warn">proposed</span></td><td><a href="parent.html">parent.html</a></td><td>parent-view W1/W2/W5</td><td>3 sessions · empty · unreadable records · store unavailable · just cleared</td></tr>
+          <tr><td>/parent/gap/:nodeId (absorbs /parent/node/:nodeId) <span class="chip chip-warn">proposed</span></td><td><a href="parent-gap.html">parent-gap.html</a></td><td>parent-view W3</td><td>gap · deeper gap recorded · node not in graph</td></tr>
+          <tr><td>/parent/trend</td><td><a href="parent-trend.html">parent-trend.html</a></td><td>parent-view W4</td><td>3 sessions · too few</td></tr>
+        </tbody></table></div>
+    </section>
+
+    <section class="stack">
+      <h2>Settings and shell</h2>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Route</th><th>Page</th><th>Domain · workflows</th><th>States</th></tr></thead>
+        <tbody>
+          <tr><td>/settings/data</td><td><a href="settings-data.html">settings-data.html</a></td><td>telemetry W1/W2/W3 · platform W5</td><td>off · on · offline · send failed</td></tr>
+          <tr><td>/settings/storage</td><td><a href="settings-storage.html">settings-storage.html</a></td><td>platform W1–W5</td><td>up to date · update ready · fetch failed · integrity failed · quota exceeded · quota low · runtime failed · offline</td></tr>
+          <tr><td>/settings/models (was /student/settings/models) <span class="chip chip-warn">proposed</span></td><td><a href="settings-models.html">settings-models.html</a></td><td>runtime-tiers W1/W6</td><td>Nano · downloadable · no WebGPU · fallback offer · downloading · insufficient · off</td></tr>
+          <tr><td>/unsupported</td><td><a href="unsupported.html">unsupported.html</a></td><td>platform W1</td><td>no WebGPU · no storage · mobile</td></tr>
+        </tbody></table></div>
+    </section>
+
+    <section class="stack">
+      <h2>Owner — offline report surfaces (local only, not shipped)</h2>
+      <p class="muted">These are the written reports the Owner-run CLIs produce. Each offline workflow's entry point is the command at the top of its report; its termination is the report's verdict line.</p>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Report</th><th>Page</th><th>Domain · workflows</th><th>States</th></tr></thead>
+        <tbody>
+          <tr><td>/owner/graph-report</td><td><a href="owner-graph-report.html">owner-graph-report.html</a></td><td>concept-graph W1/W2</td><td>pass · L0 fail · spine mismatch</td></tr>
+          <tr><td>/owner/generation-report</td><td><a href="owner-generation-report.html">owner-generation-report.html</a></td><td>content-generation W1/W2 (+ LO variant)</td><td>edges · objects · budget exceeded</td></tr>
+          <tr><td>/owner/spine-report</td><td><a href="owner-spine-report.html">owner-spine-report.html</a></td><td>curriculum-spine W1/W2</td><td>extract · cut · re-version · fail</td></tr>
+          <tr><td>/owner/lo-report</td><td><a href="owner-lo-report.html">owner-lo-report.html</a></td><td>learning-objects W1</td><td>pass · fail</td></tr>
+          <tr><td>/owner/spike-report</td><td><a href="owner-spike-report.html">owner-spike-report.html</a></td><td>runtime-tiers W7 · content-generation W3</td><td>go · no-go</td></tr>
+          <tr><td>/owner/telemetry-report</td><td><a href="owner-telemetry-report.html">owner-telemetry-report.html</a></td><td>telemetry W4 · concept-graph W4</td><td>default · sparse</td></tr>
+        </tbody></table></div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · Phase 4b prototype · <a href="../design-system/README.md">design system</a></footer>
+</div>
+</body>
+</html>

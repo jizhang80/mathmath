@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Owner: learning-objects bundle report</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="pass:Pass (bundle accepted),fail:Fail (four checks)"><b>route</b> <span class="route">/owner/lo-report</span> · <b>domain</b> learning-objects W1 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <span class="chip chip-outline">owner · local only</span>
+  </div></header>
+
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Validation complete</span></div>
+
+  <main class="shell-main wide stack">
+    <h1>Learning-objects report: bundle validation</h1>
+    <p class="muted">Written by an Owner-run CLI. There is no human content review step (I9) — the Owner accepts or rejects this bundle whole, on this report, never a node at a time.</p>
+
+    <div class="card stack">
+      <div class="section-label">Run</div>
+      <dl class="kv">
+        <dt>Command</dt><dd><code>pnpm lo:validate --bundle learning-objects@2026.09-3 --graph graph@2026.09-3</code></dd>
+        <dt>Candidate bundle</dt><dd><code>learning-objects@2026.09-3</code> — 9 nodes</dd>
+        <dt>Graph bundle targeted (must have passed L0)</dt><dd><code>graph@2026.09-3</code></dd>
+      </dl>
+      <div class="proto-note">CLI name and flags are placeholders — Phase 5/6 names the real tool. learning-objects W1 pre: a Graph bundle that already passed L0 (I8), plus candidates from content-generation.</div>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">Six checks (W1)</div>
+      <div class="table-wrap"><table class="table">
+        <thead><tr><th>Check</th><th>Result</th><th>Failing nodes</th></tr></thead>
+        <tbody>
+          <tr><td>1 · Coverage — one LearningObject per Node, no unknown-node references</td>
+            <td><section data-variant="pass"><span class="chip chip-ok">pass</span></section><section data-variant="fail"><span class="chip chip-bad">fail</span></section></td>
+            <td><section data-variant="pass">—</section><section data-variant="fail"><code>n-fn-transform</code> — no LearningObject exists for this node · <span class="code">LO_INCOMPLETE_BUNDLE</span></section></td></tr>
+          <tr><td>2 · Enum closure — non-empty, exactly one <code>none_of_these</code></td>
+            <td><span class="chip chip-ok">pass</span></td><td>—</td></tr>
+          <tr><td>3 · Mapping validity — every <code>implies_prerequisite</code> is an upstream neighbour</td>
+            <td><section data-variant="pass"><span class="chip chip-ok">pass</span></section><section data-variant="fail"><span class="chip chip-bad">fail</span></section></td>
+            <td><section data-variant="pass">—</section><section data-variant="fail"><code>n-log-eq</code> — error type "quadratic solved incorrectly" maps to <code>n-poly-factor</code>, which is not an upstream neighbour of n-log-eq (n-quad-fn is) · <span class="code">LO_BAD_PREREQ_MAPPING</span></section></td></tr>
+          <tr><td>4 · Hint coverage — full tier list for every ErrorType but <code>none_of_these</code></td>
+            <td><section data-variant="pass"><span class="chip chip-ok">pass</span></section><section data-variant="fail"><span class="chip chip-bad">fail</span></section></td>
+            <td><section data-variant="pass">—</section><section data-variant="fail"><code>n-log-eq</code> — "arithmetic slip" has tiers 1–2 only, tier 3 missing · <span class="code">LO_HINT_TIER_MISSING</span></section></td></tr>
+          <tr><td>5 · Probe checkability — every answer/step parses and is CAS-decidable</td>
+            <td><section data-variant="pass"><span class="chip chip-ok">pass</span></section><section data-variant="fail"><span class="chip chip-bad">fail</span></section></td>
+            <td><section data-variant="pass">—</section><section data-variant="fail"><code>n-log-eq</code> — one ProbeItem answer contains a free-form inequality verification has no procedure for · <span class="code">LO_PROBE_UNCHECKABLE</span></section></td></tr>
+          <tr><td>6 · No verbatim Ministry text in Explanations (I6)</td>
+            <td><span class="chip chip-ok">pass</span></td><td>—</td></tr>
+        </tbody>
+      </table></div>
+      <div class="proto-note">learning-objects W1: one pass, terminates; a fail lists every failing node, not just the first. All four listed failures happen to land on different nodes here for illustration — a real bundle can fail several checks on the same node.</div>
+    </div>
+
+    <div class="card-quiet stack" style="padding: var(--s-4); border-radius: var(--r-2);">
+      <p><strong>No human review step.</strong> Content here is generated and machine-verified only (I9, D10, D12, D13). This report is not a queue to fix items in — a fail means <em>regenerate and re-run</em>, and the Owner's only choice is to accept the bundle whole or refuse it whole.</p>
+      <div class="proto-note">Runtime-only errors from this domain — <span class="code">LO_HINT_NOT_FOUND</span> (a live lookup miss, falls back to the node's generic tier-1 hint) and <span class="code">LO_PROBE_POOL_EMPTY</span> (fewer than 2 usable ProbeItems, probe skipped) — are not produced by this offline bundle-validation report; they surface during a session in tutoring-session, not here.</div>
+    </div>
+
+    <section data-variant="pass">
+      <div class="banner banner-ok"><div class="banner-body"><div class="banner-title">Verdict: accepted</div>All six checks pass across 9 nodes. Bundle <code>learning-objects@2026.09-3</code> is frozen, versioned, and registered against <code>graph@2026.09-3</code>. Next: <code>tutoring-session</code> W2/W3 may resolve hints and probes against it. Emits <code>learning_objects.bundle_loaded</code>.</div></div>
+    </section>
+    <section data-variant="fail">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Verdict: refused</div>Four of six checks fail. The bundle is not accepted as a whole (no partial acceptance). Next: regenerate the failing items via content-generation's learning-object batch (see owner-generation-report.html) and re-run this validator. Emits <code>learning_objects.bundle_validation_failed</code>.</div></div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

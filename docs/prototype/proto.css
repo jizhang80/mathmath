@@ -1,0 +1,14 @@
+/* Prototype-only styling (not part of the design system). Annotations, variant switcher, route map. */
+.proto-bar { background: #fff8c5; color: #5a4a00; border-bottom: 1px dashed #d9c34a; font-size: 12px; padding: 6px 24px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; font-family: var(--font-ui); }
+.proto-bar b { font-weight: 700; }
+.proto-bar .variants { display: flex; gap: 4px; flex-wrap: wrap; }
+.proto-bar .variants button { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid #d9c34a; background: #fffdf0; cursor: pointer; color: inherit; }
+.proto-bar .variants button[aria-pressed="true"] { background: #5a4a00; color: #fff; border-color: #5a4a00; }
+.proto-bar .route { font-family: var(--font-mono); }
+.proto-note { border: 1px dashed #d9c34a; background: #fffdf0; color: #5a4a00; font-size: 12px; padding: 6px 10px; border-radius: 6px; margin-top: 12px; }
+.proto-note::before { content: "prototype note · "; font-weight: 700; }
+[data-variant] { display: none; }
+[data-variant].is-active { display: block; }
+li[data-variant].is-active, tr[data-variant].is-active { display: revert; }
+.route-map .table td a { font-family: var(--font-mono); font-size: 13px; }
+@media (prefers-color-scheme: dark) { .proto-bar, .proto-note { background: #3a3014; color: #f2c94c; border-color: #7a6320; } .proto-bar .variants button { background: #2a2410; border-color: #7a6320; color: #f2c94c; } .proto-bar .variants button[aria-pressed="true"] { background: #f2c94c; color: #2a2410; } }

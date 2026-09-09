@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Hint</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="tier1hint:Hint 1 + hypothesis,tier3hint:All three hints,generic:None of these (generic),capped:Backtrack capped,noprereq:Nothing upstream,reworded:Tier 1 reworded,notfound:Hint lookup miss"><b>route</b> <span class="route">/student/session/hint</span> · <b>domain</b> tutoring-session W4/W5/W8 · learning-objects W2 · concept-graph W3 · runtime-tiers W4 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html" aria-current="page">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <section data-variant="tier1hint tier3hint generic noprereq reworded notfound"><span class="depth"><i class="on"></i><i></i><i></i> level 0</span></section>
+    <section data-variant="capped"><span class="depth"><i class="on"></i><i class="on"></i><i class="cap"></i> level 2 · cap reached</span></section>
+  </div></header>
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Checker ready</span></div>
+
+  <main class="shell-main stack">
+    <h1>Hint for step 2</h1>
+    <div class="card card-quiet row row-between"><span class="math"><i>x</i>(<i>x</i> − 2) = 9</span><span class="chip chip-bad">does not follow</span></div>
+
+    <section data-variant="tier1hint reworded notfound capped noprereq">
+      <div class="row"><span class="chip chip-outline">Exponent–log relationship mixed up</span><section data-variant="reworded"><span class="chip chip-info">wording adapted on-device</span></section></div>
+    </section>
+    <section data-variant="generic"><div class="row"><span class="chip chip-outline">No specific mistake picked</span></div></section>
+    <section data-variant="notfound">
+      <div class="banner"><div class="banner-body">No hint written for that exact mistake yet — here is the general hint for this topic. <span class="code">LO_HINT_NOT_FOUND</span></div></div>
+    </section>
+
+    <!-- tiers -->
+    <section data-variant="tier1hint reworded notfound capped noprereq">
+      <div class="tiers">
+        <div class="tier"><div class="tier-label">Hint 1 of 3</div><section data-variant="tier1hint capped noprereq"><span class="prose">Look at how you went from a logarithm to a power. Which number is the base, and which is the exponent?</span></section><section data-variant="reworded"><span class="prose">Check the move from the log to the power: which of the two numbers is the base, and which is the exponent?</span></section><section data-variant="notfound"><span class="prose">Look again at the step where the logarithm disappears. Every log equation hides an exponential one.</span></section></div>
+        <div class="tier is-locked"><div class="tier-label">Hint 2 of 3</div><span class="muted">Points at this mistake directly.</span></div>
+        <div class="tier is-locked"><div class="tier-label">Hint 3 of 3</div><span class="muted">Works the step through.</span></div>
+      </div>
+    </section>
+    <section data-variant="tier3hint">
+      <div class="tiers">
+        <div class="tier"><div class="tier-label">Hint 1 of 3</div><span class="prose">Look at how you went from a logarithm to a power. Which number is the base, and which is the exponent?</span></div>
+        <div class="tier"><div class="tier-label">Hint 2 of 3</div><span class="prose">log<sub>2</sub>(<i>A</i>) = 3 means 2<sup>3</sup> = <i>A</i>. The 2 is the base; the 3 is the exponent — not the other way round.</span></div>
+        <div class="tier"><div class="tier-label">Hint 3 of 3</div><span class="prose">So log<sub>2</sub>(<i>x</i>(<i>x</i> − 2)) = 3 becomes <i>x</i>(<i>x</i> − 2) = 2<sup>3</sup> = 8. Carry on from there.</span></div>
+      </div>
+      <div class="banner"><div class="banner-body">That is the last hint. Fix step 2 and check again, or see the answer.</div></div>
+    </section>
+    <section data-variant="generic">
+      <div class="tiers">
+        <div class="tier"><div class="tier-label">Hint 1 of 3 · general</div><span class="prose">Look again at the step where the logarithm disappears. Every log equation hides an exponential one.</span></div>
+        <div class="tier is-locked"><div class="tier-label">Hint 2 of 3</div><span class="muted">Ask for it when you want it.</span></div>
+        <div class="tier is-locked"><div class="tier-label">Hint 3 of 3</div><span class="muted">Works the step through.</span></div>
+      </div>
+      <div class="proto-note">session-Q2 / lo-Q4: "none of these" → generic hint, no hypothesis, no probe. The session ends with a located error and no explanation of cause; the abstention is counted (telemetry) as enum-incompleteness evidence.</div>
+    </section>
+
+    <!-- hypothesis card -->
+    <section data-variant="tier1hint reworded notfound tier3hint">
+      <div class="card stack" style="border-color:var(--accent)">
+        <div class="row"><span class="chip chip-outline">a guess to check</span><span class="chip chip-info">Exponential functions · MCR3U</span></div>
+        <p class="prose">This kind of slip often comes from <strong>exponential functions</strong> — the topic underneath logarithms. It might not be the issue. Two short questions, about a minute, would tell us.</p>
+        <div class="actions" style="margin-top:0"><a class="btn btn-primary" href="student-session-probe.html#items">Check it — 2 questions</a><a class="btn btn-quiet" href="student-session-probe.html#declined">Not now</a></div>
+      </div>
+      <div class="proto-note">tutoring-session W5: hypothesis, not verdict (D11); cost stated first; declinable (session-Q1 → Diagnosis <em>unconfirmed</em>). The candidate came from concept-graph W3 (breadth-first, ≤ 2 levels, graph-Q2 unknown counts as candidate, graph-Q3 tie-break).</div>
+    </section>
+
+    <section data-variant="capped">
+      <div class="card stack">
+        <div class="row"><span class="chip chip-warn">noted for later</span><span class="chip chip-outline">Linear relations and equations · MTH1W</span></div>
+        <p class="prose">There may be an even earlier gap, in <strong>linear relations and equations</strong>. This session has already gone back twice, so that one is written down for later rather than checked now. Keep going with the hint.</p>
+      </div>
+      <div class="proto-note">tutoring-session W8 (I4): at level 2 with no budget the candidate goes to SessionRecord as recorded-not-remediated; visible to the parent as <em>deeper gap recorded</em>. No probe, no remediation.</div>
+    </section>
+
+    <section data-variant="noprereq">
+      <div class="banner"><div class="banner-body">Nothing upstream to check — this looks like a slip inside the topic itself. Use the hints. <span class="code">GRAPH_NO_PREREQUISITE</span></div></div>
+      <div class="proto-note">concept-graph W3 returns "none within reach" (GRAPH_NO_PREREQUISITE). Also the path for error types with <code>implies_prerequisite = null</code> such as "arithmetic slip" — those show no card at all.</div>
+    </section>
+
+    <div class="actions">
+      <section data-variant="tier1hint reworded notfound generic capped noprereq"><a class="btn btn-primary" href="#tier3hint">Next hint</a></section>
+      <a class="btn" href="student-session.html#tier0">Fix step 2 and check again</a>
+      <span class="spacer"></span>
+      <a class="btn btn-quiet" href="student-session-answer.html#answered">Show the answer</a>
+    </div>
+    <div class="proto-note">Three tiers (lo-Q1), tier 3 may reveal the failing step's result (lo-Q3). The tree gates nothing: "Show the answer" is always here (D5). Tier 1 rewording only when tier-Q4 is on (off in MVP).</div>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

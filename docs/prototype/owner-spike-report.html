@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Owner: M4′ Tier 1 spike report</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="go:Go (≥80%),nogo:No-go (below 80%)"><b>route</b> <span class="route">/owner/spike-report</span> · <b>domain</b> runtime-tiers W7 · content-generation W3 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <span class="chip chip-outline">owner · local only</span>
+  </div></header>
+
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Spike complete</span></div>
+
+  <main class="shell-main wide stack">
+    <h1>M4′ spike report: Tier 1 classification on synthetic errors</h1>
+    <p class="muted">Written by an Owner-run CLI, on the baseline machine (§4.3). Runs in parallel with M1; gates nothing before M4 (brief §8).</p>
+
+    <div class="card stack">
+      <div class="section-label">Run</div>
+      <dl class="kv">
+        <dt>Command</dt><dd><code>pnpm spike:m4prime --node n-log-eq --set synthetic@2026.09-1 --schema classification-v1</code></dd>
+        <dt>Node</dt><dd>n-log-eq — logarithmic equations (MHF4U)</dd>
+        <dt>SyntheticSolutionSet</dt><dd><code>synthetic@2026.09-1</code> (content-generation W3)</dd>
+        <dt>Adapter under test</dt><dd>Chrome Prompt API — Gemini Nano</dd>
+        <dt>Output schema</dt><dd><code>{ error_type ∈ enum, confidence }</code></dd>
+        <dt>Baseline machine</dt><dd>≥ 20 GB total RAM (D8) [SOURCED: brief §4.3]</dd>
+      </dl>
+      <div class="proto-note">CLI name and flags are placeholders — Phase 5/6 names the real tool. runtime-tiers W7 pre: the SyntheticSolutionSet for the logarithmic-equation node and its 6-value enum (brief §8).</div>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">The 6-value enum and round-trip survival (content-generation W3)</div>
+      <div class="table-wrap"><table class="table num">
+        <thead><tr><th style="text-align:left">Error type</th><th class="num">Generated</th><th class="num">Survived round-trip</th></tr></thead>
+        <tbody>
+          <tr><td>Missed domain restriction</td><td class="num">30</td><td class="num">28</td></tr>
+          <tr><td>Log-combination rule misapplied</td><td class="num">30</td><td class="num">26</td></tr>
+          <tr><td>Exponent–log inverse not internalised</td><td class="num">30</td><td class="num">27</td></tr>
+          <tr><td>Quadratic solved incorrectly</td><td class="num">30</td><td class="num">29</td></tr>
+          <tr><td>Arithmetic slip</td><td class="num">30</td><td class="num">21</td></tr>
+          <tr><td>None of these</td><td class="num">30</td><td class="num">30</td></tr>
+          <tr><td><strong>Total evaluated</strong></td><td class="num">180</td><td class="num"><strong>161</strong></td></tr>
+        </tbody>
+      </table></div>
+      <div class="proto-note">content-generation W3: disagreeing items are dropped at round-trip, so per-type survival is visible before the spike — arithmetic slip survives worst (21/30), meaning it is hardest to synthesise cleanly, not necessarily hardest to classify.</div>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">Top-1 accuracy and confusion matrix</div>
+      <dl class="kv">
+        <dt>Top-1 accuracy</dt><dd><section data-variant="go"><strong>84.5%</strong> (136 / 161)</section><section data-variant="nogo"><strong>71.4%</strong> (115 / 161)</section> — upper bound, synthetic data [SOURCED: brief §8]</dd>
+      </dl>
+      <div class="table-wrap"><table class="table num">
+        <thead><tr><th style="text-align:left">Predicted →<br>Actual ↓</th><th class="num">Domain</th><th class="num">Log-comb.</th><th class="num">Exp–log</th><th class="num">Quadratic</th><th class="num">Arithmetic</th><th class="num">None</th></tr></thead>
+        <tbody>
+          <tr><td>Domain</td><td class="num"><strong>24</strong></td><td class="num">1</td><td class="num">0</td><td class="num">0</td><td class="num">1</td><td class="num">2</td></tr>
+          <tr><td>Log-comb.</td><td class="num">2</td><td class="num"><strong>21</strong></td><td class="num">1</td><td class="num">0</td><td class="num">1</td><td class="num">1</td></tr>
+          <tr><td>Exp–log</td><td class="num">1</td><td class="num">2</td><td class="num"><strong>22</strong></td><td class="num">0</td><td class="num">1</td><td class="num">1</td></tr>
+          <tr><td>Quadratic</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num"><strong>27</strong></td><td class="num">1</td><td class="num">1</td></tr>
+          <tr><td>Arithmetic</td><td class="num">2</td><td class="num">3</td><td class="num">2</td><td class="num">1</td><td class="num"><strong>10</strong></td><td class="num">3</td></tr>
+          <tr><td>None</td><td class="num">1</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">1</td><td class="num"><strong>28</strong></td></tr>
+        </tbody>
+      </table></div>
+      <div class="proto-note">6×6 confusion matrix, rows = actual label, columns = predicted. Arithmetic slip is the weakest diagonal (10/21) — consistent with runtime-tiers Q3: a model under-confident on a diffuse category tends toward "none of these".</div>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">Misuse and abstention</div>
+      <dl class="kv">
+        <dt>"None of these" misuse rate</dt><dd>4 of 131 non-abstention items wrongly predicted "none of these" — 3.1%</dd>
+        <dt>Abstention at low confidence (runtime-tiers Q3)</dt><dd>9 items returned "none of these" with confidence &lt; 0.5, correctly counted separately from misdiagnosis</dd>
+      </dl>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">Resulting Threshold values (tier-Q1)</div>
+      <div class="table-wrap"><table class="table num">
+        <thead><tr><th style="text-align:left">Task</th><th class="num">Threshold</th></tr></thead>
+        <tbody>
+          <tr><td>Classification (W2)</td><td class="num">0.7 [ESTIMATE, tuned by M4′]</td></tr>
+          <tr><td>Free-text → node mapping (W3)</td><td class="num">0.7 [ESTIMATE, tuned by M4′]</td></tr>
+        </tbody>
+      </table></div>
+      <div class="proto-note">tier-Q1 default (0.7) is retained by this run's data — accuracy above threshold clusters well clear of 0.7, so no adjustment is proposed.</div>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">Pyodide + SymPy first-load latency</div>
+      <p>Measured on the same baseline machine, same session as the classification run (brief §8: "same session, measure Pyodide + SymPy first-load latency").</p>
+      <dl class="kv">
+        <dt>Cold first load</dt><dd>2.9 s [ESTIMATE: single-machine measurement, not a distribution]</dd>
+        <dt>Warm (cached) reload</dt><dd>0.4 s [ESTIMATE]</dd>
+      </dl>
+    </div>
+
+    <div class="card-quiet stack" style="padding: var(--s-4); border-radius: var(--r-2);">
+      <div class="section-label">Runtime error codes referenced by this spike</div>
+      <p class="muted">This is an offline evaluation of the adapter under a fixed schema; most runtime-tiers errors gate live capability detection (W1/W6) and do not apply to a spike that presumes the adapter is present.</p>
+      <ul class="menu">
+        <li><span>Off-schema or out-of-enum output, discarded before scoring</span><span class="chip chip-outline"><span class="code">TIER_SCHEMA_VIOLATION</span></span></li>
+        <li><span>Below-threshold predictions, counted as abstention above</span><span class="chip chip-outline"><span class="code">TIER_BELOW_THRESHOLD</span></span></li>
+        <li><span>Not applicable here — gates capability detection, not this fixed-adapter spike</span><span class="chip chip-outline"><span class="code">TIER_ADAPTER_UNAVAILABLE</span></span></li>
+        <li><span>Not applicable here — gates the §4.3 storage budget, not this spike</span><span class="chip chip-outline"><span class="code">TIER_STORAGE_INSUFFICIENT</span></span></li>
+      </ul>
+    </div>
+
+    <section data-variant="go">
+      <div class="banner banner-ok"><div class="banner-body"><div class="banner-title">Verdict: go</div>Top-1 accuracy 84.5% clears the 80% bar (brief §8, an upper bound on synthetic data). Tier 1 exists. Next: proceed to M4 — Prompt API mapping, classification and wording adaptation with confidence gating and Tier 0 fallback.</div></div>
+    </section>
+    <section data-variant="nogo">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Verdict: no-go</div>Top-1 accuracy 71.4% is below the 80% bar. Per D15, this is <strong>an architecture revisit, not a patch</strong> — no amount of prompt tuning on this spike report substitutes for that decision. Next: the Owner takes this to a Q5 decision on whether Tier 1 proceeds in a different form, is deferred, or M4 is dropped from this release.</div></div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

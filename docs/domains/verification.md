@@ -1,22 +1,27 @@
 # Domain — verification
 
-Prefix: `VERIFY`. Layer ④ (brief §4.1). Ground truth: `PROJECT-BRIEF-v1.md`, invariants I1–I13.
+Prefix: `VERIFY`. Layer ④ (brief §4.1). Ground truth: `PROJECT-BRIEF-v2.md` + amendments; invariants I1–I15.
+
+> **Status (v2.2 D34, v2.3 §B): this domain belongs to the M5 desktop web homework mode.** It is not part
+> of the iOS app, which checks numeric and multiple-choice items in code (expedition, diagnosis). Offline
+> probe-answer checking that v1 assigned here now runs in the Python pipeline (content-generation W1,
+> D41). The text below is preserved as the M5 design; its stack (MathLive, Pyodide) is confirmed at M5, not
+> in the Phase 5 lock for the iOS app.
 
 ## Purpose
 
 The only authority on mathematical correctness. It parses the student's LaTeX (MathLive, D9/I10) into
 SymPy in a Pyodide web worker, decides each written Step against the one before, reports the first failing
 step, and solves the problem so the answer can always be shown (D5, I3). It owns **I1: step correctness is
-decided by CAS, never by a language model** (D6). Milestone **M3**; the Pyodide + SymPy first-load
-measurement is taken at M4′ (brief §8, §11).
+decided by CAS, never by a language model** (D6). Milestone **M5** (desktop web homework mode, D34);
+the Pyodide + SymPy first-load measurement moves to M5.
 
-Every verdict reaches the Student through tutoring-session. Offline, it also answers learning-objects'
-bundle check of whether a ProbeItem answer is CAS-decidable.
+Every verdict reaches the Student through the homework-mode variant of diagnosis.
 
-**Seam — verification↔tutoring-session:** one call in, one machine-readable trace out. tutoring-session
+**Seam — verification↔diagnosis (homework mode):** one call in, one machine-readable trace out. diagnosis
 sends a Problem and the ordered Steps; verification returns a StepVerdict per step, the FirstFailure (or
-none), DomainCheck results and the solved answer. tutoring-session decides what to *do* with a verdict —
-classify, hint, backtrack, probe — while verification never sees a node id, ErrorType or Session. No model
+none), DomainCheck results and the solved answer. diagnosis decides what to *do* with a verdict —
+classify, hint, backtrack, probe — while verification never sees a node id, ErrorType or event. No model
 output can enter or alter this trace.
 
 ## Actors and roles
@@ -53,7 +58,7 @@ step dropping or violating one gets `domain_violation`, not `not_equivalent`, be
 
 ### W1 — Warm up the CAS
 
-**Pre:** the app has started; platform reports a supported environment (D8).
+**Pre:** the desktop web app has started on the M5 desktop baseline (D34).
 **Steps:** 1. Platform loads the Pyodide + SymPy assets and owns the visible "loading CAS" state.
 2. verification imports SymPy in the worker and runs a trivial round-trip. 3. It publishes readiness;
 failure after the retry budget raises `VERIFY_CAS_UNAVAILABLE`.
@@ -68,7 +73,7 @@ stops the scan. 2. Derive DomainCheck constraints. 3. For each Step *i*, test eq
 *i−1* (Step 0 against the Problem) under those constraints; a breach yields `domain_violation`. 4. Record
 FirstFailure at the first non-`equivalent` verdict; later steps are reported unevaluated. 5. Each step is
 bounded by a timeout (Q3); on expiry `VERIFY_TIMEOUT` is raised and the trace returns partial.
-**Post:** a trace of StepVerdicts, FirstFailure and DomainCheck results reaches tutoring-session. Bounded
+**Post:** a trace of StepVerdicts, FirstFailure and DomainCheck results reaches diagnosis. Bounded
 by n steps, each timed out, so it always terminates.
 
 ### W3 — Solve for the answer
@@ -76,20 +81,20 @@ by n steps, each timed out, so it always terminates.
 **Pre:** a parsed Problem. Runs however W2 ended, since answers are never withheld (D5, I3).
 **Steps:** 1. Solve symbolically under the DomainCheck constraints. 2. Discard extraneous roots violating
 a constraint. 3. If the construct is unsupported, report `VERIFY_UNSUPPORTED`.
-**Post:** an answer in LaTeX, or an explicit unsupported result; tutoring-session shows it with the
-diagnosis.
+**Post:** an answer in LaTeX, or an explicit unsupported result; diagnosis shows it with the
+hypothesis.
 
 ## UI surfaces
 
-None owned here. Verdicts render in tutoring-session (`/student/session/...`); the "loading CAS" state
-belongs to the platform shell. Confirmed in Phase 4.
+None owned here. Verdicts render in the homework-mode screens (the v1 prototype's `student-session-*`
+pages, kept as reference); the "loading CAS" state belongs to the web shell designed at M5.
 
 ## Notifications produced
 
-- `verification.cas_ready` — readiness, load duration. Consumers: platform, tutoring-session.
+- `verification.cas_ready` — readiness, load duration. Consumers: the M5 web shell, diagnosis.
 - `verification.trace_ready` — step count, FirstFailure index or `none`, verdicts and methods. Consumer:
-  tutoring-session.
-- `verification.unsupported_construct` — construct class. Consumer: tutoring-session.
+  diagnosis (homework mode).
+- `verification.unsupported_construct` — construct class. Consumer: diagnosis (homework mode).
 
 ## Errors produced
 
@@ -142,3 +147,4 @@ the weakest experience; guessing at partial support would produce wrong verdicts
 | 2026-09-08 | Drafted (Phase 3b). |
 | 2026-09-08 | Phase 3b consistency fixes (event consumers aligned with telemetry's four event kinds). |
 | 2026-09-08 | Open questions ratified by owner (all defaults; see docs/plans/phase3b-open-questions.md). |
+| 2026-09-09 | v2 re-cut: moved to the M5 desktop web homework mode (D34); consumer renamed to diagnosis; offline ProbeItem checking handed to the Python pipeline (D41). Design text otherwise preserved. |

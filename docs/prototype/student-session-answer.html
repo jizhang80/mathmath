@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Answer and diagnosis</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="answered:Answered (with diagnosis),resolved:Resolved (all steps followed),nosteps:No steps entered,answeronly:Answer-only (unsupported),noanswer:No answer possible,writefailed:Record write failed,abandoned:Abandoned"><b>route</b> <span class="route">/student/session/answer</span> · <b>domain</b> tutoring-session W7 · verification W3 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html" aria-current="page">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <a class="btn btn-quiet" href="student-history.html">History</a>
+  </div></header>
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Checker ready</span></div>
+
+  <main class="shell-main stack">
+    <section data-variant="writefailed">
+      <div class="banner banner-warn"><div class="banner-body"><div class="banner-title">This problem could not be saved to your history</div>Everything below is still yours to read; only the record on this device failed. <span class="code">SESSION_RECORD_WRITE_FAILED</span></div><a class="btn" href="settings-storage.html#quota">Check storage</a></div>
+    </section>
+
+    <h1>Answer and what we found</h1>
+    <div class="card card-quiet row row-between"><span class="math">log<sub>2</sub>(<i>x</i>) + log<sub>2</sub>(<i>x</i> − 2) = 3</span><span class="chip chip-outline">Logarithmic equations · MHF4U</span></div>
+
+    <!-- ANSWER block -->
+    <section data-variant="answered resolved nosteps writefailed abandoned answeronly">
+      <div class="card stack">
+        <div class="section-label">Answer</div>
+        <section data-variant="answered resolved nosteps writefailed abandoned"><p class="math" style="font-size:1.4rem"><i>x</i> = 4</p>
+        <p class="muted">−2 also solves the quadratic but is not a solution: log<sub>2</sub>(<i>x</i> − 2) needs <i>x</i> &gt; 2.</p></section>
+        <section data-variant="answeronly"><p class="math" style="font-size:1.4rem">2<i>x</i> ln <i>x</i> + <i>x</i></p></section>
+      </div>
+    </section>
+    <section data-variant="noanswer">
+      <div class="card stack">
+        <div class="section-label">Answer</div>
+        <div class="banner banner-error"><div class="banner-body"><div class="banner-title">No answer can be worked out right now</div>The checker that also solves the problem is not running. Reload to restart it; your problem and steps are kept. <span class="code">VERIFY_CAS_UNAVAILABLE</span></div><button class="btn">Reload</button></div>
+      </div>
+      <div class="proto-note">GAP G2 (owner call): I3 says answers are never withheld, but with the CAS worker down there is nothing to withhold. Drawn as an honest terminal state with retry. The same state covers <code>VERIFY_UNSUPPORTED</code> raised by the solver (verification W3 step 3, GAP G5) — wording then: "The checker cannot solve this kind of problem yet."</div>
+    </section>
+
+    <!-- DIAGNOSIS block -->
+    <section data-variant="answered writefailed">
+      <div class="card stack">
+        <div class="section-label">What we found</div>
+        <ol class="steps">
+          <li class="step step-ok"><span class="step-index">1</span><span class="math">log<sub>2</sub>(<i>x</i>(<i>x</i> − 2)) = 3</span><span class="step-verdict">follows</span></li>
+          <li class="step step-bad"><span class="step-index">2</span><span class="math"><i>x</i>(<i>x</i> − 2) = 9</span><span class="step-verdict">does not follow</span><span class="step-note">should be 2<sup>3</sup> = 8</span></li>
+        </ol>
+        <p class="prose">The slip was at step 2: <strong>the exponent–log relationship got mixed up</strong>. A quick check showed that <strong>exponential functions</strong> (MCR3U) are the piece underneath, and you went through the one idea needed. Next time a log equation turns into a power, ask which number is the base.</p>
+        <div class="row"><span class="node-status remediated">Exponential functions — looked at today</span></div>
+      </div>
+      <div class="proto-note">W7: answer and diagnosis together, never bare (D5 / I3). Diagnosis = FirstFailure + ErrorType + hypothesis fate (confirmed → remediated). Variants of the fate line: <em>refuted</em> "we checked exponential functions — not the issue"; <em>unconfirmed</em> "we had a guess about exponential functions but did not check it"; <em>capped</em> "an earlier gap in linear relations was noted for later".</div>
+    </section>
+
+    <section data-variant="resolved">
+      <div class="card stack">
+        <div class="section-label">What we found</div>
+        <p class="prose">Every step followed and you reached the answer on your own. Nothing to fix here.</p>
+      </div>
+      <div class="proto-note">Outcome <em>resolved</em>. The diagnosis is "nothing to diagnose" — still stated, so the answer is never bare.</div>
+    </section>
+
+    <section data-variant="nosteps">
+      <div class="card stack">
+        <div class="section-label">What we found</div>
+        <p class="prose">You asked for the answer before writing any steps, so nothing could be checked. If you try the first step or two next time, we can tell you where it goes wrong — that is the useful part.</p>
+      </div>
+      <div class="proto-note">GAP G1 (owner call): the docs define no outcome for "answer requested with zero steps". Drawn as <em>answered</em> with the diagnosis "nothing checked". Recorded in SessionRecord with node only; no error type, no hypothesis.</div>
+    </section>
+
+    <section data-variant="answeronly">
+      <div class="card stack">
+        <div class="section-label">What we found</div>
+        <p class="prose">This problem uses notation the checker does not handle yet, so the steps were not checked and there is no diagnosis for it.</p>
+      </div>
+      <div class="proto-note">verify-Q4 answer-only mode; Attempt closes as <em>answered</em>, no diagnosis, node recorded.</div>
+    </section>
+
+    <section data-variant="abandoned">
+      <div class="card stack">
+        <div class="section-label">What we found</div>
+        <p class="prose">You left this problem at step 2 after a hint. The slip there was the exponent–log relationship; the guess about exponential functions was not checked.</p>
+      </div>
+      <div class="proto-note">Outcome <em>abandoned</em> (e.g. a new problem started, or history opened). GAP G9: the doc says the answer is "shown at close" for abandoned attempts — when? Proposed: the abandoned attempt appears in History with this page reachable from there; nothing pops up.</div>
+    </section>
+
+    <div class="actions">
+      <a class="btn btn-primary btn-lg" href="student-session.html#tier0">Start another problem</a>
+      <a class="btn" href="student-node.html">Read about this topic</a>
+      <span class="spacer"></span>
+      <a class="btn btn-quiet" href="student-history.html">History</a>
+    </div>
+    <p class="hint">Saved on this device only. <a href="settings-data.html">What this device shares</a> — nothing unless you turned sharing on, and never your equations.</p>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

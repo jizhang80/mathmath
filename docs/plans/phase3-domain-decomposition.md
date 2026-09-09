@@ -1,6 +1,9 @@
 # Phase 3a — Domain decomposition (proposal for owner ratification)
 
-Status: RATIFIED by owner 2026-09-08 (ten domains, as proposed).
+Status: RATIFIED by owner 2026-09-08 (ten domains, as proposed). **Re-cut 2026-09-09 for v2** — see
+`docs/plans/phase3b-open-questions-v2.md` §0 for the v2 domain list (twelve minus one: `map`,
+`expedition` added; `tutoring-session` → `diagnosis`; `parent-view` removed per D38). The table below is
+the v1 record.
 Source: `PROJECT-BRIEF-v1.md` §4.1 layers ①–④, §4.2 tiers, §5 data model, §7 interaction contract, §8 milestones.
 
 ## Decomposition rule

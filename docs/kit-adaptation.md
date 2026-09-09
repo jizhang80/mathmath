@@ -8,42 +8,38 @@
 > Source kit: `/Users/jimmyz/Dev/bitebyte` — `CLAUDE.md`, `bootstrap.md` (v0.4),
 > `claude-tech-stack-preferences.md`, `.claude/agents/*` (11), `.claude/commands/*` (5),
 > `docs/carry-forward.md`, `docs/lessons.md`, `docs/kit-verification-rebalance.md`.
+>
+> **2026-09-09 — v2 pivot.** The product moved to a three-door map form on a native iOS app
+> (`PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5`). §0 and §1 below are updated to the v2 identity and
+> point at `CLAUDE.md` for invariants; §4–§7 still describe the *web* port done on 2026-09-08 and are
+> re-anchored at Phase 5 (stack lock) together with every agent definition and command — see §9.
 
 ---
 
 ## 0. Canonical project identity (paste verbatim into every agent's "Project context")
 
-> **mathmath** (working name; placeholder `mathpath` in the brief) — an Ontario grade 9–12 math
-> learning system for students and parents. A student brings a current homework problem; the system
-> verifies each step with a CAS, locates the first wrong step, classifies the error against a fixed
-> per-node error catalogue, walks a cross-grade **concept dependency graph** to the deepest unmastered
-> prerequisite, confirms that hypothesis with a ~60-second probe, remediates the minimum piece, and
-> returns to the original problem. Parents get a read-only view of where the student is stuck and why.
-> It is a **static-hosted PWA** (no server-side application logic in MVP; the only write path is an
-> opt-in anonymous telemetry endpoint). Four logical layers: ① curriculum spine (Ministry expectation
-> codes) → ② concept graph (DAG, the core asset) → ③ learning objects (batch-generated explanations,
-> error catalogues, hint trees, probe items) → ④ interaction (the §7 flow) + parent view. Three runtime
-> tiers: Tier 0 deterministic (MathLive + Pyodide/SymPy + graph queries + pre-generated content),
-> Tier 1 local model (Chrome Prompt API, WebLLM fallback), Tier 2 cloud (queued, not built).
-> Ground truth: `PROJECT-BRIEF-v1.md` (decisions D1–D19, all locked).
+> **mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math
+> learning system for students. One cross-grade **concept dependency graph** is rendered as a **map**
+> organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe
+> items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second
+> probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map;
+> landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 /
+> SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0,
+> layout, scheduler and state; Android is a later port. **No application server**: static hosting of
+> versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no
+> identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ②
+> concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction
+> (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated
+> content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The
+> desktop web homework mode (structured editor + CAS) is deferred to M5.
+> Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (decisions D1–D42 locked; D30, D37
+> unassigned); consolidated in `docs/idea.md`.
 
 ## 1. Hard invariants (agents enforce these; a spec that contradicts one is BLOCKed)
 
-| # | Invariant | Source |
-|---|---|---|
-| I1 | **Step correctness is decided by CAS, never by a language model.** No code path lets a model output decide whether a step is right. | D6 |
-| I2 | **Tier 0 alone must be a usable product.** Any model call has a confidence threshold and a deterministic fallback (offer candidates / generic hint). The system never guesses a diagnosis. | D7, §4.2 |
-| I3 | **Answers are never withheld; diagnosis always accompanies the answer.** | D5 |
-| I4 | **Remediation is just-in-time: backtrack ≤ 2 levels per session**; deeper gaps go to the record/parent view only. | D4 |
-| I5 | **No PII, no accounts.** Telemetry is anonymous, aggregate, opt-in, account-less. No field that identifies a person. | D17, D19 |
-| I6 | **No verbatim Ministry curriculum text is stored or shipped.** Nodes carry expectation codes + the project's own paraphrase, and link out to the official page. | D18, §10 |
-| I7 | **One cross-grade graph; a course is a node subset + depth marker.** Never 11 separate syllabi. | D3 |
-| I8 | **Every accepted graph passes the L0 structural checks** (acyclic; no later→earlier course edge; code↔node coverage both ways; in-degree outliers flagged; starting chain connected). | §5 |
-| I9 | **Zero human content review.** Graph and learning objects are generated + machine-verified; disputed edges ship at low confidence and are settled by probe data. Do not add "owner reviews content" steps. | D10, D12, D13 |
-| I10 | **Input is a structured math editor (MathLive → LaTeX).** No OCR/handwriting paths. | D9 |
-| I11 | **Docs: quantitative claims carry `[SOURCED: …]` or `[ESTIMATE: …]`; no time estimates anywhere.** | §12 |
-| I12 | **Documentation and code in English; conversation with the owner in Chinese.** | §12 |
-| I13 | Priority order: **quality > token conservation > speed.** (This overrides bitebyte's "rapid" second place.) | §12 |
+The authoritative table is `CLAUDE.md` § Hard invariants — **I1–I15** as of 2026-09-09 (I1, I4, I5, I7, I8,
+I10 amended for v2; I14 `Core` separation and I15 sourced landmarks added). This file no longer duplicates
+it; agents read `CLAUDE.md`. Gate (f) in §6 is restated against the v2 table at Phase 5.
 
 ## 2. Model policy (owner directive, 2026-09-08)
 
@@ -62,8 +58,10 @@
 
 ```
 /
-├── CLAUDE.md                        # Phase 1 — this session
-├── PROJECT-BRIEF-v1.md              # owner's locked brief (Phase 2 input; ratified)
+├── CLAUDE.md                        # Phase 1 — rewritten 2026-09-09 for v2
+├── PROJECT-BRIEF-v2.md + AMENDMENT-v2.1…v2.5.md   # owner's locked brief and deltas (ground truth)
+├── DEMO-BRIEF.md                    # the map form-test Demo (D26), as amended
+├── PROJECT-BRIEF-v1.md              # superseded; history only
 ├── bootstrap.md                     # playbook v0.5 (v0.4 + carry-forward controls)
 ├── claude-tech-stack-preferences.md # copied unchanged
 ├── docs/
@@ -85,8 +83,9 @@
     └── settings.json                # project permissions (minimal)
 ```
 
-`package.json`, `pnpm-workspace.yaml`, `.nvmrc`, `.prettierrc`, eslint, vitest, playwright, CI
-workflows, commitlint, husky/pre-commit — **all Phase 5.** Do not create them now.
+Xcode project / Swift package manifests, `pyproject.toml`, linters, CI workflows, pre-commit hooks —
+**all Phase 5.** Do not create them now. (The 2026-09-08 text named the web equivalents; superseded by
+D31–D34, D41.)
 
 ## 4. Strip list — bitebyte identity that must NOT appear in any mathmath file
 
@@ -184,21 +183,23 @@ prompts versioned, outputs schema-validated, multi-run intersection for graph ed
 |---|---|
 | 0 Scaffold | ✅ this session (`git init`; first commit pending owner) |
 | 1 CLAUDE.md | ✅ this session |
-| 2 Idea capture | ✅ satisfied by `PROJECT-BRIEF-v1.md`; `docs/idea.md` is the structured extract |
-| 3 Domain decomposition | **next** — proposed domain list for owner ratification: `curriculum-spine`, `concept-graph`, `learning-objects`, `content-generation` (offline pipeline, D12/L2), `interaction` (the §7 flow: editor, CAS verification, localisation, hints, probes, remediation, session record), `runtime-tiers` (Tier-1 adapters + fallback), `parent-view`, `telemetry` |
-| 4 UI/prototype | after 3 |
-| 5 Tech stack lock | after 4 (web-validate every pin) |
-| 6 Contracts | after 5 (planned set in §7) |
-| 7 EPIC plan | milestones M4′, M1, M2, M3, M4, M5, M6 map to EPIC groups |
+| 2 Idea capture | ✅ `docs/idea.md` re-cut 2026-09-09 as the consolidated extract of `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` |
+| 3 Domain decomposition | ✅ v1 ten domains ratified 2026-09-08; **v2 re-cut 2026-09-09**: `map` and `expedition` added, `tutoring-session` → `diagnosis`, `parent-view` removed (D38), `platform` / `telemetry` / `runtime-tiers` rewritten for native iOS, `verification` moved to M5, the rest edited. **v2 open questions ratified by owner 2026-09-09 (all defaults)** — `docs/plans/phase3b-open-questions-v2.md` |
+| 4 UI/prototype | v1 web prototype (25 pages) is **superseded** for student and parent surfaces; per v2.2 §D the **native Demo is the Phase 4 artifact for Doors B and C** (built as one EPIC after Phase 5). `student-session-*` pages remain reference for the M5 homework mode; `owner-*` reports remain valid; `parent*` pages void |
+| 5 Tech stack lock | **next** — D32/D33 (Swift 6, SwiftUI, `Core` package, SwiftMath, Foundation Models), D41 (Python pipeline), D29 (simulator gate + owner device verification), telemetry endpoint with no IP retention (v2.5 §2); Xcode/iOS SDK versions validated on this machine; then **re-anchor every agent definition and command** (strip pnpm/PWA/MathLive/Pyodide except where scoped to M5 — v2.4 §2) |
+| 6 Contracts | after 5 (planned set in §7, extended by `map-data`, `student-state`, `expedition-scheduling`, `landmarks`; `Core` data shapes from the Demo feed them) |
+| 7 EPIC plan | Demo (first), M4′, M1, M2, M3, M4, M5 map to EPIC groups (v2.3 §B renumbering) |
 
 ## 10. Deferred at seed (→ `docs/DEFERRED.md`)
 
-- D-1 UI i18n (English-only MVP). Trigger: a French-language user request or M6 scope review.
-- D-2 Tier 2 cloud inference. Trigger: M4′ fails the 80 % bar (D15) or post-release demand.
-- D-3 Chromebook / mobile / Safari / Firefox / OCR (brief §9). Trigger: post-release.
+- D-1 UI i18n (English-only MVP). Trigger: a French-language user request or M5 scope review.
+- D-2 Tier 2 cloud inference. Trigger: re-rationalised by v2.1 A4 — see `docs/DEFERRED.md`.
+- D-3 … D-7 re-cut 2026-09-09 for v2 (Android, desktop homework mode, Firefox/Prompt API, parent view,
+  Game Center, OCR) — see `docs/DEFERRED.md`.
 
 ## Change log
 
 | Date | Change |
 |---|---|
 | 2026-09-08 | Initial adaptation spec; kit ported per §3–§8. |
+| 2026-09-09 | v2 pivot: §0 identity rewritten (three doors, native iOS, no parent view, Python pipeline); §1 now points at `CLAUDE.md` I1–I15; §3 layout note; §9 status re-cut (Phase 3 v2 done, Phase 4 superseded by the native Demo, Phase 5 next incl. agent re-anchoring); §10 deferrals re-cut. §4–§7 unchanged pending Phase 5. |

@@ -1,153 +1,146 @@
 # Domain — platform
 
+Prefix: `PLATFORM`. Ground truth: `PROJECT-BRIEF-v2.md` + amendments; invariants I1–I15 in `CLAUDE.md`.
+
 ## Purpose
 
-The PWA shell every other domain runs inside: environment detection and the unsupported page, asset
-loading and versioning, IndexedDB persistence, service-worker caching, offline behaviour. It owns the
-**platform↔all** seam — no other domain touches the network, the cache or IndexedDB directly. Milestone:
-**M3** (decomposition row 10). Static hosting, no server-side application logic (brief §4.3); the sole
-write path belongs to **telemetry**.
+The native app shell every other domain runs inside: content-bundle loading and versioning (static
+hosting plus a bundled offline snapshot, D36), student-state persistence as JSON and its iCloud sync
+(D32, D36), capability facts for **runtime-tiers**, offline behaviour. It owns the **platform↔all**
+seam — no other domain touches the network, the file system or iCloud directly; the sole write path off
+the device belongs to **telemetry**. There is no application server (D36) and no environment gate page:
+the App Store enforces the iOS 18+ floor (D34). Milestones **Demo** (bundled data only, no network),
+**M3** (hosted bundles, sync, telemetry endpoint).
 
 ## Actors and roles
 
-| Actor | What they can do here | What they cannot |
+| Actor | Can do here | Cannot |
 |---|---|---|
-| Student, Parent | Load the app, see the environment result, retry an update, work offline | Choose bundle versions; bypass an integrity failure |
-| Owner | Publish a bundle set, read the M4′ load measurement, test the unsupported page | Push an update to a running client (no server logic) |
-| System | Run `EnvironmentCheck`, fetch and cache assets, migrate the `Store`, swap versions atomically | Send anything off-device (only **telemetry** may, under consent) |
-
-**runtime-tiers** owns the model adapters; this domain only reports WebGPU and free-space facts to it. The
-**Local model** and **Generation model** have no role of their own here.
+| Student | Launch, work offline, see installed content versions, trigger a content refresh, see whether iCloud sync is active | Choose bundle versions; bypass an integrity failure |
+| Owner | Publish a bundle set to the static host; ship the offline snapshot in a build; verify on a physical device at the wrap-gate (D29) | Push an update to a running client (no server logic) |
+| System | Fetch and verify bundles; swap atomically; read/write `StudentState`; sync; migrate; report capability facts | Send anything off-device (only **telemetry** may); compute state (I14) |
+| Local model (Tier 1), Generation model | No role here | Anything |
 
 ## Core entities
 
-**AssetManifest** — the bundles a build requires and the `AssetVersion` of each: Spine
-(**curriculum-spine**), Graph (**concept-graph**), LearningObject (**learning-objects**), and the
-Pyodide + SymPy runtime payload. It defines what "installed" means; a partial manifest is never activated.
+**ContentBundle** — the set of versioned JSON files a build requires, one **AssetVersion** each: Spine
+(**curriculum-spine**), Graph with precomputed coordinates (**concept-graph**, D33), Regions / Trails /
+Landmarks (**map**, **learning-objects**), LearningObjects (**learning-objects**). A **manifest** names
+them; a partial manifest is never activated. The app ships an **offline snapshot** of one complete set
+(D36) so first launch needs no network; hosted bundles replace it per W2.
 
 **AssetVersion** — an immutable version id plus a content hash, checked on fetch so a truncated or
-substituted bundle fails closed. Versions travel into `TelemetryEvent` (**telemetry**): they describe the
-build, not the device, which is why they are permitted there.
+substituted file fails closed. Versions travel into telemetry events: they describe the build, not the
+device (I5).
 
-**EnvironmentCheck** — the D8 baseline evaluated on first load, recording per criterion *pass*, *fail* or
-*undetectable*. The third state is the honest part. Browser brand and major version (UA Client Hints) and
-desktop-vs-mobile (UA-CH `mobile`) are reliable, and §9 excludes mobile anyway; WebGPU is reliable via a
-`navigator.gpu` adapter request and is the only hard Tier 1 gate. The other three are not:
-`navigator.deviceMemory` is quantised and capped at 8, so **≥ 16 GB RAM cannot be confirmed**;
-`navigator.storage.estimate()` gives an approximate origin quota, not disk free space, so **≥ 20 GB free is
-approximate**; **Chromebook is undetectable** in-browser. Instrument and exclusions per C3: RAM and
-Chromebook are excluded from the verdict, and a report naming no undetectable criterion is wrong, not
-clean. The storage figure only warns near Chrome's 10 GB free-space threshold, below which the on-device
-model is evicted [SOURCED: brief §4.3, developer.chrome.com/docs/ai/prompt-api]. Results stay on the
-device: they are the fingerprint material I5 forbids sending.
+**StatePersistence** — `StudentState` (**expedition**, a `Codable` struct in `Core`) written as one JSON
+document in Application Support, with a `schema_version`; this domain owns reading, writing, migration and
+sync, never the shape (I14). Sync via iCloud — an iCloud Drive document container or a CloudKit asset,
+chosen at M3 (Q1) — **only when the device is signed in to iCloud; otherwise silent local storage**
+(v2.5 §5). Apple-managed identity; no account of ours (D36).
 
-**Store** — the IndexedDB layout: *assets* (payloads keyed by `AssetVersion`), *session records*
-(`SessionRecord`, **tutoring-session**, read by **parent-view**), *consent* (`ConsentState`,
-**telemetry**), *tier capability cache* (`TierCapability`, **runtime-tiers**). Each carries a schema
-version; this domain owns migration, not the entity shapes. Footprint: app assets < 100 MB [ESTIMATE:
-brief §4.3] within ≈ 6–7 GB once model payloads count [SOURCED: brief §4.3].
+**CapabilityFacts** — OS version, whether the Foundation Models system model reports *available* (Apple
+Intelligence enabled on eligible hardware — D34), and nothing else; handed to **runtime-tiers**, kept on
+the device (I5).
 
-**ServiceWorker state** — installed / waiting / active, plus the cache strategy: shell and bundles are
-cache-first, being immutable and keyed by `AssetVersion`; nothing is network-first, and a new worker never
-takes over a running session.
+**Connectivity** — online/offline, observed for W2 and for telemetry buffering; never blocks anything.
 
 ## Workflows
 
-### W1 — First load
-**Pre:** no `EnvironmentCheck` result for this app version. **Steps:** 1. Run every criterion. 2. If WebGPU
-fails or storage is unavailable, render the unsupported page listing the §9 queued items and stop.
-3. Otherwise proceed, warning on any *fail* that does not break Tier 0 (Q1). 4. Persist the result locally.
-Tier 0; no model is consulted about the environment. **Post:** `platform.env_checked` emitted.
+### W1 — Launch
+**Pre:** app start. **Steps:** 1. Load the active `ContentBundle` (installed hosted set, else the offline
+snapshot); verify hashes; a failure falls back to the snapshot (`PLATFORM_BUNDLE_INTEGRITY_FAILED`).
+2. Read `StudentState` (W3); none → a fresh default. 3. Collect `CapabilityFacts`. 4. Hand control to
+**map** W1. Tier 0. **Post:** `platform.launched` emitted.
 
-### W2 — Asset install or update
-**Pre:** an `AssetManifest` differs from the installed one. **Steps:** 1. Fetch each missing bundle and
-verify its hash; on mismatch abort the update, keeping the previous manifest active. 2. Write new bundles
-alongside the old, swap atomically at next launch (Q2), delete the superseded ones. Tier 0. **Post:**
-exactly one manifest active; `platform.assets_updated` emitted.
+### W2 — Content refresh
+**Pre:** online; the hosted manifest differs from the installed one. **Steps:** 1. Fetch each changed
+bundle in the background; verify its hash; on mismatch discard and keep the installed set. 2. Write the
+new set alongside the old; swap atomically at next launch (Q2); delete the superseded set. Tier 0.
+**Post:** exactly one set active; `platform.content_updated` emitted at the launch that activates it.
 
-### W3 — Pyodide + SymPy load
-**Pre:** the app proceeded past W1. **Steps:** 1. Fetch the runtime payload per the manifest, or read it
-from cache. 2. Hand it to **verification**, which owns readiness and declares when CAS checking is
-available; this domain owns fetching and caching only. 3. Record the load measurement for the M4′
-first-load experience (brief §8 M4′, §11) — payload size unquantified [ESTIMATE: measured at M4′]. Tier 0.
-**Post:** payload cached; `platform.runtime_ready` emitted.
+### W3 — Read, write and migrate student state
+**Pre:** a launch (read) or a domain transition (write). **Steps:** 1. Read the local JSON; if
+`schema_version` is older, run migrations in order and keep the pre-migration file until the migrated one
+is written (`PLATFORM_STATE_UNREADABLE` if migration fails — the old file is kept, a fresh state is used,
+nothing deleted). 2. Writes are whole-document, atomic (write-then-rename). Tier 0. **Post:**
+`platform.state_migrated` on a migration; `platform.state_written` otherwise.
 
-### W4 — Store migration across bundle versions
-**Pre:** a store's schema version is older than the build expects. **Steps:** 1. Open at the new version.
-2. Run migrations in order, one transaction per store. 3. On failure roll back, leaving old data readable;
-unmigratable records are kept, not deleted, and surface as `PARENT_RECORD_UNREADABLE` (**parent-view**).
-Tier 0. **Post:** `platform.store_migrated` emitted.
+### W4 — Sync student state
+**Pre:** signed in to iCloud; a local write happened or a remote change arrived. **Steps:** 1. Upload the
+document / download the remote one per the mechanism chosen in Q1. 2. On conflict merge per Q3 in `Core`
+(a pure function over two `StudentState`s), write the merged result, sync again. 3. Signed out, or iCloud
+unavailable → do nothing, silently (v2.5 §5). **Post:** `platform.sync_completed` or
+`platform.sync_conflict_merged`; a failure is logged locally and retried, never surfaced as an error.
 
 ### W5 — Offline operation
-**Pre:** the app is installed and the network is unavailable. **Steps:** 1. Serve shell and bundles from
-cache. 2. Run the whole Tier 0 flow — nothing in the §7 contract needs the network. 3. Buffer telemetry
-locally. **Post:** the session completes offline; `platform.offline_changed` emitted on transition.
+**Pre:** no connectivity. **Steps:** run everything from the installed bundle and local state — Doors B, C
+and A need no network; telemetry buffers (its W3). **Post:** `platform.connectivity_changed` on transition.
 
 ## UI surfaces
 
-- `/unsupported` — the D8 failure page listing the §9 queued items (W1).
-- `/settings/storage` — installed versions, storage use, update state (W2). Confirmed in Phase 4.
+Native: **Settings › Storage** — installed content versions, refresh action, iCloud sync status (W2, W4).
+No unsupported page: the OS floor is enforced at install (D34).
 
 ## Notifications produced
 
-- `platform.env_checked` — per-criterion verdict including *undetectable*. Consumers: **runtime-tiers**,
-  **tutoring-session**.
-- `platform.assets_updated` — new manifest versions. Consumers: **curriculum-spine**, **concept-graph**,
-  **learning-objects**.
-- `platform.runtime_ready` — the Pyodide payload is cached. Consumer: **verification**.
-- `platform.store_migrated` — store and new schema version. Consumers: all store users.
-- `platform.offline_changed` / `platform.quota_low` — connectivity; storage near eviction. Consumers:
-  **telemetry**, **tutoring-session**, **runtime-tiers**.
+- `platform.launched` — `{ app_version, bundle_versions }`. Consumers: **map**, **telemetry** (session start).
+- `platform.content_updated` — new manifest versions. Consumers: **curriculum-spine**, **concept-graph**,
+  **learning-objects**, **map**, **expedition** (id revalidation, its W7).
+- `platform.state_migrated` — `{ from, to }`; `platform.state_written`. Consumer: **expedition**.
+- `platform.sync_completed` / `platform.sync_conflict_merged`. Consumer: **expedition**.
+- `platform.capability_facts` — `{ os_version, foundation_models_available }`. Consumer: **runtime-tiers**.
+- `platform.connectivity_changed`. Consumer: **telemetry**.
 
 ## Errors produced
 
-- `PLATFORM_ENV_UNSUPPORTED` — a criterion breaking Tier 1 or the store failed. User sees `/unsupported`
-  with the §9 list. Not recoverable in-app.
-- `PLATFORM_ASSET_FETCH_FAILED` — a bundle could not be fetched. User sees "could not update; still using
-  the installed version". Recoverable; the previous manifest stays active.
-- `PLATFORM_ASSET_INTEGRITY_FAILED` — a content hash mismatched; the partial download is discarded, same
-  user-visible outcome. Recoverable, never tolerated.
-- `PLATFORM_QUOTA_EXCEEDED` — a write failed for space. User sees a message naming what to free.
-  Recoverable.
-- `PLATFORM_RUNTIME_LOAD_FAILED` — the Pyodide payload failed to load. User sees that step checking is
-  unavailable; **verification** decides what the session may still do. Recoverable by retry.
+| Code | When | User sees | Recoverable |
+|---|---|---|---|
+| `PLATFORM_BUNDLE_FETCH_FAILED` | A hosted bundle could not be fetched | "Could not refresh content; still using the installed version" | Yes |
+| `PLATFORM_BUNDLE_INTEGRITY_FAILED` | Hash mismatch or a bundle failing load-time validation (`MAP_LAYOUT_MISSING`, I8) | Same message; the snapshot or installed set stays | Yes, never tolerated |
+| `PLATFORM_STATE_WRITE_FAILED` | The JSON write failed | Banner from the calling domain | Yes — retried |
+| `PLATFORM_STATE_UNREADABLE` | Migration failed | "Earlier progress could not be read; it has been kept" | Yes — file retained |
+| `PLATFORM_SYNC_UNAVAILABLE` | Not signed in, or iCloud errored | Nothing (silent); status in Settings | Yes |
 
 ## Invariants enforced here
 
-- **I2** — W1 blocks only on conditions that break Tier 0 or the store; a WebGPU failure degrades the app
-  to Tier 0 rather than ending it, and a test asserts the §7 flow completes with WebGPU and the network
-  both absent.
-- **I5** — `EnvironmentCheck` output is typed device-local with no path to `AggregateBatch`
-  (**telemetry**); only `AssetVersion` and app version cross that boundary, enforced by a test on the
-  serialised batch.
-- **I11** — the environment report states instrument per criterion, lists RAM and Chromebook as excluded
-  (C3), and asserts no untagged number.
+- **I2** — nothing here needs a model or the network; a test runs the three doors with connectivity and
+  iCloud both absent.
+- **I5** — `CapabilityFacts` and file paths are typed device-local with no path into a telemetry batch;
+  only `AssetVersion` and app version cross that boundary, asserted on the serialised batch. Sync carries
+  the `StudentState` document only — which has no identifying field — under Apple's identity, not ours.
+- **I14** — this domain reads and writes `StudentState` as an opaque `Codable` value from `Core` and merges
+  via a `Core` function; it defines no state shape and no transition.
+- **D36** — the only outbound requests are GETs to the static host, iCloud, and telemetry's single POST; a
+  network test asserts no other host.
+
+Seams: platform ↔ all (bundles, persistence); platform → runtime-tiers (capability facts); platform →
+telemetry (connectivity, versions).
 
 ## Open questions
 
-**Q1 — Hard-block or warn on a failed check?** Default: warn and proceed, except where WebGPU or storage
-would break Tier 1 or the store — Tier 0 still works (I2).
-Trade-off: warning maximises reach, but a machine quietly missing D8 gives slow first impressions the owner
-cannot tell from defects.
-**Ratified 2026-09-08:** default accepted.
+**Q1 — iCloud Drive container or CloudKit asset for the state document?** **Default:** decided at M3 per
+v2.4 §1; the Demo persists locally only. **Trade-off:** a document container is one file with
+OS-managed conflicts and no schema; CloudKit gives explicit records and conflict hooks at more code.
+**Ratified 2026-09-09:** default accepted.
 
-**Q2 — Asset update policy.** Default: background download, atomic swap at next launch.
-Trade-off: the graph never changes under a running session, but a student can sit on a stale bundle
-indefinitely if the tab is never closed.
-**Ratified 2026-09-08:** default accepted.
+**Q2 — Content update policy.** **Default:** background fetch, atomic swap at next launch, never mid-run.
+**Trade-off:** the graph never changes under a running expedition; a student who never relaunches sits on
+a stale bundle indefinitely (rare on a phone).
+**Ratified 2026-09-09:** default accepted.
 
-**Q3 — Storage quota handling.** Default: request persistent storage on first successful load; on
-`PLATFORM_QUOTA_EXCEEDED` keep session records and consent, dropping cached bundles first.
-Trade-off: this preserves the parent view and L3 evidence, but a dropped bundle needs a re-download an
-offline user cannot perform.
-**Ratified 2026-09-08:** default accepted.
+**Q3 — State merge on sync conflict.** **Default:** per-node merge in `Core`: the higher mastery wins
+(`cleared` > `blocked` > `fog`), `correct_count` takes the max, `last_probe`/`next_due` take the latest;
+logs are unioned by entry id; the marker takes the latest write. **Trade-off:** never loses earned
+progress; can resurrect a `blocked` mark the other device already cleared, corrected by the next probe.
+**Ratified 2026-09-09:** default accepted.
 
-**Q4 — Self-host Pyodide or fetch from a CDN?** Default: self-host, for offline.
-Trade-off: self-hosting keeps the offline promise and removes a third party from the load path, at the cost
-of bundle size on the static host and of shared CDN cache hits.
-**Ratified 2026-09-08:** default accepted.
+**Q4 — What happens to state if the student deletes the app?** **Default:** the local file goes with it;
+the iCloud copy, if any, restores on reinstall; no export feature in MVP. **Trade-off:** matches platform
+convention; an unsynced student loses progress, which is the A5 trade the owner accepted with D36.
+**Ratified 2026-09-09:** default accepted.
 
 ## Change log
 
-| 2026-09-08 | Drafted (Phase 3b). |
-| 2026-09-08 | Open questions ratified by owner (all defaults; see docs/plans/phase3b-open-questions.md). |
+| 2026-09-08 | Drafted (Phase 3b, PWA). Open questions ratified (see docs/plans/phase3b-open-questions.md). |
+| 2026-09-09 | Rewritten for native iOS (D31–D36): no service worker, no IndexedDB, no environment gate, no Pyodide; JSON state + iCloud sync; offline snapshot. v1 Q1–Q4 retired with the PWA; new Q1–Q4 pending owner ratification. |

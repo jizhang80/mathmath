@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Gap detail</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="default:Default (exponent laws),deeper:Deeper gap (recorded only),notingraph:Node not in graph"><b>route</b> <span class="route">/parent/gap/:nodeId</span> · <b>domain</b> parent-view W3 · curriculum-spine UI · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html" aria-current="page">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <a class="btn btn-quiet" href="parent-trend.html">See the trend</a>
+  </div></header>
+
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Checker ready</span></div>
+
+  <main class="shell-main stack">
+    <p class="muted"><a href="parent.html">&larr; Back to parent view</a></p>
+    <p class="muted">This view is read-only, and the student can open this same page (parent-view Q2). There is no PIN on this page (parent-view Q1).</p>
+
+    <section data-variant="default">
+      <h1>Exponent laws</h1>
+      <span class="node-status remediated">Worked through on 2026-09-05 after a short check did not go well — not re-checked since</span>
+
+      <div class="card stack" style="margin-top: var(--s-5);">
+        <div class="section-label">What this topic is</div>
+        <p class="prose">Apply exponent laws to simplify numeric and algebraic expressions.</p>
+        <p><span class="chip chip-outline">MTH1W B3.4</span> <a href="https://www.dcp.edu.gov.on.ca/en/" target="_blank" rel="noopener">Official expectation (Ontario)</a></p>
+        <div class="proto-note">I6: the code plus the project's own paraphrase are shown; no Ministry text is stored or shipped. MTH1W is a 2021 course, so the link goes to the dcp.edu.gov.on.ca page.</div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">What this feeds</div>
+        <p class="prose">Exponent laws <strong>is needed for</strong> exponential functions (MCR3U), and through them for logarithms in MHF4U — the topic being worked on now.</p>
+        <div class="proto-note">parent-view W3 step 2 (proposal): wording rule is "is needed for" when the edge's Confidence is ≥ 0.7, else "may affect" — the domain doc names Confidence but does not fix a threshold or the exact two phrases; this page proposes 0.7 as the cut and these two sentences for the owner to ratify. Only the direct outgoing edge's confidence is used here; the doc does not specify how confidence should read when a course is reached through more than one hop, so multi-hop wording is left informal (flagged as a GAP).</div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">What we saw</div>
+        <p class="prose">This came up on 2026-09-05 while solving an equation with two logarithms: a step mixed up how an exponent and a logarithm relate. A short check on exponential functions did not go well, and the next check back — on exponent laws — did not either. The one idea needed was worked through, and the session returned to the original problem.</p>
+        <p class="hint">Evidence is described in words; the student's own working is not shown here (parent-view actor table: parent cannot see the student's raw input).</p>
+      </div>
+
+      <div class="card card-quiet stack">
+        <div class="section-label">Suggested next step</div>
+        <p class="prose">Practise exponent laws with them this week — it was worked through once and is needed for exponential functions in MCR3U and, through them, for logarithms in MHF4U.</p>
+      </div>
+    </section>
+
+    <section data-variant="deeper">
+      <h1>Linear relations and equations</h1>
+      <span class="node-status deeper-gap">Recorded for later — not remediated this time</span>
+
+      <div class="card stack" style="margin-top: var(--s-5);">
+        <div class="section-label">What happened</div>
+        <p class="prose">While tracing the cause of the trouble further back, this topic came up as a possible earlier gap. Remediation only goes two levels deep in one session, so this one was recorded rather than worked on now, and the session returned to the original problem.</p>
+        <div class="proto-note">I4 / D4: backtrack ≤ 2 levels per session — this is the third level, so it is deeper-gap-recorded with no remediation affordance, per parent-view's own invariant mechanism (a test asserts no remediation control appears for this state).</div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">What this topic is</div>
+        <p class="prose faint">No expectation code is available for this topic in the current data.</p>
+        <div class="proto-note">GAP: the shared mock data gives an expectation code for exponent laws, logarithm topics and factoring, but none for n-lin-rel (linear relations and equations). I6 requires every node to carry a code + paraphrase; this page cannot render the official-link requirement for this node without one.</div>
+      </div>
+    </section>
+
+    <section data-variant="notingraph">
+      <h1>Open gaps</h1>
+      <ul class="menu">
+        <li><a href="parent-gap.html#deeper"><span>Linear relations and equations — recorded for later, not remediated this time</span><span class="chip chip-outline">deeper-gap-recorded</span></a></li>
+      </ul>
+      <div class="proto-note">PARENT_NODE_NOT_IN_GRAPH is internal, not user-visible (parent-view Errors table): a recorded node id absent from the installed graph bundle is silently omitted from this list rather than shown with an error. This variant illustrates that omission for the owner — one gap that would otherwise appear (a record referencing a node no longer in the installed graph bundle) is simply missing from the list above, with no banner and no trace left for the parent.</div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

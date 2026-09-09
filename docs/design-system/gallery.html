@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath design system — gallery</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  .gallery-main { max-width: var(--w-wide); }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--s-3); }
+  .swatch { border: var(--bw) solid var(--line); border-radius: var(--r-2); overflow: hidden; font-size: var(--t-xs); }
+  .swatch div { height: 44px; }
+  .swatch code { display: block; padding: var(--s-1) var(--s-2); background: var(--surface); }
+  .demo { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+  @media (max-width: 800px) { .demo { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="#">mathmath</a>
+    <nav class="nav"><a href="#" aria-current="page">Student</a><a href="#">Parent</a><a href="#">Settings</a></nav>
+    <span class="grow"></span>
+    <button class="btn btn-quiet" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'">Toggle theme</button>
+  </div></header>
+  <div class="status-strip">
+    <span class="status is-ok"><span class="dot"></span>Checker ready</span>
+    <span class="status is-busy"><span class="dot"></span>Loading checker…</span>
+    <span class="status is-bad"><span class="dot"></span>Checker could not start</span>
+    <span class="status"><span class="dot"></span>Offline — everything still works</span>
+    <span class="status"><span class="dot"></span>Update ready at next launch</span>
+  </div>
+  <main class="shell-main gallery-main stack-lg">
+    <section>
+      <h1>Design system gallery</h1>
+      <p class="muted">Phase 4a draft. Every primitive the prototype uses, in light and dark. Toggle the theme top-right.</p>
+    </section>
+
+    <section class="stack">
+      <h2>Colour</h2>
+      <div class="swatches">
+        <div class="swatch"><div style="background:var(--bg)"></div><code>--bg</code></div>
+        <div class="swatch"><div style="background:var(--surface)"></div><code>--surface</code></div>
+        <div class="swatch"><div style="background:var(--surface-2)"></div><code>--surface-2</code></div>
+        <div class="swatch"><div style="background:var(--ink)"></div><code>--ink</code></div>
+        <div class="swatch"><div style="background:var(--ink-2)"></div><code>--ink-2</code></div>
+        <div class="swatch"><div style="background:var(--line)"></div><code>--line</code></div>
+        <div class="swatch"><div style="background:var(--accent)"></div><code>--accent</code></div>
+        <div class="swatch"><div style="background:var(--accent-bg)"></div><code>--accent-bg</code></div>
+        <div class="swatch"><div style="background:var(--ok)"></div><code>--ok</code></div>
+        <div class="swatch"><div style="background:var(--ok-bg)"></div><code>--ok-bg</code></div>
+        <div class="swatch"><div style="background:var(--bad)"></div><code>--bad</code></div>
+        <div class="swatch"><div style="background:var(--bad-bg)"></div><code>--bad-bg</code></div>
+        <div class="swatch"><div style="background:var(--warn)"></div><code>--warn</code></div>
+        <div class="swatch"><div style="background:var(--warn-bg)"></div><code>--warn-bg</code></div>
+        <div class="swatch"><div style="background:var(--info)"></div><code>--info</code></div>
+        <div class="swatch"><div style="background:var(--info-bg)"></div><code>--info-bg</code></div>
+      </div>
+    </section>
+
+    <section class="stack">
+      <h2>Type</h2>
+      <p style="font-size:var(--t-2xl);font-weight:600">Solve the equation — 34/2xl</p>
+      <h1>Heading one — 26/xl</h1>
+      <h2>Heading two — 20/lg</h2>
+      <p>Body — 16/md. The UI voice: second person, present tense, no persona.</p>
+      <p class="prose">Prose — the teacher's note. Kai is stuck on exponential functions, which are needed for logarithms in MHF4U.</p>
+      <p class="math">Math — log<sub>2</sub>(<i>x</i>) + log<sub>2</sub>(<i>x</i> − 2) = 3 &nbsp; <span class="frac"><span>3<i>x</i> + 1</span><span>2</span></span> &nbsp; <i>x</i><sup>2</sup> − 2<i>x</i> − 8 = 0</p>
+      <p><span class="latex">\log_2(x)+\log_2(x-2)=3</span> raw LaTeX, mono.</p>
+      <p class="muted">Muted 14/sm</p> <p class="hint">Hint 12/xs</p>
+    </section>
+
+    <section class="demo">
+      <div class="stack">
+        <h2>Buttons</h2>
+        <div class="row"><button class="btn btn-primary">Check my steps</button><button class="btn">Next hint</button><button class="btn btn-quiet">Skip this</button><button class="btn btn-danger">Clear history</button><button class="btn" disabled>Disabled</button></div>
+        <div class="row"><button class="btn btn-primary btn-lg">Start a problem</button></div>
+        <h2>Chips &amp; depth</h2>
+        <div class="row"><span class="chip chip-ok">follows</span><span class="chip chip-bad">does not follow</span><span class="chip chip-warn">breaks a condition</span><span class="chip">not checked yet</span><span class="chip chip-info">Tier 1</span><span class="chip chip-outline">hypothesis</span></div>
+        <div class="row"><span class="depth"><i class="on"></i><i></i><i></i> level 0</span><span class="depth"><i class="on"></i><i class="on"></i><i></i> level 1</span><span class="depth"><i class="on"></i><i class="on"></i><i class="on"></i> level 2</span><span class="depth"><i class="on"></i><i class="on"></i><i class="cap"></i> capped</span></div>
+        <h2>Node status</h2>
+        <div class="stack-sm">
+          <div class="node-status not-seen">not seen — we have not got here yet</div>
+          <div class="node-status probed-pass">probed, passed — not the issue</div>
+          <div class="node-status probed-fail">probed, failed — a gap</div>
+          <div class="node-status remediated">remediated — gap closed this session</div>
+          <div class="node-status deeper-gap">deeper gap recorded — for later</div>
+        </div>
+      </div>
+      <div class="stack">
+        <h2>Banners</h2>
+        <div class="banner banner-info"><div class="banner-body"><div class="banner-title">Resume your last problem?</div>You were on step 4 of a logarithm problem.</div><button class="btn btn-quiet">Resume</button></div>
+        <div class="banner banner-ok"><div class="banner-body">Saved to this device.</div></div>
+        <div class="banner banner-warn"><div class="banner-body"><div class="banner-title">Could not update</div>Still using the installed version. <span class="code">PLATFORM_ASSET_FETCH_FAILED</span></div></div>
+        <div class="banner banner-error"><div class="banner-body"><div class="banner-title">The checker could not start</div>Reload to try again. <span class="code">VERIFY_CAS_UNAVAILABLE</span></div><button class="btn">Reload</button></div>
+        <h2>Form</h2>
+        <div class="field"><label class="label" for="g1">Describe the problem in words (optional)</label><input class="input" id="g1" placeholder="e.g. solving a log equation"><span class="hint">Used only to suggest a topic; you still pick it.</span></div>
+        <div class="field"><label class="label" for="g2">Course</label><select class="select" id="g2"><option>MHF4U — Advanced Functions</option></select></div>
+        <label class="toggle"><input type="checkbox" checked> Use the on-device model</label>
+      </div>
+    </section>
+
+    <section class="stack">
+      <h2>Math field (MathLive stand-in)</h2>
+      <div class="math-field">
+        <div class="math-field-toolbar"><button>x²</button><button>√</button><button>a⁄b</button><button>log</button><button>( )</button><button>±</button></div>
+        <div class="math-field-input" contenteditable="true" data-placeholder="Type the next step"></div>
+      </div>
+    </section>
+
+    <section class="stack">
+      <h2>Step list (verification trace)</h2>
+      <ol class="steps">
+        <li class="step step-problem"><span class="step-index">Problem</span><span class="math">log<sub>2</sub>(<i>x</i>) + log<sub>2</sub>(<i>x</i> − 2) = 3</span><span></span></li>
+        <li class="step step-ok"><span class="step-index">1</span><span class="math">log<sub>2</sub>(<i>x</i>(<i>x</i> − 2)) = 3</span><span class="step-verdict">follows</span></li>
+        <li class="step step-bad"><span class="step-index">2</span><span class="math"><i>x</i>(<i>x</i> − 2) = 9</span><span class="step-verdict">does not follow</span><span class="step-note">First step that does not follow from the one before.</span></li>
+        <li class="step step-domain"><span class="step-index">3</span><span class="math"><i>x</i> = 4 or <i>x</i> = −2</span><span class="step-verdict">breaks a condition</span><span class="step-note">log<sub>2</sub>(<i>x</i> − 2) needs <i>x</i> &gt; 2.</span></li>
+        <li class="step step-unread"><span class="step-index">4</span><span class="latex">x = 4 or or -2</span><span class="step-verdict">could not read this</span></li>
+        <li class="step step-undecided"><span class="step-index">5</span><span class="math">…</span><span class="step-verdict">could not decide in time</span></li>
+        <li class="step step-unevaluated"><span class="step-index">6</span><span class="math">…</span><span class="step-verdict">not checked yet</span></li>
+      </ol>
+    </section>
+
+    <section class="demo">
+      <div class="stack">
+        <h2>Choice list</h2>
+        <ul class="choices">
+          <li class="choice is-proposed"><input type="radio" name="c" checked><span>Exponent–log relationship mixed up<span class="choice-sub">3 became 3², not 2³</span></span><span class="chip chip-info">suggested</span></li>
+          <li class="choice"><input type="radio" name="c"><span>Log-combination rule misapplied</span></li>
+          <li class="choice"><input type="radio" name="c"><span>Arithmetic slip</span></li>
+          <li class="choice is-abstain"><input type="radio" name="c"><span>None of these</span></li>
+        </ul>
+      </div>
+      <div class="stack">
+        <h2>Hint tiers</h2>
+        <div class="tiers">
+          <div class="tier"><div class="tier-label">Hint 1 of 3</div>Look at how you moved from a log to a power.</div>
+          <div class="tier is-locked"><div class="tier-label">Hint 2 of 3</div><span class="muted">Ask for it when you want it.</span></div>
+          <div class="tier is-locked"><div class="tier-label">Hint 3 of 3</div><span class="muted">Works the step through.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo">
+      <div class="stack">
+        <h2>Cards, key-value, progress</h2>
+        <div class="card"><div class="section-label">Installed</div><dl class="kv"><dt>Spine</dt><dd>2026.09-1</dd><dt>Graph</dt><dd>2026.09-3</dd><dt>Learning objects</dt><dd>2026.09-3</dd></dl></div>
+        <div class="card card-quiet">Quiet card — context that is not the current task.</div>
+        <div class="progress"><span style="width:42%"></span></div>
+      </div>
+      <div class="stack">
+        <h2>Empty state &amp; menu</h2>
+        <div class="empty"><h2>No sessions yet</h2>A session has to run first.</div>
+        <ul class="menu"><li><a href="#">MHF4U — Advanced Functions <span class="chip">4 strands</span></a></li><li><a href="#">MCR3U — Functions <span class="chip">4 strands</span></a></li></ul>
+      </div>
+    </section>
+
+    <section class="stack">
+      <h2>Table</h2>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Check</th><th>Result</th><th class="num">Violations</th></tr></thead><tbody><tr><td>Acyclic</td><td><span class="chip chip-ok">pass</span></td><td class="num">0</td></tr><tr><td>Starting chain connected</td><td><span class="chip chip-bad">fail</span></td><td class="num">1</td></tr></tbody></table></div>
+    </section>
+
+    <section class="stack">
+      <h2>Dialog (destructive confirmation only)</h2>
+      <button class="btn btn-danger" onclick="document.getElementById('dlg').hidden=false">Show dialog</button>
+      <div class="dialog-backdrop" id="dlg" hidden><div class="dialog stack"><h2>Clear all session history on this device?</h2><p class="prose">This permanently deletes every stored session. Anything already sent as anonymous, aggregate statistics cannot be recalled and is not affected.</p><div class="actions"><span class="spacer"></span><button class="btn" onclick="document.getElementById('dlg').hidden=true">Keep it</button><button class="btn btn-danger" onclick="document.getElementById('dlg').hidden=true">Delete history</button></div></div></div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

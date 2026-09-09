@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — On-device model</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="nano:Nano available,nanodownloadable:Chrome can download it,nowebgpu:No WebGPU,fallbackoffer:Fallback offer,downloading:Downloading,insufficient:Storage insufficient,off:Student turned it off"><b>route</b> <span class="route">/settings/models</span> · <b>domain</b> runtime-tiers W1/W6 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html">Parent</a><a href="settings-data.html" aria-current="page">Settings</a></nav>
+    <span class="grow"></span>
+    <a class="btn btn-quiet" href="student-history.html">History</a>
+  </div></header>
+
+  <div class="status-strip">
+    <section data-variant="nano off"><span class="status is-ok"><span class="dot"></span>On-device model available</span></section>
+    <section data-variant="nanodownloadable fallbackoffer nowebgpu insufficient"><span class="status"><span class="dot"></span>Tier 0 only</span></section>
+    <section data-variant="downloading"><span class="status is-busy"><span class="dot"></span>Downloading the fallback model</span></section>
+  </div>
+
+  <main class="shell-main stack">
+    <h1>On-device model</h1>
+    <nav class="nav" aria-label="Settings">
+      <a href="settings-data.html">Data &amp; telemetry</a>
+      <a href="settings-storage.html">Storage &amp; updates</a>
+      <a href="settings-models.html" aria-current="page">On-device model</a>
+    </nav>
+
+    <div class="prose">
+      <p>Tier 1 only suggests a topic from what you type and rewords a hint in your own words — it never
+      checks a step; the step checker (a CAS) always decides that, with or without Tier 1.</p>
+    </div>
+
+    <section data-variant="nano">
+      <div class="card stack">
+        <div class="section-label">Status</div>
+        <p>This device has Chrome's built-in model (Gemini Nano) ready to use. <span class="chip chip-info">Tier 1</span></p>
+        <label class="toggle"><input type="checkbox" checked><span>Tier 1 (topic suggestions and reworded hints)</span></label>
+      </div>
+    </section>
+
+    <section data-variant="nanodownloadable">
+      <div class="banner banner-info"><div class="banner-body"><div class="banner-title">Chrome can provide the on-device model</div>Chrome downloads and manages this model itself in the background — there is nothing to install here. Tier 1 turns on automatically once it is ready.</div></div>
+      <div class="proto-note">runtime-tiers W1: TierCapability detects the Prompt API and its model state; when Chrome is still fetching the model this device is treated as not-yet-available, never as a guess.</div>
+    </section>
+
+    <section data-variant="nowebgpu">
+      <div class="banner"><div class="banner-body"><div class="banner-title">Tier 1 is not available on this device</div>This device does not support WebGPU, so there is nothing to install or turn on. mathmath works fully without it — every problem is still checked and diagnosed.</div></div>
+      <div class="proto-note">D7/I2: Tier 0 is a complete product on its own; this page never implies something is missing from the student's experience.</div>
+    </section>
+
+    <section data-variant="fallbackoffer">
+      <div class="card stack">
+        <div class="section-label">Try the on-device model</div>
+        <p>This device does not have Chrome's built-in model, but it can run a smaller fallback model instead.</p>
+        <div class="row"><span class="chip chip-outline">≈ 2 GB download</span><span class="hint">Checked against your free space first, so installing it will not push storage below the threshold that risks eviction.</span></div>
+        <div class="actions"><a class="btn btn-primary" href="#downloading">Download the fallback model</a></div>
+      </div>
+      <div class="proto-note">runtime-tiers W6 / tier-Q2: opt-in only, cost stated up front, never downloaded unprompted.</div>
+    </section>
+
+    <section data-variant="downloading">
+      <div class="card stack">
+        <div class="section-label">Downloading the fallback model</div>
+        <div class="progress"><span style="width:62%"></span></div>
+        <p class="hint">≈ 1.2 GB of ≈ 2 GB</p>
+        <div class="actions"><button class="btn btn-quiet">Cancel</button></div>
+      </div>
+    </section>
+
+    <section data-variant="insufficient">
+      <div class="banner banner-warn"><div class="banner-body"><div class="banner-title">Not enough free space for the fallback model</div>The download needs headroom above the 10 GB threshold Chrome uses for its own model, and this device does not currently have it. Free up space and check again. <span class="code">TIER_STORAGE_INSUFFICIENT</span></div></div>
+    </section>
+
+    <section data-variant="off">
+      <div class="card stack">
+        <div class="section-label">Status</div>
+        <p>You turned Tier 1 off. Topic suggestions and reworded hints are off; nothing about checking steps or diagnosing errors changes.</p>
+        <label class="toggle"><input type="checkbox"><span>Tier 1 (topic suggestions and reworded hints)</span></label>
+      </div>
+      <div class="proto-note">GAP: runtime-tiers.md names W1 (detect) and W6 (offer/manage the fallback download) but no workflow for a student manually turning an already-available Tier 1 off and back on; the toggle here is an inferred control, not a named workflow.</div>
+    </section>
+
+    <div class="proto-note">tier-Q4: wording adaptation (rephrasing a hint) is off until M4 passes acceptance and is not a student-facing setting — there is deliberately no toggle for it on this page.</div>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

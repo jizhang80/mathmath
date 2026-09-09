@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Quick check</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="items:The 2 questions,pass:Passed (refuted),fail:Failed (confirmed),declined:Declined,unavailable:Probe unavailable"><b>route</b> <span class="route">/student/session/probe</span> · <b>domain</b> tutoring-session W5 · learning-objects W3 · verification W2 (probe answers) · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html" aria-current="page">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <span class="depth"><i class="on"></i><i class="on"></i><i></i> level 1</span>
+  </div></header>
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Checker ready</span></div>
+
+  <main class="shell-main stack">
+    <section data-variant="items">
+      <div class="row"><h1 style="margin:0">Quick check: exponential functions</h1><span class="chip chip-outline">2 questions · about a minute</span></div>
+      <p class="muted">Not marked, not saved as a score. It only tells us whether to look here. You can stop at any time.</p>
+      <div class="card stack">
+        <div class="section-label">Question 1 of 2</div>
+        <p class="math">Write 2<sup>5</sup> = 32 as a logarithm.</p>
+        <div class="math-field"><div class="math-field-toolbar"><button>x²</button><button>log</button><button>( )</button></div><div class="math-field-input" contenteditable="true">log<sub>2</sub>(32) = 5</div></div>
+      </div>
+      <div class="card stack">
+        <div class="section-label">Question 2 of 2</div>
+        <p class="math">Solve 3<sup><i>x</i></sup> = 81.</p>
+        <div class="math-field"><div class="math-field-toolbar"><button>x²</button><button>log</button><button>( )</button></div><div class="math-field-input" contenteditable="true" data-placeholder="Your answer"></div></div>
+      </div>
+      <div class="actions"><a class="btn btn-primary btn-lg" href="#fail">Done</a><a class="btn btn-quiet" href="#declined">Stop and go back to my problem</a></div>
+      <div class="proto-note">learning-objects W3: 2 items from the node's pool of 6 (lo-Q2), unused this session preferred; answer keys never reach the UI — verification checks them (I1). Answers are CAS-checked, so no free text. Prototype: "Done" jumps to the failed outcome; use the variant bar for the passed one.</div>
+    </section>
+
+    <section data-variant="pass">
+      <h1>Not the issue — back to the problem</h1>
+      <div class="banner banner-ok"><div class="banner-body">Both answers check out. Exponential functions are not what tripped you up here, so that idea is set aside.</div></div>
+      <p class="prose">Thanks for checking. Back to step 2 with the next hint.</p>
+      <div class="actions"><a class="btn btn-primary btn-lg" href="student-session-hint.html#tier3hint">Back to the hint</a></div>
+      <div class="proto-note">W5 pass → Diagnosis <em>refuted</em>; the system owns the refutation ("a wrong hypothesis costs a minute and no trust"). Logged to ProbeStats (concept-graph W4) and, under consent, telemetry. Parent view: <em>probed, passed</em>.</div>
+    </section>
+
+    <section data-variant="fail">
+      <h1>Found it — let's fix the small piece</h1>
+      <div class="banner banner-warn"><div class="banner-body">One of the two did not check out, so exponential functions are worth a short look. Just the piece you need, then straight back to your problem.</div></div>
+      <div class="actions"><a class="btn btn-primary btn-lg" href="student-session-remediation.html">Show me the piece</a><span class="spacer"></span><a class="btn btn-quiet" href="student-session-answer.html#answered">Skip to the answer</a></div>
+      <div class="proto-note">W5 fail → Diagnosis <em>confirmed</em> → W6. Which item failed is not shown as a score. GAP G6: the doc does not say whether the student may skip the remediation after a confirmed probe; drawn as allowed (D5 spirit), with the gap still recorded as <em>probed, failed</em>.</div>
+    </section>
+
+    <section data-variant="declined">
+      <h1>Back to the problem</h1>
+      <p class="prose">Fine — the guess about exponential functions stays unchecked, and nothing is assumed from it.</p>
+      <div class="actions"><a class="btn btn-primary btn-lg" href="student-session-hint.html#tier3hint">Back to the hint</a></div>
+      <div class="proto-note">session-Q1: declined → Diagnosis <em>unconfirmed</em>, no remediation. Parent view shows nothing for this node (no probe outcome). GAP G7: parent-view's five states have no <em>unconfirmed</em> representation — proposed: not shown, by design.</div>
+    </section>
+
+    <section data-variant="unavailable">
+      <h1>Back to the problem</h1>
+      <div class="banner"><div class="banner-body">No quick check is available for this topic yet, so the guess stays unchecked. <span class="code">SESSION_PROBE_UNAVAILABLE</span></div></div>
+      <div class="actions"><a class="btn btn-primary btn-lg" href="student-session-hint.html#tier3hint">Back to the hint</a></div>
+      <div class="proto-note">Fewer than 2 ProbeItems (LO_PROBE_POOL_EMPTY → SESSION_PROBE_UNAVAILABLE): hypothesis <em>unconfirmed</em> (I2); never guessed.</div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

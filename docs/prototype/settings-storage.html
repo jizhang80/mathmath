@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Storage and updates</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="default:Up to date,updateready:Update ready,fetchfail:Fetch failed,integrity:Integrity failed,quota:Quota exceeded,quotalow:Quota low,runtimefail:Runtime load failed,offline:Offline"><b>route</b> <span class="route">/settings/storage</span> · <b>domain</b> platform W2/W3/W4/W5 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html">Parent</a><a href="settings-data.html" aria-current="page">Settings</a></nav>
+    <span class="grow"></span>
+    <a class="btn btn-quiet" href="student-history.html">History</a>
+  </div></header>
+
+  <div class="status-strip">
+    <section data-variant="default updateready fetchfail integrity quota quotalow"><span class="status is-ok"><span class="dot"></span>Checker ready</span></section>
+    <section data-variant="runtimefail"><span class="status is-bad"><span class="dot"></span>Checker unavailable</span></section>
+    <section data-variant="offline"><span class="status is-busy"><span class="dot"></span>Offline — working from cache</span></section>
+  </div>
+
+  <main class="shell-main wide stack">
+    <h1>Storage and updates</h1>
+    <nav class="nav" aria-label="Settings">
+      <a href="settings-data.html">Data &amp; telemetry</a>
+      <a href="settings-storage.html" aria-current="page">Storage &amp; updates</a>
+      <a href="settings-models.html">On-device model</a>
+    </nav>
+
+    <section data-variant="default">
+      <div class="banner banner-ok"><div class="banner-body">Everything installed is up to date.</div></div>
+    </section>
+    <section data-variant="updateready">
+      <div class="banner banner-info"><div class="banner-body"><div class="banner-title">An update finished downloading</div>It applies the next time you open mathmath — nothing changes mid-session.</div></div>
+      <div class="proto-note">platform W2 / Q2: background download, atomic swap at next launch. A running session never has its bundles changed under it.</div>
+    </section>
+    <section data-variant="fetchfail">
+      <div class="banner banner-warn"><div class="banner-body"><div class="banner-title">Could not check for updates</div>Still using the installed version — nothing is broken. <span class="code">PLATFORM_ASSET_FETCH_FAILED</span></div><button class="btn">Check again</button></div>
+      <div class="proto-note">GAP: platform.md gives the user-visible copy for PLATFORM_ASSET_FETCH_FAILED but does not name a retry affordance; "Check again" is an inferred, not sourced, control.</div>
+    </section>
+    <section data-variant="integrity">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">An update failed a safety check</div>The download did not match what was expected and was discarded. Still using the installed version. <span class="code">PLATFORM_ASSET_INTEGRITY_FAILED</span></div></div>
+    </section>
+    <section data-variant="quota">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Storage is full</div>Cached lesson bundles are dropped first to make room. Your session history and telemetry choice are never dropped for space. <span class="code">PLATFORM_QUOTA_EXCEEDED</span></div></div>
+      <div class="proto-note">platform-Q3: drop order is bundles first; session records and consent are kept.</div>
+    </section>
+    <section data-variant="quotalow">
+      <div class="banner banner-warn"><div class="banner-body"><div class="banner-title">Storage is getting low</div>Free space is close to the 10 GB threshold Chrome uses to remove the on-device model. Free up space if you want to keep it installed.</div></div>
+      <div class="proto-note">platform.quota_low, W1 / runtime-tiers TierCapability budget: not an error, an early warning.</div>
+    </section>
+    <section data-variant="runtimefail">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">The step checker failed to load</div>Steps cannot be checked until it loads. You can still get the answer. <span class="code">PLATFORM_RUNTIME_LOAD_FAILED</span></div><button class="btn">Retry</button></div>
+    </section>
+    <section data-variant="offline">
+      <div class="banner banner-info"><div class="banner-body">You are offline. mathmath runs fully from what is already installed — nothing here needs a connection.</div></div>
+    </section>
+
+    <div class="card stack">
+      <div class="section-label">Installed versions</div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Bundle</th><th>Version</th></tr></thead>
+          <tbody>
+            <tr><td>Curriculum spine</td><td>2026.09-1</td></tr>
+            <tr><td>Concept graph</td><td>2026.09-3</td></tr>
+            <tr><td>Learning objects</td><td>2026.09-3</td></tr>
+            <tr><td>Step checker runtime</td><td>2026.09-1</td></tr>
+            <tr><td>App</td><td>0.3.0</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">Storage use on this device</div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Item</th><th class="num">Size</th></tr></thead>
+          <tbody>
+            <tr><td>App assets</td><td class="num">84 MB</td></tr>
+            <tr><td>Step checker runtime</td><td class="num">31 MB</td></tr>
+            <tr><td>On-device model (Chrome-managed)</td><td class="num">≈ 4 GB</td></tr>
+            <tr><td>Fallback model</td><td class="num">not installed (≈ 2 GB if chosen)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint">Free space: about 41 GB (approximate) — <code>navigator.storage.estimate()</code> reports origin quota, not exact disk free space.</p>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">Environment check</div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Criterion</th><th>Result</th><th>Note</th></tr></thead>
+          <tbody>
+            <tr><td>Browser (Chrome or equivalent Chromium)</td><td><span class="chip chip-ok">Pass</span></td><td>Reliable — UA Client Hints</td></tr>
+            <tr><td>Desktop, not mobile</td><td><span class="chip chip-ok">Pass</span></td><td>Reliable — UA Client Hints <code>mobile</code> flag</td></tr>
+            <tr><td>WebGPU</td><td><span class="chip chip-ok">Pass</span></td><td>Reliable — the only hard Tier 1 gate</td></tr>
+            <tr><td>≥ 16 GB RAM</td><td><span class="chip chip-outline">Undetectable</span></td><td>Excluded from the verdict (C3) — <code>navigator.deviceMemory</code> is quantised and capped at 8</td></tr>
+            <tr><td>≥ 20 GB free storage</td><td><span class="chip chip-ok">Pass (approximate)</span></td><td>Approximate — origin quota, not exact disk free space</td></tr>
+            <tr><td>Chromebook</td><td><span class="chip chip-outline">Undetectable</span></td><td>Excluded from the verdict (C3) — no in-browser signal exists</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="proto-note">platform.md EnvironmentCheck / C3: results stay on this device (I5) — none of this table crosses into a telemetry batch. A report naming no undetectable criterion would be wrong, not clean.</div>
+    </div>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

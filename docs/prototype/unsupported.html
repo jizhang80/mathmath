@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — This device is not supported</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="nowebgpu:No WebGPU,nostorage:No storage,mobile:Mobile device"><b>route</b> <span class="route">/unsupported</span> · <b>domain</b> platform W1 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <span class="brand">mathmath</span>
+  </div></header>
+
+  <main class="shell-main stack">
+    <h1>This device cannot run mathmath yet</h1>
+
+    <section data-variant="nowebgpu">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">WebGPU is not available</div>mathmath needs WebGPU to run the on-device model, and to keep the whole product working offline. <span class="code">PLATFORM_ENV_UNSUPPORTED</span></div></div>
+    </section>
+    <section data-variant="nostorage">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Not enough free storage</div>mathmath could not reserve the space it needs to install and run offline. <span class="code">PLATFORM_ENV_UNSUPPORTED</span></div></div>
+    </section>
+    <section data-variant="mobile">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">This is a mobile or tablet browser</div>mathmath is not built for a phone or tablet browser yet. <span class="code">PLATFORM_ENV_UNSUPPORTED</span></div></div>
+    </section>
+
+    <div class="prose">
+      <p>mathmath is built for a desktop Chrome browser (or another Chromium-based browser) with WebGPU
+      support and at least 20 GB of free storage — the baseline the product is designed against.</p>
+    </div>
+
+    <div class="card card-quiet stack">
+      <div class="section-label">Not supported yet</div>
+      <ul class="stack-sm">
+        <li>Chromebooks</li>
+        <li>Mobile phones and tablets</li>
+        <li>Safari and Firefox</li>
+        <li>Handwriting or photo (OCR) input — problems and steps are typed with a structured math editor</li>
+        <li>Cloud-based checking or diagnosis — everything runs on this device</li>
+        <li>Accounts of any kind</li>
+      </ul>
+      <p class="hint">These are queued, not ruled out — this list is what today's build does not cover.</p>
+    </div>
+
+    <div class="card card-quiet stack">
+      <div class="section-label">What this check could not tell</div>
+      <p>Some things about this device honestly cannot be detected from the browser: whether it has at
+      least 16 GB of RAM, and whether it is a Chromebook. Neither counts against this device — they are
+      left out of the result above rather than guessed at.</p>
+    </div>
+  </main>
+  <footer class="shell-footer">mathmath · this check ran on this device only</footer>
+</div>
+</body>
+</html>

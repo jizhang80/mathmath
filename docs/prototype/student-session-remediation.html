@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — The small piece</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="explanation:Explanation,worked:Worked example,level2:Second level (chain continues)"><b>route</b> <span class="route">/student/session</span> (remediation) · <b>domain</b> tutoring-session W6 · learning-objects Explanation / WorkedExample · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html" aria-current="page">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <section data-variant="explanation worked"><span class="depth"><i class="on"></i><i class="on"></i><i></i> level 1</span></section>
+    <section data-variant="level2"><span class="depth"><i class="on"></i><i class="on"></i><i class="on"></i> level 2</span></section>
+  </div></header>
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Checker ready</span></div>
+
+  <main class="shell-main stack">
+    <section data-variant="explanation worked">
+      <div class="row"><h1 style="margin:0">Exponential functions: the one idea you need</h1><span class="chip chip-info">MCR3U</span></div>
+      <p class="muted">Just this piece. Then back to your problem at step 2.</p>
+    </section>
+    <section data-variant="level2">
+      <div class="row"><h1 style="margin:0">Exponent laws: the one idea you need</h1><span class="chip chip-info">MTH1W</span></div>
+      <p class="muted">This is the second step back this session — the last one allowed. Then back to your problem.</p>
+    </section>
+
+    <section data-variant="explanation level2">
+      <div class="card prose">
+        <section data-variant="explanation">
+        <p>An exponential equation and a logarithmic equation say the same thing two ways:</p>
+        <p class="math" style="text-align:center">2<sup>3</sup> = 8 &nbsp;&nbsp;⇔&nbsp;&nbsp; log<sub>2</sub>(8) = 3</p>
+        <p>The <strong>base</strong> stays the base. The <strong>exponent</strong> is what the logarithm gives you. So log<sub>2</sub>(<i>A</i>) = 3 tells you <i>A</i> = 2<sup>3</sup>, never 3<sup>2</sup>.</p>
+        <p>Relates to MCR3U expectations C1.1 and C2.1 — <a href="https://www.edu.gov.on.ca/eng/curriculum/secondary/math1112currb.pdf">official expectation (Ontario)</a>.</p>
+        </section>
+        <section data-variant="level2">
+        <p>When you multiply powers of the same base, the exponents add: 2<sup>3</sup> · 2<sup>4</sup> = 2<sup>7</sup>. When you raise a power to a power, they multiply: (2<sup>3</sup>)<sup>4</sup> = 2<sup>12</sup>.</p>
+        <p>Keep the base; work only on the exponents. Relates to MTH1W expectation B3.4 — <a href="https://www.dcp.edu.gov.on.ca/en/">official expectation (Ontario)</a>.</p>
+        </section>
+      </div>
+    </section>
+
+    <section data-variant="worked">
+      <div class="card stack">
+        <div class="section-label">Worked example</div>
+        <p class="math">Solve log<sub>3</sub>(<i>y</i>) = 4.</p>
+        <ol class="steps">
+          <li class="step step-ok"><span class="step-index">1</span><span class="math">3<sup>4</sup> = <i>y</i></span><span class="step-note" style="grid-column:3">base 3, exponent 4</span></li>
+          <li class="step step-ok"><span class="step-index">2</span><span class="math"><i>y</i> = 81</span><span></span></li>
+        </ol>
+      </div>
+      <div class="proto-note">A WorkedExample is an ordered LaTeX step sequence on the student-input path, each step CAS-checkable (learning-objects). The green rules mean "verified by the checker", same as the student's own steps.</div>
+    </section>
+
+    <div class="actions">
+      <a class="btn btn-primary btn-lg" href="student-session.html#tier0">Back to my problem at step 2</a>
+      <section data-variant="explanation"><a class="btn btn-quiet" href="#worked">Show a worked example instead</a></section>
+      <span class="spacer"></span>
+      <a class="btn btn-quiet" href="student-session-answer.html#answered">Show the answer</a>
+    </div>
+    <div class="proto-note">W6: exactly one Remediation piece (one Explanation OR one WorkedExample), then return to the Attempt at its failing step (D4). GAP G8: "exactly one piece" vs. the quiet link offering the other kind — proposed: the student may swap once; it still counts as one remediation. Owner call.</div>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

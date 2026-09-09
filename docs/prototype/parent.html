@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Parent view</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="default:Default (3 sessions),empty:No sessions,unreadable:Some records unreadable,storedown:Store unavailable,cleared:Just cleared"><b>route</b> <span class="route">/parent</span> · <b>domain</b> parent-view W1 W2 W5 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html" aria-current="page">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <a class="btn btn-quiet" href="parent-trend.html">See the trend</a>
+  </div></header>
+
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Checker ready</span></div>
+
+  <main class="shell-main stack">
+    <h1>Where the student is stuck</h1>
+    <p class="muted">This view is read-only — it does not change anything the student sees, and the student can open this same page (parent-view Q2). There is no PIN on this page (parent-view Q1); anyone with this device can open it.</p>
+
+    <section data-variant="unreadable">
+      <div class="banner banner-warn"><div class="banner-body"><div class="banner-title">Some earlier sessions could not be read</div>An older session record did not match the current format and was skipped. The rest of this page is complete. <span class="code">PARENT_RECORD_UNREADABLE</span></div></div>
+    </section>
+
+    <section data-variant="storedown">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Session history is unavailable on this device</div>Local storage could not be opened, so nothing can be read or shown here. <span class="code">PARENT_STORE_UNAVAILABLE</span></div><a class="btn" href="settings-storage.html">See device storage status</a></div>
+      <div class="proto-note">parent-view Errors: PARENT_STORE_UNAVAILABLE is "not recoverable here" — points to the platform limited state, represented here as settings-storage.html per the shared brief.</div>
+    </section>
+
+    <section data-variant="cleared">
+      <div class="banner banner-ok"><div class="banner-body"><div class="banner-title">History cleared</div>All locally stored session history has been deleted. Any telemetry already sent earlier remains anonymous, aggregate and cannot be recalled or changed by this action.</div></div>
+    </section>
+
+    <section data-variant="empty cleared">
+      <div class="empty">
+        <h2>No sessions yet</h2>
+        <p>Once the student runs a session, this page will show where they are stuck and what to do next.</p>
+      </div>
+      <div class="proto-note">parent-view W1 step 3 / PARENT_NO_SESSIONS: zero SessionRecords stop here — the "cleared" variant is the same empty state, shown right after W5 clear-history, with the confirmation banner above it.</div>
+    </section>
+
+    <section data-variant="default unreadable storedown">
+      <div class="card stack">
+        <div class="section-label">Status by course and strand</div>
+
+        <div class="stack-sm">
+          <p><strong>MHF4U — Advanced Functions.</strong></p>
+          <p class="prose">In <em>Exponential and logarithmic functions</em>: logarithmic equations is the topic being worked on — three problems so far, and the trouble each time traced back to earlier topics (below). <span class="node-status not-seen"></span> Laws of logarithms and the logarithm-as-inverse idea have not been checked on their own yet.</p>
+        </div>
+        <div class="stack-sm">
+          <p><strong>MCR3U — Functions.</strong></p>
+          <p class="prose">In <em>Characteristics of functions</em>: <span class="node-status remediated"></span> exponential functions was a source of trouble but has since been remediated and confirmed.</p>
+        </div>
+        <div class="stack-sm">
+          <p><strong>MPM2D — Principles of Mathematics.</strong></p>
+          <p class="prose">In <em>Polynomial and rational functions</em>: <span class="node-status probed-pass"></span> quadratic functions was checked and is not the issue.</p>
+        </div>
+        <div class="stack-sm">
+          <p><strong>MTH1W — Mathematics.</strong></p>
+          <p class="prose">In <em>Linear relations and equations</em>: <span class="node-status deeper-gap"></span> linear relations and equations was noted as a possible deeper gap but was not remediated this time (see below).</p>
+        </div>
+        <div class="proto-note">parent-view W2: one sentence per strand, worst state first; strands entirely not-seen (e.g. MHF4U's "polynomial and rational functions", not touched at all) are suppressed rather than listed as empty. GAP: the doc's five-state NodeStatus enum has no state for the node where the wrong step actually happened (n-log-eq, logarithmic equations) — the session record shows it as attempted-and-answered, not probed. This page shows no line for n-log-eq at all; flagged as a GAP below and in the report.</div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">Open gaps</div>
+        <ul class="menu">
+          <li><a href="parent-gap.html#deeper"><span>Linear relations and equations — recorded for later, not remediated this time</span><span class="chip chip-outline">deeper-gap-recorded</span></a></li>
+        </ul>
+        <div class="proto-note">parent-view W3 entry point: each row opens parent-gap.html (nodeId in the real route). The deeper-gap row links to the "deeper" variant, which per I4 shows no remediation affordance. A Gap is a node in <em>probed-fail</em> or <em>deeper-gap-recorded</em>; remediated nodes are listed separately below.</div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">Worked through</div>
+        <ul class="menu">
+          <li><a href="parent-gap.html"><span>Exponent laws — a short check did not go well on 2026-09-05; the one idea needed was worked through, not re-checked since</span><span class="chip chip-info">remediated</span></a></li>
+          <li><a href="parent-gap.html"><span>Exponential functions — worked through on 2026-09-02, then checked again on 2026-09-07 and found fine</span><span class="chip chip-ok">probed, passed</span></a></li>
+        </ul>
+        <div class="proto-note">GAP: the doc defines Gap and NodeStatus but not whether a <em>remediated</em> node is a closed gap (as drawn) or stays open until a later probe passes. Trend's "gaps closed" depends on this. Owner call.</div>
+      </div>
+
+      <div class="card card-quiet stack">
+        <div class="section-label">Suggested next steps</div>
+        <div class="prose">
+          <p>Practise exponent laws with them this week — it was worked through once and is needed for exponential functions in MCR3U and, through them, for logarithms in MHF4U.</p>
+          <p>Ask the teacher about linear relations and equations (MTH1W) — it was noted as a possible deeper gap and has not been checked.</p>
+          <p>No action needed on quadratic functions — that was checked and confirmed fine.</p>
+        </div>
+        <div class="proto-note">parent-view SuggestedAction: up to three, from a fixed template table keyed by (NodeStatus, recurrence, downstream-course presence) — no model involved.</div>
+      </div>
+    </section>
+
+    <div class="row">
+      <a class="btn btn-danger" data-show-dialog="#confirm-clear">Clear history</a>
+      <span class="hint">Deletes all locally stored session history on this device.</span>
+      <span class="grow"></span>
+      <a class="btn btn-quiet" href="settings-data.html">What this device shares</a>
+    </div>
+
+    <div class="dialog-backdrop" id="confirm-clear" hidden>
+      <div class="dialog stack">
+        <h2>Clear all session history?</h2>
+        <p>This permanently deletes all locally stored session history on this device. Any telemetry data already sent is anonymous and aggregate, and this action cannot recall or change it.</p>
+        <div class="row row-end">
+          <button class="btn btn-quiet" data-close-dialog>Cancel</button>
+          <a class="btn btn-danger" href="parent.html#cleared" data-close-dialog>Clear history</a>
+        </div>
+      </div>
+    </div>
+    <div class="proto-note">parent-view W5 step 1: dialog wording follows the domain doc's confirmation exactly in meaning — permanent local deletion, and telemetry already sent is anonymous/aggregate/unaffected. Confirming routes to the "cleared" variant (W5 post-state).</div>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

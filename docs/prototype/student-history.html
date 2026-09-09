@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — History</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="default:This device's attempts,empty:No attempts yet"><b>route</b> <span class="route">/student/history</span> · <b>domain</b> tutoring-session UI · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html" aria-current="page">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <a class="btn btn-primary" href="student-session.html">New problem</a>
+  </div></header>
+
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Checker ready</span></div>
+
+  <main class="shell-main stack">
+    <h1>History</h1>
+    <p class="hint">Every attempt on this device, in one place. No scores — just what happened.</p>
+
+    <section data-variant="empty">
+      <div class="empty">
+        <h2>No attempts yet</h2>
+        <p>Start a problem and it will show up here.</p>
+        <a class="btn btn-primary" href="student-session.html">Start a problem</a>
+      </div>
+    </section>
+
+    <section data-variant="default" class="stack">
+      <div class="card stack">
+        <div class="row row-between">
+          <div><strong>2026-09-02</strong> · Logarithmic equations <span class="chip chip-outline">MHF4U</span></div>
+          <span class="chip chip-ok">Resolved</span>
+        </div>
+        <p>A step did not follow, traced to an exponent–log mix-up. Hypothesis: <em>exponential functions</em> — <span class="chip chip-warn">confirmed</span> by a short probe. Remediated, then the problem was finished.</p>
+        <a class="btn btn-quiet" href="student-session-answer.html">Open this attempt</a>
+      </div>
+
+      <div class="card stack">
+        <div class="row row-between">
+          <div><strong>2026-09-05</strong> · Logarithmic equations <span class="chip chip-outline">MHF4U</span></div>
+          <span class="chip chip-ok">Resolved</span>
+        </div>
+        <p>The same kind of mix-up came up again. Hypothesis: <em>exponential functions</em> — <span class="chip chip-warn">confirmed</span>, then one level further: <em>exponent laws</em> — <span class="chip chip-warn">confirmed</span> and worked through. A deeper candidate (<em>linear relations and equations</em>) was found beyond that but not pursued this session — <span class="chip">capped, recorded for later</span>.</p>
+        <a class="btn btn-quiet" href="student-session-answer.html">Open this attempt</a>
+      </div>
+
+      <div class="card stack">
+        <div class="row row-between">
+          <div><strong>2026-09-07</strong> · Logarithmic equations <span class="chip chip-outline">MHF4U</span></div>
+          <span class="chip">Answered</span>
+        </div>
+        <p>A slip at step 3. Hypothesis: <em>exponential functions</em> — <span class="chip chip-ok">refuted</span> by a short probe ("not the issue"). The answer was shown with the diagnosis.</p>
+        <a class="btn btn-quiet" href="student-session-answer.html#answered">Open this attempt</a>
+      </div>
+
+      <div class="proto-note">tutoring-session: outcome is one of resolved / answered / abandoned; a hypothesis fate is one of refuted / confirmed / unconfirmed / capped (I4, D4 — capped candidates are recorded, not remediated, and the session returns to the problem). GAP: tutoring-session.md does not name a distinct case for an attempt with no Diagnosis at all (a clean pass, as on 09-07) — the wording above is inferred, not sourced from the domain doc's Attempt outcomes.</div>
+    </section>
+
+    <p class="hint">History is deleted only from the parent view's <a href="parent.html">clear-history</a> action — nothing on this page deletes anything.</p>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

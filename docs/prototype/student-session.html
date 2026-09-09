@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — New problem</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="tier0:Tier 0 (menu),tier1:Tier 1 (free text suggests),tier1low:Tier 1 below threshold,resume:Resume after reload,casloading:Checker still loading,casdown:Checker failed,nonode:No topic chosen"><b>route</b> <span class="route">/student/session</span> · <b>domain</b> tutoring-session W1 · runtime-tiers W3 · verification W1 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html" aria-current="page">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <a class="btn btn-quiet" href="student-history.html">History</a>
+  </div></header>
+
+  <div class="status-strip">
+    <section data-variant="tier0 tier1 tier1low resume nonode"><span class="status is-ok"><span class="dot"></span>Checker ready</span></section>
+    <section data-variant="casloading"><span class="status is-busy"><span class="dot"></span>Loading the step checker… you can enter your problem meanwhile</span></section>
+    <section data-variant="casdown"><span class="status is-bad"><span class="dot"></span>Checker could not start</span></section>
+    <section data-variant="tier1 tier1low"><span class="status is-ok"><span class="dot"></span>On-device model available</span></section>
+  </div>
+
+  <main class="shell-main stack">
+    <section data-variant="resume">
+      <div class="banner banner-info"><div class="banner-body"><div class="banner-title">Resume your last problem?</div>You were on a logarithm problem, stopped at step 2. Nothing was lost.</div><a class="btn btn-primary" href="student-session-steps.html#firstfail">Resume</a><a class="btn btn-quiet" href="#tier0">Start fresh</a></div>
+      <div class="proto-note">session-Q4: a session survives a reload; the last Attempt is offered, not forced.</div>
+    </section>
+
+    <section data-variant="casdown">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">The step checker could not start</div>You can still enter your problem and get the answer. Steps will not be checked and no diagnosis is possible until the checker starts. <span class="code">VERIFY_CAS_UNAVAILABLE</span></div><button class="btn">Reload</button></div>
+    </section>
+
+    <section data-variant="nonode">
+      <div class="banner banner-warn"><div class="banner-body"><div class="banner-title">Choose a topic first</div>Your steps can only be checked against a topic. Pick one from the menu, or browse all topics. <span class="code">SESSION_NODE_UNMAPPED</span></div><a class="btn" href="student-browse.html">Browse topics</a></div>
+      <div class="proto-note">tutoring-session SESSION_NODE_UNMAPPED: W1 ended with no node; the menu is re-shown. Recoverable.</div>
+    </section>
+
+    <h1>What are you working on?</h1>
+
+    <div class="card stack">
+      <div class="section-label">1 · Topic</div>
+
+      <section data-variant="tier1 tier1low" class="field">
+        <label class="label" for="freetext">Describe it in a few words (optional)</label>
+        <input class="input" id="freetext" value="solving an equation with two logs">
+        <span class="hint">The on-device model only suggests a topic; you still choose it below. Nothing leaves this device.</span>
+      </section>
+
+      <section data-variant="tier1">
+        <div class="banner banner-info"><div class="banner-body">Suggested topic: <strong>Logarithmic equations</strong> (MHF4U). Pre-selected below — change it if that is not right. <span class="chip chip-info">Tier 1</span></div></div>
+      </section>
+      <section data-variant="tier1low">
+        <div class="banner"><div class="banner-body">No confident suggestion for that description — pick the topic from the menu.</div></div>
+        <div class="proto-note">runtime-tiers W3/W5: below threshold → FallbackDecision logged, menu stands (I2). The student never sees a guess.</div>
+      </section>
+
+      <div class="row">
+        <div class="field grow"><label class="label" for="course">Course</label>
+          <select class="select" id="course"><option>MHF4U — Advanced Functions</option><option>MCR3U — Functions</option><option>MPM2D — Principles of Mathematics</option><option>MTH1W — Mathematics</option></select></div>
+        <div class="field grow"><label class="label" for="strand">Strand</label>
+          <select class="select" id="strand"><option>Exponential and logarithmic functions</option><option>Polynomial and rational functions</option><option>Trigonometric functions</option><option>Characteristics of functions</option></select></div>
+      </div>
+      <div class="field"><label class="label" for="node">Topic</label>
+        <select class="select" id="node"><option>Logarithmic equations</option><option>Laws of logarithms</option><option>Exponential equations</option><option>Logarithm as inverse of an exponential</option></select>
+        <span class="hint">Not sure? <a href="student-browse.html">Browse all topics</a> or <a href="student-node.html">read about this one</a>.</span></div>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">2 · The problem, as written on your homework</div>
+      <div class="math-field">
+        <div class="math-field-toolbar"><button>x²</button><button>√</button><button>a⁄b</button><button>log</button><button>( )</button><button>±</button></div>
+        <div class="math-field-input" contenteditable="true">log<sub>2</sub>(<i>x</i>) + log<sub>2</sub>(<i>x</i> − 2) = 3</div>
+      </div>
+      <span class="hint">Structured editor (MathLive). No photos or handwriting.</span>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">3 · Your steps, in order</div>
+      <ol class="steps">
+        <li class="step step-editable"><span class="step-index">1</span><div class="math-field"><div class="math-field-input" contenteditable="true">log<sub>2</sub>(<i>x</i>(<i>x</i> − 2)) = 3</div></div><button class="btn btn-quiet" title="Remove">×</button></li>
+        <li class="step step-editable"><span class="step-index">2</span><div class="math-field"><div class="math-field-input" contenteditable="true"><i>x</i>(<i>x</i> − 2) = 9</div></div><button class="btn btn-quiet" title="Remove">×</button></li>
+        <li class="step step-editable"><span class="step-index">3</span><div class="math-field"><div class="math-field-input" contenteditable="true"><i>x</i><sup>2</sup> − 2<i>x</i> − 9 = 0</div></div><button class="btn btn-quiet" title="Remove">×</button></li>
+        <li class="step step-editable"><span class="step-index">4</span><div class="math-field"><div class="math-field-input" contenteditable="true" data-placeholder="Type the next step"></div></div><span></span></li>
+      </ol>
+      <div class="row"><button class="btn">+ Add a step</button><span class="hint">Stuck before writing anything? Leave the steps empty and ask for the answer — it comes with what we could and could not check.</span></div>
+    </div>
+
+    <div class="actions">
+      <section data-variant="tier0 tier1 tier1low resume nonode"><a class="btn btn-primary btn-lg" href="student-session-steps.html#firstfail">Check my steps</a></section>
+      <section data-variant="casloading"><button class="btn btn-primary btn-lg" disabled>Check my steps (checker loading…)</button></section>
+      <section data-variant="casdown"><button class="btn btn-primary btn-lg" disabled>Check my steps (checker unavailable)</button></section>
+      <span class="spacer"></span>
+      <a class="btn btn-quiet" href="student-session-answer.html#nosteps">Just show me the answer</a>
+    </div>
+    <div class="proto-note">tutoring-session W1 → W2. "Just show me the answer" is always present (D5/I3); it closes the Attempt as <em>answered</em> with whatever diagnosis exists. With CAS down and no steps, the answer itself also needs the CAS (verification W3) — see checklist gap G2.</div>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

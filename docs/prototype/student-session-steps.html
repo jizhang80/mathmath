@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Your steps, checked</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="firstfail:First failure,allok:All steps follow,domain:Domain violation,unread:Unreadable step,timeout:Timed-out step,unsupported:Unsupported construct (answer-only),casdown:Checker died mid-check"><b>route</b> <span class="route">/student/session</span> (verification trace) · <b>domain</b> tutoring-session W2 · verification W2/W3 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html" aria-current="page">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <span class="depth" title="Backtrack level (at most 2 per session)"><i class="on"></i><i></i><i></i> level 0</span>
+  </div></header>
+  <div class="status-strip">
+    <section data-variant="firstfail allok domain unread timeout unsupported"><span class="status is-ok"><span class="dot"></span>Checker ready</span></section>
+    <section data-variant="casdown"><span class="status is-bad"><span class="dot"></span>Checker stopped</span></section>
+  </div>
+
+  <main class="shell-main stack">
+    <div class="row row-between"><h1 style="margin:0">Your steps, checked</h1><span class="chip chip-outline">Logarithmic equations · MHF4U</span></div>
+    <p class="muted">Each step is compared with the one before it by a symbolic checker. No model is involved in this.</p>
+
+    <!-- FIRST FAILURE -->
+    <section data-variant="firstfail">
+      <ol class="steps">
+        <li class="step step-problem"><span class="step-index">Problem</span><span class="math">log<sub>2</sub>(<i>x</i>) + log<sub>2</sub>(<i>x</i> − 2) = 3</span><span></span></li>
+        <li class="step step-ok"><span class="step-index">1</span><span class="math">log<sub>2</sub>(<i>x</i>(<i>x</i> − 2)) = 3</span><span class="step-verdict">follows</span></li>
+        <li class="step step-bad"><span class="step-index">2</span><span class="math"><i>x</i>(<i>x</i> − 2) = 9</span><span class="step-verdict">does not follow</span><span class="step-note">This is the first step that does not follow from step 1. Later steps are not checked until this one is settled.</span></li>
+        <li class="step step-unevaluated"><span class="step-index">3</span><span class="math"><i>x</i><sup>2</sup> − 2<i>x</i> − 9 = 0</span><span class="step-verdict">not checked yet</span></li>
+      </ol>
+      <div class="actions">
+        <a class="btn btn-primary btn-lg" href="student-session-classify.html#tier0">What went wrong here?</a>
+        <a class="btn" href="student-session.html#tier0">Edit my steps</a>
+        <span class="spacer"></span>
+        <a class="btn btn-quiet" href="student-session-answer.html#answered">Show the answer</a>
+      </div>
+      <div class="proto-note">tutoring-session W2 → W3. FirstFailure is deterministic (I1). "Show the answer" is never withheld; it closes as <em>answered</em> with the diagnosis so far.</div>
+    </section>
+
+    <!-- ALL OK -->
+    <section data-variant="allok">
+      <ol class="steps">
+        <li class="step step-problem"><span class="step-index">Problem</span><span class="math">log<sub>2</sub>(<i>x</i>) + log<sub>2</sub>(<i>x</i> − 2) = 3</span><span></span></li>
+        <li class="step step-ok"><span class="step-index">1</span><span class="math">log<sub>2</sub>(<i>x</i>(<i>x</i> − 2)) = 3</span><span class="step-verdict">follows</span></li>
+        <li class="step step-ok"><span class="step-index">2</span><span class="math"><i>x</i>(<i>x</i> − 2) = 8</span><span class="step-verdict">follows</span></li>
+        <li class="step step-ok"><span class="step-index">3</span><span class="math">(<i>x</i> − 4)(<i>x</i> + 2) = 0</span><span class="step-verdict">follows</span><span class="step-note">Two manipulations in one step — fine; only equivalence is tested, not step size.</span></li>
+        <li class="step step-ok"><span class="step-index">4</span><span class="math"><i>x</i> = 4</span><span class="step-verdict">follows</span><span class="step-note">−2 correctly discarded: log<sub>2</sub>(<i>x</i> − 2) needs <i>x</i> &gt; 2.</span></li>
+      </ol>
+      <div class="banner banner-ok"><div class="banner-body">Every step follows, and the last one matches the answer.</div></div>
+      <div class="actions"><a class="btn btn-primary btn-lg" href="student-session-answer.html#resolved">Finish this problem</a><a class="btn" href="student-session.html#tier0">Add more steps</a></div>
+      <div class="proto-note">verify-Q2 (skipping ahead accepted). Terminates via W7 as <em>resolved</em>. GAP G3: what if every step follows but the last step is not yet the answer (student stopped early)? The doc has no "all follow, not finished" state — proposed wording: "Every step so far follows. Keep going, or see the answer."</div>
+    </section>
+
+    <!-- DOMAIN VIOLATION -->
+    <section data-variant="domain">
+      <ol class="steps">
+        <li class="step step-problem"><span class="step-index">Problem</span><span class="math">log<sub>2</sub>(<i>x</i>) + log<sub>2</sub>(<i>x</i> − 2) = 3</span><span></span></li>
+        <li class="step step-ok"><span class="step-index">1</span><span class="math">log<sub>2</sub>(<i>x</i>(<i>x</i> − 2)) = 3</span><span class="step-verdict">follows</span></li>
+        <li class="step step-ok"><span class="step-index">2</span><span class="math"><i>x</i><sup>2</sup> − 2<i>x</i> − 8 = 0</span><span class="step-verdict">follows</span></li>
+        <li class="step step-ok"><span class="step-index">3</span><span class="math">(<i>x</i> − 4)(<i>x</i> + 2) = 0</span><span class="step-verdict">follows</span></li>
+        <li class="step step-domain"><span class="step-index">4</span><span class="math"><i>x</i> = 4 or <i>x</i> = −2</span><span class="step-verdict">breaks a condition</span><span class="step-note">The algebra follows, but log<sub>2</sub>(<i>x</i> − 2) needs <i>x</i> &gt; 2, so −2 cannot be a solution.</span></li>
+      </ol>
+      <div class="actions"><a class="btn btn-primary btn-lg" href="student-session-classify.html#tier0">What went wrong here?</a><a class="btn" href="student-session.html#tier0">Edit my steps</a><span class="spacer"></span><a class="btn btn-quiet" href="student-session-answer.html#answered">Show the answer</a></div>
+      <div class="proto-note">verification DomainCheck: <code>domain_violation</code> is distinct from <code>not_equivalent</code> because the M4′ error type "missed domain restriction" depends on it. When a constraint is not symbolically decidable (<code>VERIFY_DOMAIN_UNDECIDABLE</code>, internal) the checker falls back to numeric sampling and records the method (verify-Q1); nothing changes on screen.</div>
+    </section>
+
+    <!-- UNREADABLE -->
+    <section data-variant="unread">
+      <ol class="steps">
+        <li class="step step-problem"><span class="step-index">Problem</span><span class="math">log<sub>2</sub>(<i>x</i>) + log<sub>2</sub>(<i>x</i> − 2) = 3</span><span></span></li>
+        <li class="step step-ok"><span class="step-index">1</span><span class="math">log<sub>2</sub>(<i>x</i>(<i>x</i> − 2)) = 3</span><span class="step-verdict">follows</span></li>
+        <li class="step step-unread"><span class="step-index">2</span><span class="latex">x(x-2) = = 9</span><span class="step-verdict">could not read this</span><span class="step-note">Re-enter step 2 — it could not be read as an equation. Steps after it are not checked. <span class="code">VERIFY_PARSE_FAILED</span></span></li>
+        <li class="step step-unevaluated"><span class="step-index">3</span><span class="math"><i>x</i><sup>2</sup> − 2<i>x</i> − 9 = 0</span><span class="step-verdict">not checked yet</span></li>
+      </ol>
+      <div class="actions"><a class="btn btn-primary btn-lg" href="student-session.html#tier0">Fix step 2</a><span class="spacer"></span><a class="btn btn-quiet" href="student-session-answer.html#answered">Show the answer</a></div>
+      <div class="proto-note">verification W2 step 1: a parse failure stops the scan. An unreadable step is not an error in the mathematics, so no classification is offered.</div>
+    </section>
+
+    <!-- TIMEOUT -->
+    <section data-variant="timeout">
+      <ol class="steps">
+        <li class="step step-problem"><span class="step-index">Problem</span><span class="math">log<sub>2</sub>(<i>x</i>) + log<sub>2</sub>(<i>x</i> − 2) = 3</span><span></span></li>
+        <li class="step step-ok"><span class="step-index">1</span><span class="math">log<sub>2</sub>(<i>x</i>(<i>x</i> − 2)) = 3</span><span class="step-verdict">follows</span></li>
+        <li class="step step-undecided"><span class="step-index">2</span><span class="math"><i>x</i>(<i>x</i> − 2) = 8</span><span class="step-verdict">could not decide in time</span><span class="step-note">The checker ran out of time on this step. Try again, or split it into smaller steps. <span class="code">VERIFY_TIMEOUT</span></span></li>
+        <li class="step step-ok"><span class="step-index">3</span><span class="math"><i>x</i><sup>2</sup> − 2<i>x</i> − 8 = 0</span><span class="step-verdict">follows</span></li>
+      </ol>
+      <div class="actions"><a class="btn btn-primary" href="#timeout">Check again</a><a class="btn" href="student-session.html#tier0">Edit my steps</a><span class="spacer"></span><a class="btn btn-quiet" href="student-session-answer.html#answered">Show the answer</a></div>
+      <div class="proto-note">verify-Q3: per-step bound; "the rest of the trace stands". GAP G4: the doc says later steps stand after a timeout, but W2 step 4 says FirstFailure is the first non-<code>equivalent</code> verdict — is an undecided step a FirstFailure (offer classification) or not (as drawn here)? Proposed: not a failure; no classification.</div>
+    </section>
+
+    <!-- UNSUPPORTED -->
+    <section data-variant="unsupported">
+      <div class="banner banner-warn"><div class="banner-body"><div class="banner-title">This problem uses notation the checker does not handle yet</div>Matrices and calculus notation are not supported. You will get the answer, but the steps are not checked and there is no diagnosis for this problem. <span class="code">VERIFY_UNSUPPORTED</span></div></div>
+      <ol class="steps">
+        <li class="step step-problem"><span class="step-index">Problem</span><span class="math">d/d<i>x</i> [ <i>x</i><sup>2</sup> ln <i>x</i> ]</span><span></span></li>
+        <li class="step step-unevaluated"><span class="step-index">1</span><span class="math">2<i>x</i> ln <i>x</i> + <i>x</i></span><span class="step-verdict">not checked</span></li>
+      </ol>
+      <div class="actions"><a class="btn btn-primary btn-lg" href="student-session-answer.html#answeronly">Show the answer</a><a class="btn" href="student-session.html#tier0">Try a different problem</a></div>
+      <div class="proto-note">verify-Q4: answer-only mode. GAP G5: verification W3 solves "if the construct is unsupported, report VERIFY_UNSUPPORTED" — so in answer-only mode the answer may ALSO be unavailable. The answer page needs a "no answer either" terminal state; drawn there as variant <em>noanswer</em>.</div>
+    </section>
+
+    <!-- CAS DOWN -->
+    <section data-variant="casdown">
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">The checker stopped while checking</div>Nothing you typed was lost. Reload to restart the checker, then check again. <span class="code">SESSION_VERIFICATION_UNAVAILABLE</span></div><button class="btn">Reload</button></div>
+      <ol class="steps">
+        <li class="step step-problem"><span class="step-index">Problem</span><span class="math">log<sub>2</sub>(<i>x</i>) + log<sub>2</sub>(<i>x</i> − 2) = 3</span><span></span></li>
+        <li class="step step-unevaluated"><span class="step-index">1</span><span class="math">log<sub>2</sub>(<i>x</i>(<i>x</i> − 2)) = 3</span><span class="step-verdict">not checked</span></li>
+        <li class="step step-unevaluated"><span class="step-index">2</span><span class="math"><i>x</i>(<i>x</i> − 2) = 9</span><span class="step-verdict">not checked</span></li>
+      </ol>
+      <div class="proto-note">tutoring-session error SESSION_VERIFICATION_UNAVAILABLE: retry offered, no diagnosis meanwhile. GAP G2: without the CAS, "Show the answer" cannot produce an answer either (verification W3 runs in the same worker) — I3 says answers are never withheld; the honest terminal state is "answer unavailable until the checker restarts". Needs an owner call on wording; drawn on the answer page as <em>noanswer</em>.</div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

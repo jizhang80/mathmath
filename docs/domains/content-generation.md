@@ -2,10 +2,13 @@
 
 ## Purpose
 
-The offline batch pipeline behind D12: the Owner runs it on their own machine against the Claude API for
-candidate graph edges, per-node learning objects, expectation paraphrases and the M4′ synthetic
-wrong-solution set. It is **not Tier 2** — Tier 2 is in-product cloud inference and stays queued (D15, §9).
-Nothing here executes in the browser; only validated outputs ship. Milestones **M4′**, **M2**, **M6**.
+The offline batch pipeline behind D12, written in **Python** (D41): the Owner runs it on their own
+machine against the Claude API for candidate graph edges, per-node learning objects, expectation
+paraphrases, landmarks (D22) and the M4′ synthetic wrong-solution set; it re-derives every probe answer
+with SymPy (I1) and invokes the `Core` CLI for L0 validation and layout precompute (D33, D42 — never
+reimplemented here). It is **not Tier 2** — Tier 2 is in-product cloud inference and stays queued (D15,
+§9). Nothing here executes on the device; only validated outputs ship as the JSON `Core` consumes.
+Milestones **M4′**, **M2**, **M5**.
 
 ## Actors and roles
 
@@ -53,8 +56,15 @@ configuration at known cost. Emits `gen.run_completed`.
 **Learning-object variant.** Over an accepted Node (concept-graph), the same batch produces the
 Explanation, WorkedExamples, the ErrorType enum (closed, always including "none of these"), a HintTree
 tiered per ErrorType, and ProbeItems, then validates structurally — enum closed and non-empty, a hint tier
-per ErrorType, probe items fitting the two-item ~60 s budget [SOURCED: brief §2, §7], LaTeX parsable
-(I10) — regenerating whatever fails, with no edit step and no review queue (I9). The stamped bundle goes to
+per ErrorType, probe items of type `numeric | mc` (I10) fitting the two-item ~60 s budget [SOURCED: brief
+§2, §7] with every distractor tagged by an enum member (diagnosis Q1), every answer re-derived by SymPy
+(I1, D41), every prompt in the SwiftMath-renderable LaTeX subset — regenerating whatever fails, with no
+edit step and no review queue (I9).
+
+**Landmark variant.** Over a set of accepted Nodes, the batch proposes candidate landmarks — a real, named
+thing, one plain paragraph, a `source_url`, the node ids it touches (D22). Mechanical verification only
+(I9): the URL resolves (HTTP 2xx) and its page text contains the landmark's name; node ids exist; text
+clears the I6 screen. A candidate failing any check is dropped, never repaired or invented (I15). The stamped bundle goes to
 `learning-objects`, which accepts or refuses it on its own schema checks (`gen.objects_ready`).
 
 ### W2 — Intersect runs into a candidate set (L2)
@@ -71,6 +81,17 @@ per ErrorType, probe items fitting the two-item ~60 s budget [SOURCED: brief §2
 agreement counts, model id) and handed to `concept-graph`. Nothing is accepted here: the consumer's
 validators decide, and a refusal is regenerated, never hand-patched (I9). Emits `gen.intersection_ready`
 and, on refusal, `gen.bundle_rejected`.
+
+### W4 — Validate and lay out a graph bundle (build step)
+
+**Pre:** an accepted node/edge set with regions (concept-graph W2), region polygons, trails.
+**Steps:** 1. (Tier 0) Invoke the `Core` CLI: L0 validation including the region and trail rules (I8);
+a failing set is not emitted (D33). 2. (Tier 0) Invoke the `Core` CLI layout: region-constrained force
+layout seeded from `layout_hint`, deterministic; write `position` into every node. 3. Emit the versioned
+bundle JSON with its L0 report.
+**Post:** the app reads coordinates and never recomputes layout (D33). Emits `gen.bundle_built`. The
+reference implementation is the Swift function in `Core`; if invoking it proves awkward at M1, port to
+Python and record the switch (v2.4 §7).
 
 ### W3 — Build the M4′ synthetic wrong-solution set
 
@@ -91,7 +112,7 @@ confusion-matrix and abstention measurements; nothing here judges mathematics (I
 ## UI surfaces
 
 None. This is an offline, Owner-run pipeline: a CLI plus written run reports (configuration, agreement
-statistics, rejections, tokens, cost). No `/student/...` or `/parent/...` route touches it.
+statistics, rejections, tokens, cost, dropped landmarks, L0 report). No app screen touches it.
 
 ## Notifications produced
 
@@ -100,6 +121,7 @@ statistics, rejections, tokens, cost). No `/student/...` or `/parent/...` route 
 - `gen.intersection_ready` — `{ batch_id, scope, agreed_items, disagreed_items, k }` → `concept-graph`;
   `gen.objects_ready` — `{ batch_id, node_ids[], object_counts }` → `learning-objects`.
 - `gen.synthetic_set_ready` — `{ node_id, per_type_counts, round_trip_survival }` → `runtime-tiers` (M4′).
+- `gen.bundle_built` — `{ graph_version, l0_passed, node_count, laid_out }` → `concept-graph`, `platform`.
 
 ## Errors produced
 
@@ -113,8 +135,10 @@ statistics, rejections, tokens, cost). No `/student/...` or `/parent/...` route 
 
 - **I9 — primary owner.** No review, approval or edit state exists: every failure path ends in
   *regenerate* or *discard*. A spec adding "owner reviews the content" is BLOCKed.
-- **I1** — nothing generated is consulted about step correctness; this domain produces candidate structure
-  and wrong-solution *data*, and `verification` alone decides correctness. **I6** — expectation text
+- **I1** — nothing generated is consulted about correctness; this domain produces candidate structure
+  and wrong-solution *data*, and SymPy here (offline), `Core`'s checker (on device) and, at M5,
+  `verification` decide correctness. **I15** — landmarks are dropped, never invented. **I14 / D42** — L0
+  and layout are invoked, not reimplemented. **I6** — expectation text
   reaches prompts in memory only, and paraphrases clear the `curriculum-spine` overlap check, so no source
   prose survives in a kept RunOutput.
 - **I13 / I11** — quality over token conservation: independent runs beat one cheap run; counts are tagged.
@@ -123,7 +147,7 @@ statistics, rejections, tokens, cost). No `/student/...` or `/parent/...` route 
 
 Seams: → `concept-graph` (IntersectionResult accepted only after L0 and L1); → `learning-objects` (bundle
 accepted only after schema validation); → `curriculum-spine` (paraphrases); → `runtime-tiers`
-(SyntheticSolutionSet for M4′).
+(SyntheticSolutionSet for M4′); → `Core` CLI (L0, layout — D42).
 
 ## Open questions
 
@@ -155,3 +179,4 @@ weakens the audit story for an older bundle.
 | 2026-09-08 | Drafted (Phase 3b). |
 | 2026-09-08 | Phase 3b consistency fixes (event consumers aligned with telemetry's four event kinds). |
 | 2026-09-08 | Open questions ratified by owner (all defaults; see docs/plans/phase3b-open-questions.md). |
+| 2026-09-09 | v2 re-cut: Python pipeline (D41); SymPy answer re-derivation; landmark variant (D22, I15); W4 build step invoking the `Core` CLI for L0 and layout (D33, D42); milestone M6 → M5. No open-question changes. |

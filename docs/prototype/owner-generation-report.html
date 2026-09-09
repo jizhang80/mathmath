@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Owner: generation batch report</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="edges:Edges batch,objects:Learning-object batch,budget:GEN_BUDGET_EXCEEDED (halted)"><b>route</b> <span class="route">/owner/generation-report</span> · <b>domain</b> content-generation W1 W2 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <span class="chip chip-outline">owner · local only</span>
+  </div></header>
+
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Batch finished</span></div>
+
+  <main class="shell-main wide stack">
+    <h1>Content-generation report: batch, intersection, validation</h1>
+    <p class="muted">Written by an Owner-run CLI against the Claude API, on the Owner's own machine. Offline only — never a runtime dependency (D15 boundary).</p>
+
+    <div class="card stack">
+      <div class="section-label">Run</div>
+      <dl class="kv">
+        <dt>Command</dt><dd><section data-variant="edges"><code>pnpm gen:batch --scope starting-chain-edges --runs 3 --k 2</code></section><section data-variant="objects"><code>pnpm gen:batch --scope node:n-log-eq --kind learning-objects --runs 3</code></section><section data-variant="budget"><code>pnpm gen:batch --scope strand:exponential-logarithmic --runs 3 --ceiling 2.00</code></section></dd>
+        <dt>PromptVersion</dt><dd><section data-variant="edges"><code>pv-edges-2026.09-a3f1c9</code></section><section data-variant="objects"><code>pv-objects-2026.09-77bd02</code></section><section data-variant="budget"><code>pv-edges-2026.09-a3f1c9</code></section></dd>
+        <dt>Model id</dt><dd>claude-opus-4-5-20260201 [placeholder id]</dd>
+        <dt>Temperature</dt><dd>0.7</dd>
+        <dt>Seeds (per run)</dt><dd>101, 102, 103</dd>
+        <dt>Runs</dt><dd>3, independent — no run sees another's output (content-generation W1 step 2, gen-Q2: prompt phrasing varied, model fixed)</dd>
+      </dl>
+      <div class="proto-note">CLI name and flags are placeholders — Phase 5/6 names the real tool. Batch configuration is recorded before any call (W1 step 1), so the batch stays describable even when it fails midway.</div>
+    </div>
+
+    <section data-variant="edges objects">
+      <div class="card stack">
+        <div class="section-label">W1 — batch execution: tokens and cost</div>
+        <div class="table-wrap"><table class="table num">
+          <thead><tr><th style="text-align:left">Run</th><th class="num">Items</th><th class="num">Discarded (schema)</th><th class="num">Tokens in</th><th class="num">Tokens out</th><th class="num">Cost</th></tr></thead>
+          <tbody>
+            <tr><td>run 101</td><td class="num">9</td><td class="num">0</td><td class="num">12,400</td><td class="num">3,100</td><td class="num">$0.42</td></tr>
+            <tr><td>run 102</td><td class="num">7</td><td class="num">2</td><td class="num">13,100</td><td class="num">3,250</td><td class="num">$0.44</td></tr>
+            <tr><td>run 103</td><td class="num">9</td><td class="num">0</td><td class="num">12,400</td><td class="num">3,100</td><td class="num">$0.41</td></tr>
+            <tr><td><strong>Total</strong></td><td class="num">25</td><td class="num">2</td><td class="num">37,900</td><td class="num">9,450</td><td class="num"><strong>$1.27</strong> of $5.00 ceiling</td></tr>
+          </tbody>
+        </table></div>
+        <div class="banner banner-warn"><div class="banner-body"><div class="banner-title">2 items discarded</div>Run 102 produced 2 items failing schema validation (missing <code>to</code> field on one candidate edge, malformed LaTeX on another). Discarded, not hand-repaired. <span class="code">GEN_SCHEMA_INVALID</span></div></div>
+        <div class="proto-note">content-generation W1 step 3: validate each RunOutput, discard failures, accumulate cost against the Owner-set ceiling (gen-Q4) rather than spending silently.</div>
+      </div>
+    </section>
+
+    <section data-variant="edges">
+      <div class="card stack">
+        <div class="section-label">W2 — intersection at k = 2 (edges)</div>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Candidate edge</th><th>Runs agreeing</th><th>generation_agreement</th><th>Outcome</th></tr></thead>
+          <tbody>
+            <tr><td>n-poly-factor → n-quad-fn</td><td>101, 102, 103</td><td>3</td><td><span class="chip chip-ok">in IntersectionResult</span></td></tr>
+            <tr><td>n-exp-fn → n-log-inverse</td><td>101, 102, 103</td><td>3</td><td><span class="chip chip-ok">in IntersectionResult</span></td></tr>
+            <tr><td>n-log-laws → n-log-eq</td><td>101, 102, 103</td><td>3</td><td><span class="chip chip-ok">in IntersectionResult</span></td></tr>
+            <tr><td>n-exp-laws → n-exp-fn</td><td>101, 102, 103</td><td>3</td><td><span class="chip chip-ok">in IntersectionResult</span></td></tr>
+            <tr><td>n-log-inverse → n-log-laws</td><td>101, 102, 103</td><td>3</td><td><span class="chip chip-ok">in IntersectionResult</span></td></tr>
+            <tr><td>n-log-inverse → n-log-eq</td><td>101, 103</td><td>2</td><td><span class="chip chip-ok">in IntersectionResult</span></td></tr>
+            <tr><td>n-quad-fn → n-log-eq</td><td>102, 103</td><td>2</td><td><span class="chip chip-ok">in IntersectionResult (ships low-confidence, D13)</span></td></tr>
+            <tr><td>n-lin-rel → n-exp-laws</td><td>101</td><td>1</td><td><span class="chip chip-warn">disagreement list</span></td></tr>
+            <tr><td>n-fn-transform → n-exp-fn</td><td>102</td><td>1</td><td><span class="chip chip-bad">GEN_INTERSECTION_EMPTY</span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="banner banner-error"><div class="banner-body"><div class="banner-title">n-fn-transform has no edge in ≥ 2 independent runs</div>Only run 102 proposed an edge touching this node. Per gen-Q3, nothing is emitted for it here — the report lists it, and <code>concept-graph</code>'s connectivity check catches the isolated node at L0. <span class="code">GEN_INTERSECTION_EMPTY</span></div></div>
+        <div class="proto-note">content-generation W2 step 2: items below k go to a disagreement list, not the bin — n-lin-rel → n-exp-laws (1 of 3) ships as a disputed low-confidence edge instead, matching owner-graph-report.html's disputed list. n-fn-transform's empty intersection is exactly the cause of the GRAPH_L0_FAILED variant on that report — see it there.</div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">gen.bundle_rejected round-trip</div>
+        <p>IntersectionResult <code>batch-2026.09-edges-03</code> handed to <code>concept-graph</code> W1/W2. On the run where the candidate targeted an out-of-date spine (<code>spine@2026.08-4</code>), concept-graph refused it before L1 tagging.</p>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Consumer</th><th>Reason codes</th><th>Next</th></tr></thead>
+          <tbody><tr><td>concept-graph</td><td><code>GRAPH_L0_FAILED</code> (spine_version mismatch)</td><td>Re-run W2 against the current spine_version — nothing here is hand-patched (I9)</td></tr></tbody>
+        </table></div>
+        <div class="proto-note">content-generation W2 post: "nothing is accepted here: the consumer's validators decide, and a refusal is regenerated, never hand-patched." Emits <code>gen.bundle_rejected</code>.</div>
+      </div>
+
+      <div class="banner banner-ok"><div class="banner-body"><div class="banner-title">Verdict: accepted</div>IntersectionResult and disagreement list stamped with provenance and hand off to <code>concept-graph</code> W1/W2 (this run, against <code>spine@2026.09-1</code>). Next: run the graph L0/L1 checker — see owner-graph-report.html.</div></div>
+    </section>
+
+    <section data-variant="objects">
+      <div class="card stack">
+        <div class="section-label">Learning-object variant of W1 — structural validation, node n-log-eq</div>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Check</th><th>Result</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>ErrorType enum closed, non-empty</td><td><span class="chip chip-ok">pass</span></td><td>6 members, exactly one <code>none_of_these</code></td></tr>
+            <tr><td>Hint tier per ErrorType</td><td><span class="chip chip-ok">pass</span></td><td>3 tiers × 5 non-abstention types</td></tr>
+            <tr><td>Probe items fit the ~60 s / 2-item budget</td><td><span class="chip chip-ok">pass</span></td><td>6 ProbeItems in the pool (lo-Q2), 2 drawn per probe</td></tr>
+            <tr><td>LaTeX parsable (I10)</td><td><span class="chip chip-warn">1 regenerated</span></td><td>One WorkedExample step failed to parse on first pass, regenerated clean</td></tr>
+          </tbody>
+        </table></div>
+        <div class="proto-note">content-generation W1 "learning-object variant": same batch mechanism, node-scoped validation — Explanation, WorkedExamples, ErrorType enum, HintTree, ProbeItems, regenerated on failure with no edit step (I9). The stamped bundle then goes to learning-objects W1 for its own six checks — see owner-lo-report.html.</div>
+      </div>
+      <div class="banner banner-ok"><div class="banner-body"><div class="banner-title">Verdict: accepted</div>Structural validation passed after one regeneration. Next: hand the bundle to <code>learning-objects</code> W1 (<code>gen.objects_ready</code>) for its own coverage/enum/mapping/hint/probe/verbatim checks.</div></div>
+    </section>
+
+    <section data-variant="budget">
+      <div class="card stack">
+        <div class="section-label">W1 — halted mid-batch</div>
+        <div class="table-wrap"><table class="table num">
+          <thead><tr><th style="text-align:left">Run</th><th class="num">Items</th><th class="num">Tokens in</th><th class="num">Tokens out</th><th class="num">Cost</th></tr></thead>
+          <tbody>
+            <tr><td>run 101</td><td class="num">14</td><td class="num">31,000</td><td class="num">8,400</td><td class="num">$1.06</td></tr>
+            <tr><td>run 102</td><td class="num">12</td><td class="num">33,500</td><td class="num">9,900</td><td class="num">$1.18</td></tr>
+            <tr><td>run 103 — halted partway</td><td class="num">4 (partial)</td><td class="num">9,200</td><td class="num">2,600</td><td class="num">$0.31</td></tr>
+            <tr><td><strong>Total at halt</strong></td><td class="num">30</td><td class="num">73,700</td><td class="num">20,900</td><td class="num"><strong>$2.55</strong> — ceiling was $2.00</td></tr>
+          </tbody>
+        </table></div>
+        <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Batch halted: cost ceiling exceeded</div>Accumulated cost passed the $2.00 batch ceiling during run 103. Runs 101 and 102 are complete and kept; run 103's 4 partial items are also kept. <span class="code">GEN_BUDGET_EXCEEDED</span></div></div>
+        <div class="proto-note">content-generation W1 step 3 / errors: halting rather than spending silently. Partial output is kept, not discarded — the batch is resumable from its recorded configuration (gen-Q4).</div>
+      </div>
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Verdict: refused</div>The batch is incomplete — run 103 did not finish, so this scope has no IntersectionResult yet. Next: resume run 103 alone, raise the ceiling, or narrow the scope, then re-run W2.</div></div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

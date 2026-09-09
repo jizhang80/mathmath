@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Data and telemetry</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="off:Off (default),on:On,offline:Offline (buffering),sendfail:Send failed"><b>route</b> <span class="route">/settings/data</span> · <b>domain</b> telemetry W1 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html">Parent</a><a href="settings-data.html" aria-current="page">Settings</a></nav>
+    <span class="grow"></span>
+    <a class="btn btn-quiet" href="student-history.html">History</a>
+  </div></header>
+
+  <div class="status-strip">
+    <section data-variant="off"><span class="status"><span class="dot"></span>Telemetry off</span></section>
+    <section data-variant="on"><span class="status is-ok"><span class="dot"></span>Telemetry on</span></section>
+    <section data-variant="offline"><span class="status is-ok"><span class="dot"></span>Telemetry on</span></section>
+    <section data-variant="offline"><span class="status is-busy"><span class="dot"></span>Offline — buffering</span></section>
+    <section data-variant="sendfail"><span class="status is-ok"><span class="dot"></span>Telemetry on</span></section>
+  </div>
+
+  <main class="shell-main stack">
+    <h1>Data and telemetry</h1>
+    <nav class="nav" aria-label="Settings">
+      <a href="settings-data.html" aria-current="page">Data &amp; telemetry</a>
+      <a href="settings-storage.html">Storage &amp; updates</a>
+      <a href="settings-models.html">On-device model</a>
+    </nav>
+
+    <div class="prose">
+      <p>mathmath can send small, anonymous counts back to the project so the concept graph can be
+      checked against real results. This is off unless you turn it on, and it never identifies you or
+      this device.</p>
+    </div>
+
+    <div class="card stack">
+      <div class="section-label">What would be sent, if you turn this on</div>
+      <ul class="stack-sm">
+        <li>The id of the topic (node) involved — never its name in free text</li>
+        <li>The id of the error type, when one was diagnosed</li>
+        <li>Whether a check passed or failed — a plain true/false</li>
+        <li>Which tier answered — 0 or 1</li>
+        <li>The app version and the bundle versions installed</li>
+        <li>Counts grouped by day — never a finer time</li>
+      </ul>
+    </div>
+
+    <div class="card card-quiet stack">
+      <div class="section-label">What is never sent</div>
+      <ul class="stack-sm">
+        <li>Any free text you typed</li>
+        <li>The problem or steps you wrote, in any form</li>
+        <li>A timestamp finer than the day</li>
+        <li>Anything that fingerprints this device — browser details, screen size, storage figures</li>
+      </ul>
+      <p class="hint">These are excluded by the shape of the data itself, not by a setting — there is no
+      field to put them in.</p>
+    </div>
+
+    <div class="banner"><div class="banner-body"><div class="banner-title">Sent batches cannot be recalled</div>Once a batch leaves this device it carries no id linking it back here, so it cannot be found and withdrawn later. Turning telemetry off only stops future batches and clears what is still waiting to send.</div></div>
+
+    <div class="card stack">
+      <div class="section-label">This device</div>
+      <dl class="kv">
+        <dt>Buffered events</dt>
+        <dd>
+          <span data-variant="off">0 — nothing buffered while telemetry is off</span>
+          <span data-variant="on">3, waiting for the next daily send</span>
+          <span data-variant="offline">7, waiting for a connection</span>
+          <span data-variant="sendfail">5, kept after a failed send</span>
+        </dd>
+        <dt>Last batch</dt>
+        <dd>
+          <span data-variant="off">None sent</span>
+          <span data-variant="on">Sent 2026-09-07, 12 events</span>
+          <span data-variant="offline">Sent 2026-09-05, 9 events</span>
+          <span data-variant="sendfail">Attempted 2026-09-07 — not sent</span>
+        </dd>
+      </dl>
+    </div>
+
+    <section data-variant="offline">
+      <div class="banner banner-info"><div class="banner-body">You are offline. Buffered events stay on this device and send automatically once you are back online.</div></div>
+      <div class="proto-note">platform W5: offline is a normal state, not an error — nothing here blocks or nags.</div>
+    </section>
+
+    <section data-variant="sendfail">
+      <div class="banner"><div class="banner-body"><div class="banner-title">The last send did not go through</div>Nothing is lost — buffered events are kept and retried. <span class="code">TELEM_ENDPOINT_UNREACHABLE</span></div></div>
+      <div class="banner"><div class="banner-body"><div class="banner-title">A batch was rejected</div>The endpoint did not accept the last batch's shape. It was dropped after a bounded number of retries; newer events keep buffering normally. <span class="code">TELEM_BATCH_REJECTED</span></div></div>
+      <div class="proto-note">telemetry W3: both failures are shown quietly, inline, never as a modal or a red alarm — the session is never blocked by a send failure.</div>
+    </section>
+
+    <div class="actions">
+      <section data-variant="off"><a class="btn btn-primary" href="#on">Turn telemetry on</a></section>
+      <section data-variant="on offline sendfail"><a class="btn btn-quiet" href="#off">Turn telemetry off</a></section>
+    </div>
+    <div class="proto-note">telemetry W1: off by default; consent is set or revoked from this one surface only, never mid-session and never a blocking modal (design-system principle 3). GAP: neither telemetry.md nor the buffered-event notifications name a human-readable "buffered count" field for a settings surface to read — the counts above are inferred, not sourced from a notification payload.</div>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

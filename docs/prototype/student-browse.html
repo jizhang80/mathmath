@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Browse topics</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="courses:Courses,strands:Strands,expectations:Expectations,linkoff:Link unresolved"><b>route</b> <span class="route">/student/browse</span> · <b>domain</b> curriculum-spine UI · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html" aria-current="page">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <a class="btn btn-quiet" href="student-history.html">History</a>
+  </div></header>
+
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Checker ready</span></div>
+
+  <main class="shell-main stack">
+    <h1>Browse topics</h1>
+
+    <section data-variant="courses">
+      <div class="card stack">
+        <div class="section-label">Course</div>
+        <ul class="menu">
+          <li><a href="#strands">MTH1W — Mathematics (2021) <span class="chip chip-outline">4 strands</span></a></li>
+          <li><a href="#strands">MPM2D — Principles of Mathematics (2005 + 2022 addendum) <span class="chip chip-outline">5 strands</span></a></li>
+          <li><a href="#strands">MCR3U — Functions (2007) <span class="chip chip-outline">5 strands</span></a></li>
+          <li><a href="#strands">MHF4U — Advanced Functions (2007) <span class="chip chip-outline">3 strands</span></a></li>
+        </ul>
+      </div>
+      <div class="proto-note">curriculum-spine W1/W2: one Course per (grade, stream, vintage); MPM2D carries both its 2005 base and 2022 addendum codes (Q3, addendum wins on overlap).</div>
+    </section>
+
+    <section data-variant="strands">
+      <div class="card stack">
+        <p class="menu crumb">MHF4U — Advanced Functions <a href="#courses">(change course)</a></p>
+        <div class="section-label">Strand</div>
+        <ul class="menu">
+          <li><a href="#expectations">Exponential and logarithmic functions <span class="chip chip-outline">3 expectations</span></a></li>
+          <li><a href="#expectations">Polynomial and rational functions</a></li>
+          <li><a href="#expectations">Characteristics of functions</a></li>
+        </ul>
+      </div>
+    </section>
+
+    <section data-variant="expectations">
+      <div class="card stack">
+        <p class="menu crumb">MHF4U — Advanced Functions › Exponential and logarithmic functions <a href="#strands">(change strand)</a></p>
+        <div class="section-label">Expectation</div>
+        <ul class="menu">
+          <li class="stack-sm" style="padding:12px 16px">
+            <div class="row row-between">
+              <div><span class="code">A1.1</span> — Recognise a logarithm as the exponent that produces a given power</div>
+              <a class="btn btn-quiet" href="student-node.html">View topic</a>
+            </div>
+            <div class="row"><a href="https://www.edu.gov.on.ca/eng/curriculum/secondary/math1112currb.pdf">Official expectation (Ontario)</a><span class="grow"></span><a class="btn btn-quiet" href="student-session.html">Use this topic</a></div>
+          </li>
+          <li class="stack-sm" style="padding:12px 16px">
+            <div class="row row-between">
+              <div><span class="code">A1.4</span> — Use the laws of logarithms to rewrite expressions</div>
+              <a class="btn btn-quiet" href="student-node.html">View topic</a>
+            </div>
+            <div class="row"><a href="https://www.edu.gov.on.ca/eng/curriculum/secondary/math1112currb.pdf">Official expectation (Ontario)</a><span class="grow"></span><a class="btn btn-quiet" href="student-session.html">Use this topic</a></div>
+          </li>
+          <li class="stack-sm" style="padding:12px 16px">
+            <div class="row row-between">
+              <div><span class="code">A3.2</span> — Solve equations that contain logarithms, checking the domain</div>
+              <a class="btn btn-quiet" href="student-node.html">View topic</a>
+            </div>
+            <div class="row"><a href="https://www.edu.gov.on.ca/eng/curriculum/secondary/math1112currb.pdf">Official expectation (Ontario)</a><span class="grow"></span><a class="btn btn-quiet" href="student-session.html">Use this topic</a></div>
+          </li>
+        </ul>
+      </div>
+      <div class="proto-note">I6: every row shows the code plus this project's own paraphrase and a link to the official Ministry page — never the Ministry wording itself. "View topic" opens the node's own page; "Use this topic" starts a session pre-filled with it.</div>
+    </section>
+
+    <section data-variant="linkoff">
+      <div class="card stack">
+        <p class="menu crumb">MPM2D — Principles of Mathematics › Quadratic relations</p>
+        <div class="section-label">Expectation</div>
+        <ul class="menu">
+          <li class="stack-sm" style="padding:12px 16px">
+            <div class="row row-between">
+              <div><span class="code">QR2.3</span> — Solve quadratic equations by factoring</div>
+              <a class="btn btn-quiet" href="student-node.html">View topic</a>
+            </div>
+            <div class="row"><span class="faint">Official expectation link unavailable</span><span class="grow"></span><a class="btn btn-quiet" href="student-session.html">Use this topic</a></div>
+          </li>
+        </ul>
+      </div>
+      <div class="banner"><div class="banner-body">The code and paraphrase still render normally when the official link cannot be resolved — only the link itself is switched off. <span class="code">SPINE_LINK_UNRESOLVED</span></div></div>
+    </section>
+
+    <div class="proto-note">GAP: curriculum-spine.md's two link templates cover only the "2021" and "2005/2007" vintage groups; it does not say which template an MPM2D 2022-addendum code uses versus its 2005 base code. This mock uses the 2007-style PDF link for both, as the closer analogue — the doc should say explicitly.</div>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

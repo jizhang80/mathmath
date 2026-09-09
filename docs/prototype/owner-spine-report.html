@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Owner: spine extraction &amp; bundle report</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="extract:Extract (MPM2D addendum),cut:Cut a bundle,reversion:Re-version diff,fail:Fail (verbatim / parse / paraphrase)"><b>route</b> <span class="route">/owner/spine-report</span> · <b>domain</b> curriculum-spine W1 W2 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <span class="chip chip-outline">owner · local only</span>
+  </div></header>
+
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Run complete</span></div>
+
+  <main class="shell-main wide stack">
+    <h1>Curriculum-spine report: extraction and bundle cut</h1>
+    <p class="muted">Written by an Owner-run CLI. Source text is archived locally and never leaves memory during a run (I6).</p>
+
+    <div class="card stack">
+      <div class="section-label">Run</div>
+      <dl class="kv">
+        <dt>Command</dt>
+        <dd><section data-variant="extract"><code>pnpm spine:extract --course MPM2D --vintage 2022-addendum --base 2005</code></section>
+            <section data-variant="cut"><code>pnpm spine:cut --courses MTH1W,MPM2D,MCR3U,MHF4U --version 2026.09-1</code></section>
+            <section data-variant="reversion"><code>pnpm spine:cut --reversion --from spine@2026.08-2 --to spine@2026.09-1</code></section>
+            <section data-variant="fail"><code>pnpm spine:extract --course MHF4U --vintage 2007</code></section></dd>
+        <dt>Source, retrieval date</dt>
+        <dd><section data-variant="extract">2022 addendum PDF, official Ministry host — retrieved 2026-09-01</section>
+            <section data-variant="cut reversion">four archived sources, retrieved 2026-08-28 through 2026-09-01</section>
+            <section data-variant="fail">2007 curriculum PDF, official Ministry host — retrieved 2026-09-02</section></dd>
+        <dt>Output</dt><dd><code>spine@2026.09-1</code></dd>
+      </dl>
+      <div class="proto-note">CLI name and flags are placeholders — Phase 5/6 names the real tool. curriculum-spine W1 pre: the official source for the Course and vintage is archived locally first.</div>
+    </div>
+
+    <section data-variant="extract">
+      <div class="card stack">
+        <div class="section-label">W1 — per-course extraction</div>
+        <dl class="kv">
+          <dt>Strands found</dt><dd>4</dd>
+          <dt>Codes found (2022 addendum)</dt><dd>11</dd>
+        </dl>
+        <div class="section-label">Paraphrase verification (spine-Q1)</div>
+        <div class="table-wrap"><table class="table num">
+          <thead><tr><th style="text-align:left">Check</th><th class="num">Passed</th><th class="num">Rejected → regenerated</th></tr></thead>
+          <tbody>
+            <tr><td>Length bound (≤ 140 characters)</td><td class="num">10</td><td class="num">1</td></tr>
+            <tr><td>6-gram overlap with source (spine-Q1 threshold)</td><td class="num">9</td><td class="num">2</td></tr>
+            <tr><td>English check (I12)</td><td class="num">11</td><td class="num">0</td></tr>
+          </tbody>
+        </table></div>
+        <div class="proto-note">curriculum-spine W1 step 4: mechanical verification only (I9) — a rejected paraphrase is regenerated, never hand-edited, and never replaced by Ministry wording.</div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">Addendum variant: MPM2D codes vs. the 2005 base (spine-Q3)</div>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Code</th><th>Classification</th><th>Paraphrase re-generated?</th></tr></thead>
+          <tbody>
+            <tr><td>QR2.3 — "Solve quadratic equations by factoring"</td><td><span class="chip chip-outline">unchanged</span></td><td>No — 2005 entry kept</td></tr>
+            <tr><td>QR1.2</td><td><span class="chip chip-warn">revised</span></td><td>Yes — addendum wording differs from 2005</td></tr>
+            <tr><td>QR3.4</td><td><span class="chip chip-info">new</span></td><td>Yes — no 2005 counterpart</td></tr>
+          </tbody>
+        </table></div>
+        <div class="proto-note">spine-Q3: the addendum wins for any code it touches; unchanged codes keep the base paraphrase; only new/revised codes are re-paraphrased. Both vintages are recorded as provenance.</div>
+      </div>
+      <div class="banner banner-ok"><div class="banner-body"><div class="banner-title">Verdict: accepted</div>MPM2D 2022 addendum extracted, classified against the 2005 base, all paraphrases pass verification. Next: include in the next <code>spine:cut</code> alongside the other three courses. Emits <code>spine.course_extracted</code>.</div></div>
+    </section>
+
+    <section data-variant="cut">
+      <div class="card stack">
+        <div class="section-label">W2 — bundle cut checks</div>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Check</th><th>Result</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Schema</td><td><span class="chip chip-ok">pass</span></td><td>4 courses, 4 strands avg. per course</td></tr>
+            <tr><td>No duplicate (course, code)</td><td><span class="chip chip-ok">pass</span></td><td>—</td></tr>
+            <tr><td>Every strand reachable</td><td><span class="chip chip-ok">pass</span></td><td>—</td></tr>
+            <tr><td>Link allow-list (Ministry hosts)</td><td><span class="chip chip-ok">pass</span></td><td><code>dcp.edu.gov.on.ca</code>, <code>edu.gov.on.ca</code></td></tr>
+            <tr><td>Verbatim-text gate (I6, bundles + fixtures)</td><td><span class="chip chip-ok">pass</span></td><td>0 findings</td></tr>
+          </tbody>
+        </table></div>
+        <dl class="kv">
+          <dt>spine_version</dt><dd><code>spine@2026.09-1</code></dd>
+          <dt>Content hash</dt><dd><code>sha256:9c2f…e410</code> [placeholder]</dd>
+          <dt>Registered with</dt><dd><code>AssetManifest</code> (platform)</dd>
+        </dl>
+        <div class="proto-note">curriculum-spine W2 step 1: failure at any check stops the cut. This run assembles MTH1W, MPM2D (incl. 2022 addendum), MCR3U, MHF4U.</div>
+      </div>
+      <div class="banner banner-ok"><div class="banner-body"><div class="banner-title">Verdict: accepted</div>Bundle hashed, frozen, registered. Next: <code>concept-graph</code> L0 reads this as its coverage input. Emits <code>spine.bundle_published</code>.</div></div>
+    </section>
+
+    <section data-variant="reversion">
+      <div class="card stack">
+        <div class="section-label">W2 — re-version diff</div>
+        <dl class="kv">
+          <dt>From</dt><dd><code>spine@2026.08-2</code></dd>
+          <dt>To</dt><dd><code>spine@2026.09-1</code></dd>
+        </dl>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Class</th><th>Codes</th><th>Flag</th></tr></thead>
+          <tbody>
+            <tr><td>Added</td><td>QR3.4 (MPM2D)</td><td>—</td></tr>
+            <tr><td>Revised</td><td>QR1.2 (MPM2D)</td><td>—</td></tr>
+            <tr><td>Removed</td><td>A1.3 (MHF4U — folded into A1.1 on the Ministry's 2026 update)</td><td><span class="chip chip-bad">dangerous</span> a Node may map to nothing</td></tr>
+          </tbody>
+        </table></div>
+        <div class="banner banner-warn"><div class="banner-body"><div class="banner-title">Removal needs a coverage recheck</div>Any Node whose only <code>expectation_codes[]</code> entry was A1.3 loses coverage. <code>concept-graph</code> must re-run L0 coverage against <code>spine@2026.09-1</code> before this graph bundle is trusted.</div></div>
+        <div class="proto-note">curriculum-spine W2 step 2: removals are the dangerous class. Prior bundles (spine@2026.08-2) stay retrievable, so an existing Graph bundle built on it still validates.</div>
+      </div>
+      <div class="banner banner-ok"><div class="banner-body"><div class="banner-title">Verdict: accepted (with a required follow-up)</div><code>spine@2026.09-1</code> is published. Next: re-run <code>concept-graph</code> W1 coverage check against the new version before accepting any graph bundle targeting it. Emits <code>spine.bundle_published</code> and <code>spine.codes_changed</code>.</div></div>
+    </section>
+
+    <section data-variant="fail">
+      <div class="card stack">
+        <div class="section-label">W1 — failures</div>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Code</th><th>When</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td><span class="code">SPINE_PARSE_INCOMPLETE</span></td><td>Step 2 stub check</td><td>Strand "C — Trigonometric Functions" parsed empty — the 2007 layout's column break was misread. Stopped.</td></tr>
+            <tr><td><span class="code">SPINE_PARAPHRASE_REJECTED</span></td><td>Step 4 verification</td><td>3 of 14 paraphrases rejected this run (2 over the length bound, 1 sharing a 6-gram outside the technical-term allow-list) — all regenerated, none hand-edited</td></tr>
+            <tr><td><span class="code">SPINE_VERBATIM_TEXT_DETECTED</span></td><td>W2 build gate</td><td>A fixture file under test data contained a pasted sentence from the source PDF. Build fails.</td></tr>
+            <tr><td><span class="code">SPINE_LINK_UNRESOLVED</span></td><td>W1 step 5</td><td>1 code's official-link template could not instantiate (missing section anchor) — code and paraphrase still render, link switched off, non-blocking</td></tr>
+          </tbody>
+        </table></div>
+        <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Build failed: verbatim Ministry text detected</div><span class="code">SPINE_VERBATIM_TEXT_DETECTED</span> — the I6 gate runs over bundles <em>and</em> fixtures; this one caught a test fixture, not the shipped bundle itself, but the gate still fails the build. No bundle is cut while this stands.</div></div>
+        <div class="proto-note">curriculum-spine errors: SPINE_PARSE_INCOMPLETE stops W1 before any model call; SPINE_PARAPHRASE_REJECTED is recoverable by regeneration only (I9); SPINE_VERBATIM_TEXT_DETECTED fails the whole build, "fix first," never patched around.</div>
+      </div>
+      <div class="banner banner-error"><div class="banner-body"><div class="banner-title">Verdict: refused</div>Fix the parser for the misread strand, remove the pasted fixture text, and re-run W1 from the top. No partial spine ships. Next: re-run <code>pnpm spine:extract</code> for MHF4U.</div></div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

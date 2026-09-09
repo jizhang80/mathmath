@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mathmath — Trend</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<link rel="stylesheet" href="proto.css">
+<script src="proto.js" defer></script>
+</head>
+<body>
+<div class="proto-bar" data-variants="default:Default (3 sessions),toofew:Too few sessions (1)"><b>route</b> <span class="route">/parent/trend</span> · <b>domain</b> parent-view W4 · <a href="index.html">route map</a></div>
+<div class="shell">
+  <header class="shell-header"><div class="shell-header-inner">
+    <a class="brand" href="index.html">mathmath</a>
+    <nav class="nav"><a href="student-session.html">Student</a><a href="parent.html" aria-current="page">Parent</a><a href="settings-data.html">Settings</a></nav>
+    <span class="grow"></span>
+    <a class="btn btn-quiet" href="parent.html">Back to parent view</a>
+  </div></header>
+
+  <div class="status-strip"><span class="status is-ok"><span class="dot"></span>Checker ready</span></div>
+
+  <main class="shell-main stack">
+    <h1>How things are trending</h1>
+    <p class="muted">This view is read-only, and the student can open this same page (parent-view Q2). There is no PIN on this page (parent-view Q1).</p>
+
+    <section data-variant="toofew">
+      <div class="card">
+        <p class="prose">Not enough sessions yet to say anything about a trend. Come back after another session or two.</p>
+      </div>
+      <div class="proto-note">parent-view W4: with fewer than two SessionRecords, the page stops at this sentence and renders nothing else — no counts, no gap lists.</div>
+    </section>
+
+    <section data-variant="default">
+      <div class="card stack">
+        <div class="section-label">Across the last few sessions</div>
+        <div class="prose">
+          <p>Over three sessions, exponential functions went from a source of trouble to something that has since been checked and confirmed — that gap is closed.</p>
+          <p>Exponent laws was checked partway through and did not go well at first, but has since been remediated and is no longer open.</p>
+          <p>One deeper topic, linear relations and equations, was noticed along the way but only recorded for later rather than worked on, since a session only backtracks so far.</p>
+        </div>
+      </div>
+
+      <div class="card stack">
+        <div class="section-label">A pattern worth noticing</div>
+        <p class="prose">The same kind of mix-up — confusing how an exponent and a logarithm relate to each other — showed up more than once across these sessions, which is why it was worth tracing back rather than treating as a one-off slip.</p>
+        <div class="proto-note">parent-view Trend: "recurring" means the same ErrorType id in two or more sessions (the doc's own [ESTIMATE] threshold). Written here as prose, not a count or score — no numbers-as-scores anywhere on this page, though the session count itself ("three sessions") is stated in words.</div>
+      </div>
+    </section>
+  </main>
+  <footer class="shell-footer">mathmath · runs on this device · no account</footer>
+</div>
+</body>
+</html>

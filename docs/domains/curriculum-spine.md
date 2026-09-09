@@ -4,8 +4,8 @@
 
 The index of what Ontario requires taught in grades 9–12 mathematics: the twelve courses of brief §4.1,
 their strands, and every expectation code, each with the project's own paraphrase and a link out to the
-official Ministry page (D18, I6). It gives `concept-graph` a citable code set for Nodes, and the product
-its Course → Strand → Node menu (§4.2). Milestones **M1**, **M6**.
+official Ministry page (D18, I6). It gives `concept-graph` a citable code set for Nodes, and the map its
+trails — a course as an ordered node path drawn over the continent (D20). Milestones **M1**, **M5**.
 
 ## Actors and roles
 
@@ -14,7 +14,7 @@ its Course → Strand → Node menu (§4.2). Milestones **M1**, **M6**.
 | Owner | Run extraction, supply sources, cut and version a bundle | Write or edit a paraphrase; approve content on quality (I9) |
 | System | Read the bundle, resolve code → Expectation, render the menu | Write to the spine; invent a code |
 | Generation model | Produce each `paraphrase` offline via `content-generation` | Emit codes or names — those are extracted deterministically |
-| Student / Parent | See code + paraphrase, follow the official link | Edit anything |
+| Student | See code + paraphrase, follow the official link (node panel) | Edit anything |
 
 ## Core entities
 
@@ -78,11 +78,10 @@ entry, both vintages are recorded, and only new/revised codes are re-paraphrased
 
 ## UI surfaces
 
-- `/student/browse` — Course → Strand → Expectation menu (Tier 0 mapping): code, paraphrase, link.
-- `/student/node/:nodeId`, `/parent/node/:nodeId` — "official expectations behind this node".
+- **Node panel** (map W2) — "official expectations behind this node": code, paraphrase, link.
+- **Trail** (map) — the course as a path; there is no Course → Strand → Expectation browse menu in the
+  iOS app (the map replaced it, D20).
 - No offline UI: extraction and bundling are Owner-run CLIs with a written report.
-
-Routes are placeholders, confirmed in Phase 4.
 
 ## Notifications produced
 
@@ -91,7 +90,7 @@ Routes are placeholders, confirmed in Phase 4.
 - `spine.bundle_published` — `{ spine_version, course_codes[], content_hash }`. Consumers: `concept-graph`
   (L0 coverage input), `platform` (asset registration).
 - `spine.codes_changed` — `{ version_from, version_to, added[], removed[], revised[] }`. Consumers:
-  `concept-graph` (recheck coverage), `parent-view`.
+  `concept-graph` (recheck coverage), `map` (trail revalidation).
 
 ## Errors produced
 
@@ -139,3 +138,4 @@ base vintage survives as provenance. **Trade-off:** simple, but drops phrasing s
 |---|---|
 | 2026-09-08 | Drafted (Phase 3b). |
 | 2026-09-08 | Open questions ratified by owner (all defaults; see docs/plans/phase3b-open-questions.md). |
+| 2026-09-09 | v2 re-cut: trails replace the browse menu as the runtime surface (D20); parent consumer removed (D38); milestone M6 → M5. No open-question changes. |
