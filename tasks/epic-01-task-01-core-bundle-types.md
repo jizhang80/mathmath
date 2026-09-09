@@ -10,20 +10,35 @@ depends_on: [none]
 model: sonnet
 ---
 
+> **Arbitrated 2026-09-09** (Q4, tester BLOCK `tasks/blocked/tester-blocked-01-01.md`, class
+> testability-gap). The previous revision carried a contradiction between §4.1 (shared
+> `.convertFromSnakeCase` decoder for every bundle type) and §4.10 (explicit snake_case `CodingKeys` on
+> `StudentState` and its nested types); Foundation applies the key-decoding strategy to the incoming key
+> **before** matching it against a `CodingKey` raw value, so the two are mutually exclusive. The settled
+> convention is stated once, in §4.1 / §4.1.1: **one wire format, one key strategy, one coder pair in
+> product code (`CoreCoding`)**, and no `Model/` type declares an explicit `CodingKeys`. AC6 changed
+> instrument (from `CodingKeys` reflection to the re-encoded document's own key set) and AC9 is new. See
+> the resolution note in the BLOCK file.
+
 ## §1 Goal & acceptance criteria
 
 Goal: `Core` gains `Codable` Swift types for every bundle file (`manifest`, `regions`, `nodes`, `edges`,
-`courses`, `landmarks`, `sources`) and for `StudentState`, plus a `CoreError` enum mirroring the subset of
-`contracts/error-codes.json` that `Core` actually raises in this EPIC's scope, plus deterministic
-bundle-directory read/write I/O (`BundleIO`). This is the interface every later EPIC-01 task (L0 checker,
-layout, `core-cli`, the demo bundle) builds on — it ships whole, with no placeholder types.
+`courses`, `landmarks`, `sources`) and for `StudentState`, plus one canonical JSON coder pair for that wire
+format (`CoreCoding`), plus a `CoreError` enum mirroring the subset of `contracts/error-codes.json` that
+`Core` actually raises in this EPIC's scope, plus deterministic bundle-directory read/write I/O (`BundleIO`).
+This is the interface every later EPIC-01 task (L0 checker, layout, `core-cli`, the demo bundle) builds on —
+it ships whole, with no placeholder types.
 
 Invariants in play:
 
 - **I1** — `ProbeItem` has no free-text answer field; numeric items carry `answer`/`wrong_answers`, `mc` items
   carry `choices`/`correct_choice_id`. The type shape makes a free-text answer field structurally impossible.
-- **I5** — `StudentState` and its nested types expose no field whose `CodingKeys` raw value is in the
-  identifier blocklist; a Swift test mirrors `pipeline/tests/test_contracts.py::test_transmitted_shapes_reject_identifier_keys`.
+- **I5** — the **encoded** `StudentState` document exposes no key in the identifier blocklist. The guard is
+  the wire key set of the re-encoded document, per `contracts/data-model.md` § StudentState — "**No field may
+  name a person, device, account, install or session** (I5); the schema's closed key set is the guard" — not a
+  Swift-side `CodingKeys` reflection; the Swift test mirrors
+  `pipeline/tests/test_contracts.py::test_transmitted_shapes_reject_identifier_keys` in intent (identifier
+  keys must not appear at any object nesting level).
 - **I6** — no type carries a `verbatim` field; `Node.paraphrase` and `Expectation.paraphrase` are the only
   Ministry-adjacent prose fields, both bounded to the project's own words per schema (`maxLength: 140`).
 - **I8** — the decode round-trip is the EPIC-time rung of the L0/decode contract; the types this task ships
@@ -33,6 +48,9 @@ Invariants in play:
   anywhere in the type set.
 - **I14** — `Core` imports `Foundation` only; the existing import-boundary test is extended to walk
   `Sources/Core` recursively so the new `Model/` subdirectory is scanned; an empty scan is a FAIL.
+  I14/D42's "anything the pipeline and the app must agree on is implemented **once, in `Core`**" covers the
+  wire-format coder: the decode/encode recipe exists exactly once, in `Sources/Core/CoreCoding.swift`, and
+  never in a test file (AC9).
 - **I15** — `Landmark.sourceUrl` is a required, non-optional `String` field (https resolution is verified by
   the pipeline in task 01.7, not here).
 
@@ -40,8 +58,11 @@ Acceptance criteria:
 
 - AC1: every file in `contracts/examples/` except `telemetry-batch.json` (8 files: `manifest.json`,
   `regions.json`, `nodes.json`, `edges.json`, `courses.json`, `landmarks.json`, `sources.json`,
-  `student-state.json`) decodes into the `Core` types listed in §4 and re-encodes to a structurally JSON-equal
-  document (key order excluded); the test enumerates the files it read and fails on an empty scan.
+  `student-state.json`) decodes into the `Core` types listed in §4 **through `CoreCoding.decoder`** and
+  re-encodes **through `CoreCoding.encoder`** to a structurally JSON-equal document (key order excluded); all
+  eight files, `student-state.json` included, go through that one pair with no per-file or per-type decoder
+  override. The instrument is `DecodeRoundTripTests.decodeRoundTrip()`; it enumerates the files it read and
+  fails on an empty or partial list (empty = FAIL).
 - AC2: `telemetry-batch.json` is excluded by name from the round-trip test, with a comment stating there is no
   `Core` type for it (telemetry is EPICs 10–11's scope).
 - AC3: every case of `CoreError` is present in `contracts/error-codes.json`, read from disk at test time; an
@@ -50,18 +71,32 @@ Acceptance criteria:
   level) and passes with the new `Model/` subdirectory in place; an empty scan is a FAIL.
 - AC5: round-tripping an example that omits an optional key (e.g. the first node in `nodes.json`, which has
   no `layout_hint`) never emits `null` for that key in the re-encoded document.
-- AC6: `StudentState` and every nested type it is built from expose a `CodingKeys` case set with no
-  intersection with the identifier blocklist `{id, install_id, device_id, session_id, user_id, ip, timestamp,
-  email, name}`; the round trip over `contracts/examples/student-state.json` passes.
+- AC6: encoding the `StudentState` decoded from `contracts/examples/student-state.json` through
+  `CoreCoding.encoder` produces a document whose object keys, collected recursively at every nesting level,
+  are disjoint from the identifier blocklist `{id, install_id, device_id, session_id, user_id, ip, timestamp,
+  email, name}`. The instrument is the recursive key collector in `DecodeRoundTripTests` (§4.13); it excludes
+  no nesting level and no key; empty = FAIL — the collected set must first be asserted a superset of the ten
+  top-level required names of `contracts/schemas/student-state.schema.json` (`schema_version`,
+  `format_version_seen`, `syllabi`, `marker`, `nodes`, `trail`, `expedition_log`, `probe_log`, `install_day`,
+  `consent_on`), so a collector that silently returned nothing cannot pass.
 - AC7: `BundleIO.read` throws `CoreError.platformBundleIntegrityFailed` when a file named in `manifest.files`
   is absent from the target directory, and does not return a partially constructed bundle.
 - AC8: `scripts/gate.sh` gate 1 (format+lint) and gate 3 (Core build+test) are green with the new files
   included.
+- AC9: no file under `Packages/Core/Sources/Core/` other than `CoreCoding.swift` contains the text
+  `JSONDecoder(` or `JSONEncoder(` — the wire-format decode/encode recipe lives in product code, exactly once.
+  The instrument is the recursive source scan in `CoreTests.swift` (§4.17). It scans `Sources/Core` only and
+  explicitly **excludes** `Tests/CoreTests` (that tree also decodes non-wire JSON — `contracts/error-codes.json`
+  in `ErrorRegistryTests` — and contains files other EPIC-01 tasks own, so scanning it would couple this task
+  to theirs). Empty = FAIL: the scan must find a non-empty `.swift` file list, and must find `CoreCoding.swift`
+  itself containing both texts.
 
 ## §2 File scope
 
 In-scope (the implementer touches EXACTLY these; nothing else):
 
+- `Packages/Core/Sources/Core/CoreCoding.swift` — **the one** `JSONDecoder`/`JSONEncoder` configuration for
+  the bundle wire format and `student-state.json` (§4.1.1).
 - `Packages/Core/Sources/Core/Model/Ids.swift` — shared id/point/region-vocabulary primitives (`Point`,
   `RegionId`) used by more than one bundle file's types.
 - `Packages/Core/Sources/Core/Model/Manifest.swift` — `Codable` type for `manifest.json`.
@@ -71,28 +106,39 @@ In-scope (the implementer touches EXACTLY these; nothing else):
 - `Packages/Core/Sources/Core/Model/Courses.swift` — `Codable` types for `courses.json`.
 - `Packages/Core/Sources/Core/Model/Landmarks.swift` — `Codable` types for `landmarks.json`.
 - `Packages/Core/Sources/Core/Model/Sources.swift` — `Codable` types for `sources.json`.
-- `Packages/Core/Sources/Core/Model/StudentState.swift` — `Codable` type for `student-state.json`, with the
-  I5 identifier-blocklist guard shape.
+- `Packages/Core/Sources/Core/Model/StudentState.swift` — `Codable` type for `student-state.json`.
 - `Packages/Core/Sources/Core/BundleIO.swift` — deterministic bundle-directory read/write; manifest
   file-presence completeness check.
 - `Packages/Core/Sources/Core/CoreError.swift` — the `CoreError` enum.
 - `Packages/Core/Sources/Core/Core.swift` — MODIFY: remove the stale "Phase 5 placeholder; the first EPIC
   replaces it" comment (this task is that replacement); `CoreInfo.dataFormatVersion` value stays `"0.0.0"`.
-- `Packages/Core/Tests/CoreTests/DecodeRoundTripTests.swift` — the AC1/AC2/AC5 round-trip test.
+- `Packages/Core/Tests/CoreTests/DecodeRoundTripTests.swift` — the AC1/AC2/AC5/AC6 round-trip and I5 tests.
 - `Packages/Core/Tests/CoreTests/ErrorRegistryTests.swift` — the AC3 registry test.
 - `Packages/Core/Tests/CoreTests/CoreTests.swift` — MODIFY: `coreImportBoundary()` walks `Sources/Core`
-  recursively.
+  recursively; plus the AC9 single-coder scan (§4.17).
+
+File-scope delta recorded by arbitration: `Packages/Core/Sources/Core/CoreCoding.swift` is new relative to the
+previous revision of this spec and to §L of the context bundle. It is required by AC9 — the tester's BLOCK is
+precisely that the only working recipe lived in `Tests/CoreTests`. It is a sibling of `BundleIO.swift` rather
+than a member of it, because `student-state.json` is not part of `ContentBundle` (§4.12) yet shares the wire
+format (`contracts/data-model.md`: "The shapes every bundle file, the student state and `Core`'s `Codable`
+types share"). No other task's file scope touches it.
 
 Note on §L of the context bundle: it lists `Model/Ids.swift` implicitly by omission (it did not name a file
 for `Point`/`RegionId`); this spec adds `Model/Ids.swift` as the explicit home for those shared primitives so
-no other `Model/*.swift` file needs to forward-declare a type another file also declares. This is the one
-place this spec's file list is more specific than the context bundle's §L, and it stays inside the same
-`Model/` directory the bundle already scoped.
+no other `Model/*.swift` file needs to forward-declare a type another file also declares. This and
+`CoreCoding.swift` are the only two places this spec's file list is more specific than the context bundle's
+§L, and both stay inside the `Packages/Core/Sources/Core/` tree the bundle already scoped.
+
+Any additional test file created under `Packages/Core/Tests/CoreTests/` while executing this task (by the
+implementer or the tester) decodes and encodes wire-format types through `CoreCoding` and declares no
+`JSONDecoder`/`JSONEncoder` of its own. This is a spec instruction, not a scope claim: those files are not
+listed above and AC9's scan does not read `Tests/CoreTests`.
 
 Out-of-scope (do not touch even if tempted):
 
-- `Packages/Core/Sources/Core/Layout*.swift`, `L0*.swift`, any validation function — task 01.2 (L0) / 01.3
-  (layout).
+- `Packages/Core/Sources/Core/Layout*.swift`, `L0*.swift`, `Validation/**`, any validation function — task
+  01.2 (L0) / 01.3 (layout).
 - `Packages/Core/Sources/CoreCLI/**` — task 01.4.
 - `data/demo/**` — task 01.5.
 - `Packages/Rendering/**` — task 01.6.
@@ -103,6 +149,12 @@ Out-of-scope (do not touch even if tempted):
 ## §3 Inputs (verbatim — do not paraphrase)
 
 Binding contract rules:
+
+- `contracts/data-model.md` — the contract's own opening statement of scope:
+  > The shapes every bundle file, the student state and `Core`'s `Codable` types share. The **JSON Schemas in
+  > `contracts/schemas/` are normative**; this file states the rules the schemas cannot. `Core` decodes exactly
+  > these shapes (a decode test over `contracts/examples/` is owed by the Demo EPIC); Android's `core` will
+  > too (D33). Retrofitting corrupts shipped bundles and synced state — locked first.
 
 - `contracts/data-model.md` — heading `### Identifiers`:
   > Ids are **stable, opaque, lowercase kebab-case slugs** matching `^[a-z0-9]+(-[a-z0-9]+)*$`, unique within
@@ -140,6 +192,10 @@ Binding contract rules:
   > `expedition_log[] {day, item_count, cleared, blocked, abandoned, diagnosis_events}`,
   > `probe_log[] {day, node_id, item_id, correct, retry}`, `install_day`, `consent_on`. **No field may name a
   > person, device, account, install or session** (I5); the schema's closed key set is the guard.
+
+- `contracts/data-model.md` — heading `## Enforcement`:
+  > - Demo EPIC: `CoreTests` decode every example file into the `Core` types and re-encode byte-equal (modulo
+  >   key order); `core-cli validate` runs L0 (`graph-constraints.md`).
 
 - `contracts/error-codes.md` — heading `## Rules`:
   > - Prefixes are fixed per domain: `MAP`, `EXP`, `DIAG`, `GRAPH`, `LO`, `SPINE`, `GEN`, `PLATFORM`, `TELEM`,
@@ -184,6 +240,20 @@ Binding contract rules:
   is task 01.2/01.4's concern — this task's `BundleIO` raises the same `CoreError` case for the same
   underlying condition (a listed file missing on disk) because that condition can only be observed while
   reading the directory.
+
+Wire-key evidence for the settled Codable strategy (§4.1), gathered by arbitration in this run:
+
+- `contracts/schemas/student-state.schema.json` `nodes.propertyNames.pattern` (line 42–44) is
+  `"^[a-z0-9]+(-[a-z0-9]+)*$"`; `contracts/schemas/nodes.schema.json`'s `hint_tree` keys are `error_type_id`
+  slugs of the same shape (`contracts/examples/nodes.json:37` `"added-exponents-on-power"`,
+  `contracts/examples/nodes.json:113` `"base-exponent-swapped"`). Those are the only two dictionary-keyed
+  positions in the whole wire format, and kebab-case slugs contain neither `_` nor an upper-case letter, so
+  both Foundation key strategies pass them through unchanged.
+- The only key containing a digit anywhere in the seven `Core`-typed bundle files is `sha256`
+  (`contracts/examples/manifest.json:15,20,25,30,35`); it has no `_` and no upper-case letter, so it is also
+  unchanged in both directions. The one digit-adjacent boundary key in `contracts/examples/`,
+  `tier1_available` (`contracts/examples/telemetry-batch.json:55`), is in the one file that has **no** `Core`
+  type (AC2).
 
 Prior signatures (verbatim, from `Packages/Core/Sources/Core/Core.swift`, read in this run):
 
@@ -337,16 +407,30 @@ All new `Model/*.swift` files begin `import Foundation` (matches `Core.swift`'s 
 still imports Foundation only — I14). Every struct/enum is `public` (consumed by `CoreCLI`, `CoreTests`, and
 later by `App/Sources`/`pipeline` through `core-cli`).
 
-### 4.1 Codable strategy (applies to every type below)
+### 4.1 Codable strategy (settled — applies to EVERY type below, `StudentState` included)
 
-- Swift property names are `camelCase`; JSON keys are `snake_case`. `BundleIO` (and any decoder/encoder built
-  in tests) configures `JSONDecoder.keyDecodingStrategy = .convertFromSnakeCase` and
-  `JSONEncoder.keyEncodingStrategy = .convertToSnakeCase` — no manual `CodingKeys` enum is written on any
-  type **except** where §4.9 requires an explicit `CodingKeys: String, CodingKey, CaseIterable` for the I5
-  reflection guard, or where a JSON key contains characters `.convertToSnakeCase` cannot round-trip (none do
-  in this bundle: verify by inspection — no key has a leading underscore, no key already contains a digit run
-  that could be mis-split, e.g. `sha256` stays `sha256` because Foundation's algorithm splits only at
-  uppercase-letter boundaries).
+**One wire format, one key strategy, one coder pair.** `contracts/data-model.md` opens by defining a single
+shape set that "every bundle file, the student state and `Core`'s `Codable` types share" (§3); this spec
+therefore defines exactly one decode/encode configuration for all eight documents.
+
+- Swift property names are `camelCase`; JSON keys are `snake_case`. The conversion is done by Foundation's key
+  strategies — `JSONDecoder.keyDecodingStrategy = .convertFromSnakeCase` and
+  `JSONEncoder.keyEncodingStrategy = .convertToSnakeCase` — configured **once**, in `CoreCoding` (§4.1.1).
+- **No type in `Sources/Core/Model/` declares an explicit `CodingKeys` enum.** `.convertFromSnakeCase`
+  transforms the incoming JSON key *before* Foundation matches it against a `CodingKey` raw value, so an
+  explicit `CodingKeys` case whose raw value is already snake_case (`case courseCode = "course_code"`) can
+  never match: the decoder has already turned `course_code` into `courseCode` and throws `keyNotFound`. An
+  explicit snake_case `CodingKeys` and `.convertFromSnakeCase` are mutually exclusive; this spec chooses the
+  key strategy, so the explicit `CodingKeys` go. (The encode direction hides the bug —
+  `.convertToSnakeCase` is a no-op on an already-snake_case key — which is why a decoder/encoder mismatch can
+  pass a round-trip test while product code is broken. Do not rely on that.)
+- This is safe for the whole wire format, verified key by key in §3's "Wire-key evidence": no key in the eight
+  documents needs an explicit `CodingKeys`. There is **no** acronym run and **no** digit-adjacent boundary
+  that the conversion cannot express in the seven `Core`-typed bundle files or in `student-state.json`; the
+  only digit-bearing key, `sha256`, is all-lower-case and passes through both strategies unchanged, and the
+  only two dictionary-keyed positions (`StudentState.nodes` keyed by node id, `Node.hintTree` keyed by
+  `error_type_id`) hold kebab-case slugs, which contain no `_` and no upper-case letter and are likewise
+  unchanged in both directions.
 - Do not name a Swift property with an internal capital-run acronym (`sourceURL`, `nodeID`) — use
   `sourceUrl`, `nodeId` etc. `.convertToSnakeCase`/`.convertFromSnakeCase` only round-trips correctly for
   single-capital word boundaries; an acronym run breaks the round trip.
@@ -359,7 +443,7 @@ later by `App/Sources`/`pipeline` through `core-cli`).
 - Closed vocabularies are `enum SomeName: String, Codable` (and `CaseIterable` where a test needs to
   enumerate cases, e.g. `CoreError`). A raw-value-backed enum's synthesized `init(from:)` already throws on an
   unrecognized string — this is what satisfies "enums are closed; an unknown value fails decode" without extra
-  code.
+  code. (Key strategies do not touch enum raw values; only keys.)
 - String fields whose JSON Schema carries a `pattern` (ids, `course_code`, `sha256`, dates, `source_url`,
   `official_url`) are plain `String` in `Core`'s types. Pattern conformance is a schema/pipeline-layer
   concern (`pipeline/tests/test_contracts.py`) and an L0 concern where graph-constraints.md names it; `Core`'s
@@ -368,7 +452,47 @@ later by `App/Sources`/`pipeline` through `core-cli`).
   `Foundation.Date`. `contracts/data-model.md` § Time distinguishes calendar-day strings (`YYYY-MM-DD`) from
   ISO 8601 UTC timestamps (`built_at`); converting either to `Date` and back risks losing the exact source
   text, which would break the byte-for-shape round-trip AC1 requires. Round-tripping as `String` is exact by
-  construction.
+  construction. `CoreCoding` therefore sets no `dateDecodingStrategy`/`dateEncodingStrategy`.
+
+### 4.1.1 `Packages/Core/Sources/Core/CoreCoding.swift`
+
+The single decode/encode recipe, in product code. Every consumer — `BundleIO` (§4.12), `CoreTests` (§4.13),
+and later EPIC 02's state transitions and EPIC 03's App loader — uses this pair; nothing else in `Core`
+constructs a `JSONDecoder` or `JSONEncoder` (AC9).
+
+```swift
+import Foundation
+
+/// The one JSON coder configuration for the bundle wire format and `student-state.json`.
+///
+/// `contracts/data-model.md` defines one shape set that "every bundle file, the student state and
+/// `Core`'s `Codable` types share", so there is one key strategy: JSON keys are snake_case, Swift
+/// properties are camelCase, and Foundation converts between them. No `Model/` type declares an
+/// explicit `CodingKeys` — `.convertFromSnakeCase` rewrites the incoming key before it is matched
+/// against a `CodingKey` raw value, so the two mechanisms cannot be combined.
+public enum CoreCoding {
+    /// A fresh decoder per access: `JSONDecoder` is a non-`Sendable` class, so a shared `static let`
+    /// would not compile under Swift 6 strict concurrency.
+    public static var decoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return decoder
+    }
+
+    /// `.sortedKeys` is what makes `BundleIO.write` deterministic — byte-identical output for
+    /// byte-identical input across runs. It is harmless for every other consumer because every
+    /// comparison in this task's tests is structural (key order excluded).
+    public static var encoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }
+}
+```
+
+Nothing else belongs in this file: no `decode`/`encode` wrapper functions, no per-type coder, no
+`StudentStateIO`. Two configured coders are the whole deliverable (RULE 2).
 
 ### 4.2 `Packages/Core/Sources/Core/Model/Ids.swift`
 
@@ -550,10 +674,11 @@ public struct ProbeChoice: Codable, Equatable {
 ```
 
 `hintTree` is `[String: [String]]`, keyed by `error_type_id`, each value an ordered `[tier1, tier2, tier3]`.
-The schema bounds each array to exactly 3 items (`minItems`/`maxItems: 3`) — not enforced at decode time
+Its dictionary keys are kebab-case slugs and therefore pass through both key strategies unchanged (§4.1). The
+schema bounds each array to exactly 3 items (`minItems`/`maxItems: 3`) — not enforced at decode time
 (§4.1's pattern rule: shape, not constraint, is `Core`'s job here).
 
-`SourceRef.source` and `UndergraduateSourceName` are declared once, in `Model/Sources.swift` (§4.7), and
+`SourceRef.source` and `UndergraduateSourceName` are declared once, in `Model/Sources.swift` (§4.9), and
 referenced here — both files are the same `Core` module, no import needed.
 
 ### 4.6 `Packages/Core/Sources/Core/Model/Edges.swift`
@@ -710,7 +835,12 @@ Fields per `contracts/schemas/student-state.schema.json` (read directly in this 
 `schema_version, format_version_seen, syllabi, marker, nodes, trail, expedition_log, probe_log, install_day,
 consent_on`; `nodes` values required list: `mastery, correct_count, ladder_rung`; `expedition_log` item
 required list: `day, item_count, cleared, blocked, abandoned, diagnosis_events`; `probe_log` item required
-list: `day, node_id, item_id, correct, retry`):
+list: `day, node_id, item_id, correct, retry`).
+
+`StudentState` follows §4.1 exactly like the seven bundle types: **no explicit `CodingKeys` on any type
+below**, camelCase properties, `CoreCoding` supplies the conversion. It is decoded and encoded with
+`CoreCoding.decoder`/`CoreCoding.encoder` — the same pair as every other document — from product code and
+from tests alike.
 
 ```swift
 public struct StudentState: Codable, Equatable {
@@ -724,29 +854,11 @@ public struct StudentState: Codable, Equatable {
     public let probeLog: [ProbeLogEntry]
     public let installDay: String
     public let consentOn: Bool
-
-    enum CodingKeys: String, CodingKey, CaseIterable {
-        case schemaVersion = "schema_version"
-        case formatVersionSeen = "format_version_seen"
-        case syllabi
-        case marker
-        case nodes
-        case trail
-        case expeditionLog = "expedition_log"
-        case probeLog = "probe_log"
-        case installDay = "install_day"
-        case consentOn = "consent_on"
-    }
 }
 
 public struct Marker: Codable, Equatable {
     public let courseCode: String
     public let unitId: String
-
-    enum CodingKeys: String, CodingKey, CaseIterable {
-        case courseCode = "course_code"
-        case unitId = "unit_id"
-    }
 }
 
 public struct NodeState: Codable, Equatable {
@@ -755,14 +867,6 @@ public struct NodeState: Codable, Equatable {
     public let lastProbe: String?
     public let nextDue: String?
     public let ladderRung: Int
-
-    enum CodingKeys: String, CodingKey, CaseIterable {
-        case mastery
-        case correctCount = "correct_count"
-        case lastProbe = "last_probe"
-        case nextDue = "next_due"
-        case ladderRung = "ladder_rung"
-    }
 }
 
 public enum Mastery: String, Codable {
@@ -779,17 +883,11 @@ public struct TrailSegment: Codable, Equatable {
     public let kind: SegmentKind
     public let courseCode: String?
     public let nodeIds: [String]
-
-    enum CodingKeys: String, CodingKey, CaseIterable {
-        case kind
-        case courseCode = "course_code"
-        case nodeIds = "node_ids"
-    }
 }
 
 public enum SegmentKind: String, Codable {
     case course
-    case extension
+    case `extension`
 }
 
 public struct ExpeditionLogEntry: Codable, Equatable {
@@ -799,15 +897,6 @@ public struct ExpeditionLogEntry: Codable, Equatable {
     public let blocked: Int
     public let abandoned: Bool
     public let diagnosisEvents: Int
-
-    enum CodingKeys: String, CodingKey, CaseIterable {
-        case day
-        case itemCount = "item_count"
-        case cleared
-        case blocked
-        case abandoned
-        case diagnosisEvents = "diagnosis_events"
-    }
 }
 
 public struct ProbeLogEntry: Codable, Equatable {
@@ -816,23 +905,18 @@ public struct ProbeLogEntry: Codable, Equatable {
     public let itemId: String
     public let correct: Bool
     public let retry: Bool
-
-    enum CodingKeys: String, CodingKey, CaseIterable {
-        case day
-        case nodeId = "node_id"
-        case itemId = "item_id"
-        case correct
-        case retry
-    }
 }
 ```
 
-Every nested type of `StudentState` declares an explicit `CodingKeys: String, CodingKey, CaseIterable` (rather
-than relying on `.convertFromSnakeCase`/`.convertToSnakeCase` implicitly) precisely so the I5 guard test in
-§4.13 can enumerate `Type.CodingKeys.allCases.map(\.rawValue)` and assert no intersection with the identifier
-blocklist. `StudentState.nodes` is `[String: NodeState]`, keyed by node id — the node id is a **dictionary
-key**, not a `CodingKeys` case, so it is outside the blocklist check's scope (correctly: dictionary keys carry
-no field name to leak).
+`StudentState.nodes` is `[String: NodeState]`, keyed by node id (`propertyNames` pattern
+`^[a-z0-9]+(-[a-z0-9]+)*$`); the node id is a **dictionary key**, not a field name, and kebab-case slugs are
+unchanged by both key strategies (§4.1).
+
+The I5 guard is the **wire key set of the re-encoded document**, not Swift-side `CodingKeys` reflection —
+`contracts/data-model.md` § StudentState: "the schema's closed key set is the guard". The guard test lives in
+§4.13. This is what AC6 asserts, and it is the stronger reading: it checks the keys that are actually written
+to disk and (in aggregate form) transmitted, in the same snake_case vocabulary as the blocklist, rather than
+Swift-side declarations that may or may not equal them.
 
 ### 4.11 `Packages/Core/Sources/Core/CoreError.swift`
 
@@ -874,30 +958,32 @@ public enum BundleIO {
 }
 ```
 
+`BundleIO` declares **no** decoder or encoder of its own: every `decode` call uses `CoreCoding.decoder` and
+every `encode` call uses `CoreCoding.encoder` (§4.1.1, AC9).
+
 `read(from:)`:
-1. Decode `manifest.json` from `directory` using the shared decoder configuration (§4.1).
+1. Decode `manifest.json` from `directory` with `CoreCoding.decoder`.
 2. For every `ManifestFile` in `manifest.files`, check `FileManager.default.fileExists(atPath:)` for
    `directory.appendingPathComponent(file.name)`. If any is missing, throw
    `CoreError.platformBundleIntegrityFailed` **before** decoding any of the six content files — no partial
    `ContentBundle` is ever constructed (AC7).
 3. Decode `regions.json`, `nodes.json`, `edges.json`, `courses.json`, `landmarks.json`, `sources.json` from
-   `directory` into their respective types.
+   `directory` into their respective types with `CoreCoding.decoder`.
 4. Return the fully populated `ContentBundle`.
 
-`write(_:to:)`: encode `manifest.json` plus the six content files into `directory`, one file per type, using
-a `JSONEncoder` configured with `keyEncodingStrategy = .convertToSnakeCase` and `outputFormatting =
-[.sortedKeys]` — `.sortedKeys` is what makes the write deterministic (byte-identical output for
-byte-identical input across runs), matching the plan's "deterministic bundle-directory read/write I/O"
-framing (`docs/plans/epic-01-task-plan.md` task 01.1 row).
+`write(_:to:)`: encode `manifest.json` plus the six content files into `directory`, one file per type, with
+`CoreCoding.encoder`. That encoder's `outputFormatting = [.sortedKeys]` is what makes the write deterministic
+(byte-identical output for byte-identical input across runs), matching the plan's "deterministic
+bundle-directory read/write I/O" framing (`docs/plans/epic-01-task-plan.md` task 01.1 row).
 
 `BundleIO` does not compute or check `sha256` (§3, planner note 2) and does not touch `student-state.json`
 (`StudentState` has no bundle-directory consumer until EPIC 02 — planner note 8; it ships as a standalone
-`Codable` type only in this task).
+`Codable` type in this task, decodable through `CoreCoding` from any call site).
 
 ### 4.13 `Packages/Core/Tests/CoreTests/DecodeRoundTripTests.swift`
 
-For each of the 8 files below, read `contracts/examples/<file>` as `Data`, decode into the named type using
-the shared decoder configuration (§4.1), re-encode using the shared encoder configuration, then compare the
+**Round trip (AC1, AC2, AC5).** For each of the 8 files below, read `contracts/examples/<file>` as `Data`,
+decode into the named type with `CoreCoding.decoder`, re-encode with `CoreCoding.encoder`, then compare the
 **original** and **re-encoded** `Data` structurally (parse both through `JSONSerialization.jsonObject` and
 compare the resulting `NSObject` graphs for equality — this is what makes the comparison key-order-independent
 while still order-sensitive on arrays, matching AC1's "JSON-equal (key order excluded)"):
@@ -913,6 +999,10 @@ while still order-sensitive on arrays, matching AC1's "JSON-equal (key order exc
 | `sources.json` | `SourcesFile` |
 | `student-state.json` | `StudentState` |
 
+The round-trip helper takes **no** decoder or encoder parameter and no per-type override: all eight rows go
+through `CoreCoding`. A `private static var decoder`/`encoder` in this test file, or a per-type variant such
+as `studentStateDecoder`, is a defect — it is the exact condition AC9 and the tester's BLOCK exist to prevent.
+
 Locate `contracts/examples/` the same way `coreImportBoundary()` locates `Sources/Core` (§3's prior
 signature): from `#filePath` (`Packages/Core/Tests/CoreTests/DecodeRoundTripTests.swift`), three
 `.deletingLastPathComponent()` calls reach the package root (`Packages/Core`), two more reach the repo root,
@@ -924,6 +1014,23 @@ must never be picked up incidentally) and asserts the count is 8 before checking
 State in a comment that `telemetry-batch.json` is excluded by name because it has no `Core` type (telemetry is
 EPICs 10–11's scope) — AC2.
 
+**I5 wire-key guard (AC6).** A second `@Test` in this file:
+
+1. Decode `contracts/examples/student-state.json` into `StudentState` with `CoreCoding.decoder` and re-encode
+   it with `CoreCoding.encoder`.
+2. Parse the re-encoded `Data` with `JSONSerialization` and collect, with a small recursive function, **every**
+   object key at every nesting level into a `Set<String>` (descend into both dictionaries and arrays).
+3. Anti-vacuity (empty = FAIL): assert the collected set is a superset of the ten top-level required names of
+   `contracts/schemas/student-state.schema.json` — `schema_version`, `format_version_seen`, `syllabi`,
+   `marker`, `nodes`, `trail`, `expedition_log`, `probe_log`, `install_day`, `consent_on` — so a collector
+   that returned an empty or shallow set cannot pass.
+4. Assert `collected.isDisjoint(with: identifierBlocklist)`, where `identifierBlocklist` is the literal Swift
+   set matching §3's verbatim Python quote (mirrored, not shared code across languages — there is no
+   cross-language import).
+
+The collected set deliberately includes the `nodes` dictionary's keys (node ids). No exclusion is applied —
+see the §6 default on a node id colliding with a blocklist entry.
+
 ### 4.14 `Packages/Core/Tests/CoreTests/ErrorRegistryTests.swift`
 
 Read `contracts/error-codes.json` from disk at test time (same repo-root path derivation as §4.13), parse its
@@ -934,6 +1041,11 @@ fine to declare inside this test file — it is not a new file). Assert:
 - `CoreError.allCases` is non-empty (`#expect(!CoreError.allCases.isEmpty, ...)`) — anti-vacuity on the enum
   side.
 - every `CoreError.allCases.map(\.rawValue)` is contained in the registry set (AC3).
+
+`contracts/error-codes.json` is **not** a bundle wire-format document — it has no `Model/` type, its keys
+(`code`, `recoverable`, `surface`, `user_text`) are read into a file-local struct, and it is decoded with a
+plain `JSONDecoder()`, not `CoreCoding.decoder`. This is the declared exception, and it is the reason AC9's
+scan does not read `Tests/CoreTests`.
 
 ### 4.15 `Packages/Core/Tests/CoreTests/CoreTests.swift` (modify `coreImportBoundary()`)
 
@@ -947,17 +1059,34 @@ scan is a FAIL")` guard on the recursive result. Do not change the `forbidden` m
 ### 4.16 Smoke check
 
 `( cd Packages/Core && swift build -c release --product core-cli )` — must be green (this also compiles
-`Core`, whose new `Model/*.swift` files must build without error even though `CoreCLI`'s `main.swift` does not
-yet reference them — task 01.4's job).
+`Core`, whose new `CoreCoding.swift` and `Model/*.swift` files must build without error even though
+`CoreCLI`'s `main.swift` does not yet reference them — task 01.4's job).
+
+### 4.17 `Packages/Core/Tests/CoreTests/CoreTests.swift` (add the single-coder guard — AC9)
+
+A third `@Test` in `CoreTests.swift`, reusing the recursive `Sources/Core` walk of §4.15:
+
+- Collect every `.swift` file under `Packages/Core/Sources/Core/` recursively.
+- Anti-vacuity (empty = FAIL): assert the file list is non-empty, and assert that `CoreCoding.swift` is in it
+  and contains both the text `JSONDecoder(` and the text `JSONEncoder(` — if the detector cannot find the one
+  legitimate occurrence, it cannot be trusted to find an illegitimate one.
+- For every other file in the list, assert the file text contains neither `JSONDecoder(` nor `JSONEncoder(`,
+  failing with the offending file name.
+- Scope statement to put in the test's doc comment: this scan covers `Sources/Core` only. It deliberately
+  **excludes** `Tests/CoreTests`, because that tree also decodes non-wire JSON (`contracts/error-codes.json`,
+  §4.14) and contains files owned by other EPIC-01 tasks; a scan over it would couple this task to theirs.
 
 ## §5 Test plan (risk: seam — full plan)
 
-- T1 happy path: `DecodeRoundTripTests` decodes and re-encodes all 8 named example files (AC1, AC2, AC5); the
-  file-count anti-vacuity guard (§4.13) is part of this test, not a separate one.
+- T1 happy path: `DecodeRoundTripTests` decodes and re-encodes all 8 named example files through
+  `CoreCoding` (AC1, AC2, AC5); the file-count anti-vacuity guard (§4.13) is part of this test, not a separate
+  one. This is also the **real-composition test** for the seam this task crosses: `student-state.json` — the
+  document whose decoding recipe the BLOCK was about — is decoded by the same product-code coder `BundleIO`
+  uses, not by a test-local one.
 - T2 negative — invalid input rejected at the boundary: decode a mutated copy of an example with an
-  unrecognized enum raw value substituted for a closed field (e.g. `student-state.json`'s
-  `nodes["exponent-laws"].mastery` set to `"unknown"`, or `nodes.json`'s first node's `region_id` set to
-  `"made-up-region"`) and assert the decode throws (a `DecodingError`) — this is what "enums are closed; an
+  unrecognized enum raw value substituted for a closed field (`nodes.json`'s first node's `region_id` set to
+  `"made-up-region"`, and `student-state.json`'s `nodes["exponent-laws"].mastery` set to `"unknown"`) with
+  `CoreCoding.decoder` and assert the decode throws (a `DecodingError`) — this is what "enums are closed; an
   unknown value fails decode" (`contracts/data-model.md` § Nulls) means at the `Core` layer, and it is
   naturally satisfied by raw-value-backed enum `Codable` conformance (§4.1) without extra code; the test
   proves it rather than asserting it by inspection.
@@ -975,27 +1104,47 @@ yet reference them — task 01.4's job).
     already fails if a `null` leaks in for an omitted optional key (`NSNull` vs. absent key are not
     structurally equal), so a regression that swaps `encodeIfPresent` semantics for `encode` on any optional
     field is caught by T1 itself, not a new test.
-  - the I5 guard (AC6): assert `StudentState.CodingKeys.allCases` and every nested type's `CodingKeys.allCases`
-    (`Marker`, `NodeState`, `Trail`, `TrailSegment`, `ExpeditionLogEntry`, `ProbeLogEntry`) is non-empty before
-    checking blocklist intersection (anti-vacuity — a type with zero declared keys would vacuously "pass"); then
-    assert `Set(allRawValues).isDisjoint(with: identifierBlocklist)` for the union of all of them, where
-    `identifierBlocklist` is the literal Swift set matching §3's verbatim Python quote (mirrored, not shared
-    code across languages — there is no cross-language import).
+  - the I5 wire-key guard (AC6): the negative control is a mutated document — take the re-encoded
+    `StudentState` JSON object, inject `"device_id": "x"` into the **nested** `marker` object, re-serialize,
+    run the same recursive collector over it, and assert the collected set now **intersects** the blocklist.
+    This proves in one step that the collector descends past the top level and that the disjointness
+    assertion is live rather than vacuous.
+  - the single-coder guard (AC9): the anti-vacuity half of §4.17 is its own negative control — the scan must
+    positively locate `JSONDecoder(`/`JSONEncoder(` inside `CoreCoding.swift`, so a detector that matched
+    nothing (wrong path derivation, wrong extension filter, empty read) fails instead of passing silently.
   - the CoreError registry guard (AC3): covered by T3's own anti-vacuity guards (both sides asserted
     non-empty before the subset check).
 - T6 idempotency / no-leak:
   - `BundleIO.write` idempotency: construct a `ContentBundle` from the decoded `contracts/examples/` files
     (excluding `student-state.json`, which `BundleIO` does not touch), write it to a temporary directory
-    twice, and assert the two writes produce byte-identical files (via `.sortedKeys`, §4.12) — this is the
-    "deterministic ... write" requirement from the task plan's row for 01.1.
+    twice, and assert the two writes produce byte-identical files (via `.sortedKeys` on `CoreCoding.encoder`,
+    §4.1.1) — this is the "deterministic ... write" requirement from the task plan's row for 01.1.
   - `BundleIO.read` no-leak (AC7): build a temporary directory whose `manifest.json` lists `nodes.json` in
     `files[]` but does not contain a `nodes.json` file on disk; assert `BundleIO.read` throws
     `CoreError.platformBundleIntegrityFailed` and that no `ContentBundle` value is ever produced (the `throws`
     signature already makes a partial return impossible in Swift — the test documents this as the
     contract-level assertion, not a runtime state check).
 
+Verification is on the iOS simulator only (`scripts/gate.sh` gate 3). Physical-device verification is the
+owner's wrap-gate delivery verification and no test in this task claims it (D29).
+
 ## §6 Decision defaults
 
+- IF a `Model/` type appears to need an explicit `CodingKeys` to match a JSON key THEN it does not: §3's
+  wire-key evidence enumerates every key of the eight documents and none needs one. The convention is one key
+  strategy in `CoreCoding` (§4.1). If a *future* schema change ever introduces a key the conversion cannot
+  express, the resolution is a spec change (Q4) that renames the schema key or defines the exception in
+  `CoreCoding` — never a second decoder configuration, and never an explicit snake_case `CodingKeys` layered
+  under `.convertFromSnakeCase`, which cannot work (`contracts/data-model.md`: one shape set shared by every
+  bundle file, the student state and `Core`'s `Codable` types).
+- IF any consumer — `BundleIO`, `CoreTests`, and later EPIC 02's state transitions or EPIC 03's App loader —
+  needs to decode or encode `student-state.json` or any bundle file THEN it uses `CoreCoding.decoder` /
+  `CoreCoding.encoder` and constructs no coder of its own (AC9, I14/D42: implemented once, in `Core`).
+- IF a `contracts/examples/student-state.json` fixture ever contains a node id equal to a blocklist entry
+  (`id`, `name`, …), making AC6's collector report an intersection THEN that is a FAIL and the fixture is
+  fixed — the guard applies no exclusion. Rationale: `contracts/data-model.md` § StudentState makes the
+  document's closed key set the guard, and an exclusion list is a hole in it (RULE 2: no configurability that
+  was not requested).
 - IF a node's `region_id` is decoded that is structurally valid per `RegionId`'s 15-case superset but would be
   invalid per `nodes.schema.json`'s narrower 10-value enum (a horizon label or `shore` on a node) THEN
   `Core`'s `Codable` layer accepts it (decode succeeds) and L0-6 (`GRAPH_L0_FAILED{L0-6}` /
@@ -1016,20 +1165,19 @@ yet reference them — task 01.4's job).
   replicated in `Core`. No task in EPIC 01's `Core` scope (01.1–01.3) needs to distinguish `ProbeItem`
   variants at the type level; if a later task needs an exhaustive-switch guarantee, it adds one then.
 - IF the implementer's build/test cycle reports this task is overrunning THEN the only sanctioned split is
-  01.1a (`Model/Ids.swift`, `Manifest.swift`, `Regions.swift`, `Nodes.swift`, `Edges.swift`, `Courses.swift`,
-  `Landmarks.swift`, `Sources.swift`, `BundleIO.swift`, `DecodeRoundTripTests.swift` minus the
-  `student-state.json` row) / 01.1b (`Model/StudentState.swift`, `CoreError.swift`,
-  `ErrorRegistryTests.swift`, the `student-state.json` row of `DecodeRoundTripTests.swift`, and the
-  `CoreTests.swift` recursive-walk change) — per `docs/plans/epic-01-task-plan.md` planner note 7. Do not
-  invent a different split.
-- IF a JSON key's snake_case→camelCase (or reverse) conversion via `.convertFromSnakeCase`/
-  `.convertToSnakeCase` produces a property name that collides with a Swift reserved word (only `extension` in
-  this bundle, `SegmentKind.extension`) THEN the enum case is still named `extension` — Swift allows reserved
-  words as enum case names without backticks in this position; if the compiler disagrees, backtick it
-  (`` `extension` ``) rather than renaming the case (the raw value `"extension"` must stay exact to match
-  `contracts/schemas/student-state.schema.json`'s `trail.segments[].kind` enum).
+  01.1a (`CoreCoding.swift`, `Model/Ids.swift`, `Manifest.swift`, `Regions.swift`, `Nodes.swift`,
+  `Edges.swift`, `Courses.swift`, `Landmarks.swift`, `Sources.swift`, `BundleIO.swift`,
+  `DecodeRoundTripTests.swift` minus the `student-state.json` row) / 01.1b (`Model/StudentState.swift`,
+  `CoreError.swift`, `ErrorRegistryTests.swift`, the `student-state.json` row and the I5 guard of
+  `DecodeRoundTripTests.swift`, and the `CoreTests.swift` changes) — per `docs/plans/epic-01-task-plan.md`
+  planner note 7. `CoreCoding.swift` goes in the first half: it is the dependency of both. Do not invent a
+  different split.
+- IF a Swift property name produced from a JSON key collides with a Swift reserved word (only `extension` in
+  this bundle, `SegmentKind.extension`) THEN the enum case is still named `extension`, backticked
+  (`` case `extension` ``) if the compiler requires it, rather than renamed — the raw value `"extension"` must
+  stay exact to match `contracts/schemas/student-state.schema.json`'s `trail.segments[].kind` enum.
 - Standing defaults: identifiers are stable lowercase kebab-case slugs, never parsed for meaning
-  (`contracts/data-model.md` § Identifiers, quoted in §3); `format_version` on every bundle file file mirrors
+  (`contracts/data-model.md` § Identifiers, quoted in §3); `format_version` on every bundle file mirrors
   `CoreInfo.dataFormatVersion` (unchanged at `"0.0.0"` by this task); `StudentState` carries no identifying
   field (I5, AC6); telemetry is out of scope entirely for this task (no telemetry type exists in `Core`).
 
@@ -1038,15 +1186,18 @@ yet reference them — task 01.4's job).
 The task is done when ALL gates pass:
 
 - `xcrun swift-format lint --strict --recursive --configuration .swift-format Packages App/Sources` — clean
-  over the new `Packages/Core/Sources/Core/Model/*.swift`, `BundleIO.swift`, `CoreError.swift` files (App/Sources
-  is untouched by this task and stays clean trivially).
+  over the new `Packages/Core/Sources/Core/Model/*.swift`, `CoreCoding.swift`, `BundleIO.swift`,
+  `CoreError.swift` files (App/Sources is untouched by this task and stays clean trivially).
 - `Core` build + test green: `( cd Packages/Core && swift build -c release --product core-cli )` and
   `( cd Packages/Core && xcodebuild test -quiet -scheme Core-Package -destination "$SIM"
   CODE_SIGNING_ALLOWED=NO )` (`scripts/gate.sh` gate 3, `$SIM` from `scripts/pick-simulator.sh`).
 - All cases in §5 (T1–T6) pass.
+- One decoding convention only: `Packages/Core/Sources/Core/CoreCoding.swift` is the sole site in
+  `Sources/Core` that configures a `JSONDecoder`/`JSONEncoder` (AC9), no `Model/` type declares an explicit
+  `CodingKeys`, and no test file declares a wire-format coder of its own.
 - Conforms to every contract section cited in §3 and §4 (`contracts/data-model.md` § Identifiers, §
-  Versioning, § Nulls/enums/unknowns, § ProbeItem, § StudentState; `contracts/error-codes.md` § Rules) and to
-  every invariant listed in §1 (I1, I5, I6, I8, I10, I14, I15).
+  Versioning, § Nulls/enums/unknowns, § ProbeItem, § StudentState, § Enforcement; `contracts/error-codes.md`
+  § Rules) and to every invariant listed in §1 (I1, I5, I6, I8, I10, I14, I15).
 - `scripts/gate.sh` gates 1 and 3 green in full (gates 2 and 4 are pipeline/App-scoped and are unaffected by
   this task's file scope — they must already be green from Phase 5 and stay green since this task touches
   neither `pipeline/` nor `App/Sources`).
