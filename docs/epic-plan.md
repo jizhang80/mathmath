@@ -2,7 +2,7 @@
 
 Date: 2026-09-09. Inputs: `docs/idea.md` (D1–D49, milestones), `docs/domains/*.md`, `contracts/*`
 (signed off 2026-09-09), `docs/tech-stack.md`, `DEMO-BRIEF.md` as amended (v2.1 §D surviving parts, v2.2
-§B, v2.6 §D). **Status: for owner sign-off — the last synchronous owner interaction before auto-execute.**
+§B, v2.6 §D). **Status: signed off by the owner 2026-09-09.** Auto-execute (7b) runs from an Opus session via `/run-epic 01`.
 
 **EPIC size cap:** 8 tasks [ESTIMATE: owner-set at Phase 7a; a planner that exceeds it splits at the brief's
 seams]. **Conformance tests (B.1)** for an EPIC are the "Invariants enforced here" mechanisms of its domain
@@ -73,4 +73,4 @@ design, not a stop.
 
 | Date | Owner |
 |---|---|
-| 2026-09-09 | pending |
+| 2026-09-09 | signed off (owner, in conversation) — auto-execute may begin with EPIC 01 |
