@@ -136,7 +136,7 @@ Binding contract rules:
   > an injected seeded RNG (determinism test: two runs, byte-equal positions).
 
 - `contracts/error-codes.json` — the two entries this task's `LayoutEngine` raises (full file read in this
-  run; showing exactly these two of its 40 entries):
+  run; showing exactly these two of its 51 entries):
   > `{"code": "MAP_LAYOUT_MISSING", "recoverable": true, "surface": "internal", "user_text": null},`
   > `{"code": "MAP_REGION_UNKNOWN", "recoverable": true, "surface": "internal", "user_text": null},`
 
