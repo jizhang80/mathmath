@@ -17,7 +17,7 @@ Execute ONE task spec to green. Input: a path like `tasks/epic-<NN>-task-<MM>-<s
 6. **Commit.** One clean task-commit, Conventional Commits scoped to the EPIC/contract (e.g. `feat(graph): …`, `test(probe): …`). Do not push.
 
 ## Rules
-- Q-protocol throughout (Q1 self-answer from contracts/docs; Q2 retry; Q3 bypass; Q4 spec-arbiter; Q5 owner-stop — rare; changing a locked decision D1–D42 is always Q5).
+- Q-protocol throughout (Q1 self-answer from contracts/docs; Q2 retry; Q3 bypass; Q4 spec-arbiter; Q5 owner-stop — rare; changing a locked decision D1–D49 is always Q5).
 - Conform to every contract in `contracts/` (Phase 6; planned set in `contracts/README.md`). The toolchain is whatever `docs/tech-stack.md` locks in Phase 5 — BLOCK on a spec that pins a tool that file does not name.
 - Hold invariants I1–I15 (`CLAUDE.md`): the CAS decides step correctness, never a model (I1); every model call has a confidence threshold and a deterministic Tier-0 fallback (I2); no identifying field is persisted or transmitted (I5); no verbatim Ministry text (I6); input is defined per door, with no OCR path in any door (I10); `Core` imports Foundation only, the render layer never computes state, and L0/layout exist once, in `Core` (I14); every landmark has a resolving `source_url` (I15).
 - UI / rendering / the expedition/diagnosis flow are in scope; the Demo/M3 device acceptance is the owner's product test at the wrap gate (gate d), not per task — agents verify on the simulator only.

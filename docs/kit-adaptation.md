@@ -32,7 +32,7 @@
 > (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated
 > content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The
 > desktop web homework mode (structured editor + CAS) is deferred to M5.
-> Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (decisions D1–D42 locked; D30, D37
+> Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (decisions D1–D49 locked; D30, D37
 > unassigned); consolidated in `docs/idea.md`.
 
 ## 1. Hard invariants (agents enforce these; a spec that contradicts one is BLOCKed)

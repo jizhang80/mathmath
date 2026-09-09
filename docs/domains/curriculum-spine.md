@@ -4,8 +4,10 @@
 
 The index of what Ontario requires taught in grades 9–12 mathematics: the twelve courses of brief §4.1,
 their strands, and every expectation code, each with the project's own paraphrase and a link out to the
-official Ministry page (D18, I6). It gives `concept-graph` a citable code set for Nodes, and the map its
-trails — a course as an ordered node path drawn over the continent (D20). Milestones **M1**, **M5**.
+official Ministry page (D18, I6). For the undergraduate tier (D43) it indexes the designated CC-licensed
+sources instead (D2 as revised). It gives `concept-graph` a citable code set for Nodes, and **expedition**
+the course structure a trail is generated over (D47): units, unit order and course succession. Milestones
+**M1**, **M5** (undergraduate sources after the grade 9–12 strands, D1 order).
 
 ## Actors and roles
 
@@ -21,7 +23,21 @@ trails — a course as an ordered node path drawn over the continent (D20). Mile
 **Course** — one published course with grade, stream and vintage: MTH1W (2021); MPM2D, MFM2P (2005 plus
 the 2022 addenda); MCR3U, MCF3M, MBF3C, MEL3E, MHF4U, MCV4U, MDM4U, MAP4C, MEL4E (2007) [SOURCED: brief
 §4.1] — twelve in all. Vintage belongs to the Course: a nominal strand differs between vintages.
-**Strand** — a division of a Course identified by its code prefix; the menu's middle level, never empty.
+**Strand** — a division of a Course identified by its code prefix; never empty.
+
+**Unit** — a course's teaching unit (D45): an ordered group of that course's Expectations. Units are not in
+the Ministry documents; each Course names one designated textbook as its `unit_source` (chosen at M1,
+recorded in the bundle), and Expectations are grouped by that textbook's chapter sequence — the existing L1
+`textbook_order` source. A course with no `unit_source`, or an Expectation the textbook does not place,
+falls back to grouping by Strand in Ministry order (v2.7 §2). The Demo's two unit lists are hand-written.
+
+**Course succession** — `next_courses[]` per Course from the Ministry's course-prerequisite chart
+[SOURCED: Ontario 2007 curriculum document], e.g. MPM2D → MCR3U → MHF4U → MCV4U; data, not logic (v2.7 §4),
+read by expedition W8 when a trail extends past a course.
+
+**UndergraduateSource** — a designated CC-licensed source (OpenStax CC BY 4.0; MIT OCW CC BY-NC-SA) with
+edition and licence; Nodes in that tier cite it by `source_ref` (source, edition, chapter/section), which
+must resolve (L0, I8 as amended). Attribution travels with the bundle per the licence.
 
 **Expectation** — the atom: the **code** as published (its identity; codes and names are facts, not
 protected material — §10), its kind (overall / specific), the **paraphrase**, and the **official link** to
@@ -76,6 +92,14 @@ entry, both vintages are recorded, and only new/revised codes are re-paraphrased
 **Post:** an immutable bundle is available to `concept-graph` and the System. Emits
 `spine.bundle_published`, plus `spine.codes_changed` on a re-version.
 
+### W3 — Derive units and succession
+**Pre:** an extracted Course; its `unit_source` textbook's chapter order (the L1 `textbook_order`
+artefact) if designated; the prerequisite chart. **Steps:** 1. (Tier 0) Group Expectations by chapter
+sequence into Units; unplaced ones and courses without a textbook fall back to Strand order (v2.7 §2);
+fail on an empty Unit (`SPINE_UNIT_EMPTY`). 2. (Tier 0) Record `next_courses[]` from the chart.
+**Post:** Units and succession are in the bundle for expedition W8 and map W5. Emits
+`spine.units_derived`.
+
 ## UI surfaces
 
 - **Node panel** (map W2) — "official expectations behind this node": code, paraphrase, link.
@@ -100,6 +124,8 @@ entry, both vintages are recorded, and only new/revised codes are re-paraphrased
 | `SPINE_PARAPHRASE_REJECTED` | Missing, too long, overlapping the source, or non-English | Internal | Yes — regenerate, never edit (I9) |
 | `SPINE_VERBATIM_TEXT_DETECTED` | The I6 gate finds source prose in a bundle or fixture | Internal; fails the build | Yes — fix first |
 | `SPINE_LINK_UNRESOLVED` | Template cannot instantiate, or the check fails | Code + paraphrase render, link off | Yes |
+| `SPINE_UNIT_EMPTY` | A derived Unit has no Expectations | Internal; build stops | Yes |
+| `SPINE_SOURCE_REF_UNRESOLVED` | An undergraduate `source_ref` does not resolve | Internal; L0 fails (I8) | Yes |
 
 ## Invariants enforced here
 
@@ -138,4 +164,5 @@ base vintage survives as provenance. **Trade-off:** simple, but drops phrasing s
 |---|---|
 | 2026-09-08 | Drafted (Phase 3b). |
 | 2026-09-08 | Open questions ratified by owner (all defaults; see docs/plans/phase3b-open-questions.md). |
+| 2026-09-09 | v2.6/v2.7: Unit entity with `unit_source` textbook grouping and Strand fallback (D45); `next_courses[]` succession (D47); UndergraduateSource and `source_ref` (D2 revised, D43); W3. |
 | 2026-09-09 | v2 re-cut: trails replace the browse menu as the runtime surface (D20); parent consumer removed (D38); milestone M6 → M5. No open-question changes. |

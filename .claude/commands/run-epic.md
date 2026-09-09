@@ -30,6 +30,6 @@ For each task in topological (dependency) order, run the **/run-task** loop (imp
 - Run **/wrap-epic <NN>**. Only a green wrap merges the branch to `main`.
 
 ## Rules
-- Q-protocol throughout; Q5 is the only owner stop and must be rare (if frequent, the design under-locked — surface it). Changing a locked decision D1–D42 is always Q5.
+- Q-protocol throughout; Q5 is the only owner stop and must be rare (if frequent, the design under-locked — surface it). Changing a locked decision D1–D49 is always Q5.
 - Conform to every contract in `contracts/` (Phase 6; planned set in `contracts/README.md`). The toolchain and application file layout are whatever `docs/tech-stack.md` locks in Phase 5 — BLOCK on any brief or spec that pins a tool that file does not name. Hold invariants I1–I15 (`CLAUDE.md`): the CAS decides step correctness, every model call has a confidence threshold and a Tier-0 fallback, no identifying fields, no verbatim Ministry text, no human content-review step, `Core` imports Foundation only, every landmark has a resolving `source_url`.
 - A derailed task reverts to its last task-commit; a badly drifted EPIC drops its branch and re-plans from `main`.

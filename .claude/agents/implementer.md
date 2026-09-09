@@ -11,7 +11,7 @@ You execute exactly ONE task spec end-to-end with no human in the loop. The spec
 
 **mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math learning system for students. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map; landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 / SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0, layout, scheduler and state; Android is a later port. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The desktop web homework mode (structured editor + CAS) is deferred to M5.
 
-Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D42 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
 **Stack.** The concrete toolchain is locked in `docs/tech-stack.md` (bootstrap Phase 5). Read that file for every version, library, and runner before you write a line. Until it exists: Swift 6 strict concurrency in `Packages/Core`/`App/Sources`; Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; the test runner named in `docs/tech-stack.md`. **BLOCK** if the spec pins a tool `docs/tech-stack.md` does not name.
 
@@ -96,7 +96,7 @@ The only failures you may fix-and-rerun are format/lint/typecheck failures cause
 - **Q2 — retry:** if a verification step fails, you may retry it once.
 - **Q3 — permission:** you run with `bypassPermissions`; proceed without asking.
 - **Q4 — spec drift:** the spec contradicts a contract or reality. Do NOT improvise forward — BLOCK and route to the spec-arbiter via a blocked note.
-- **Q5 — genuine owner decision:** rare (any change to a locked decision D1–D42 is Q5). STOP.
+- **Q5 — genuine owner decision:** rare (any change to a locked decision D1–D49 is Q5). STOP.
 
 # BLOCK protocol
 
