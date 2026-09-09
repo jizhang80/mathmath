@@ -16,6 +16,7 @@ echo "== 2/4 typecheck =="
 echo "== 3/4 Core: build + test on the iOS simulator (D29) =="
 ( cd "$ROOT/Packages/Core" && swift build -c release --product core-cli )
 ( cd "$ROOT/Packages/Core" && xcodebuild test -quiet -scheme Core-Package -destination "$SIM" CODE_SIGNING_ALLOWED=NO )
+( cd "$ROOT/Packages/Rendering" && xcodebuild test -quiet -scheme Rendering -destination "$SIM" CODE_SIGNING_ALLOWED=NO )
 
 echo "== 4/4 App build on the simulator + pipeline tests =="
 xcodebuild build -quiet -workspace "$ROOT/App/mathmath.xcworkspace" -scheme mathmath -destination "$SIM" CODE_SIGNING_ALLOWED=NO

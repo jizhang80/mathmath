@@ -15,7 +15,7 @@ that pins a tool this file does not name (CLAUDE.md).
 | UI | **SwiftUI**; map on **`Canvas`**; first-party **SpriteKit** only if a few-hundred-node map demands it (D24/D32) | OS frameworks | D32 | — (OS-provided) |
 | Deployment target | **iOS / iPadOS 18.0** | `IPHONEOS_DEPLOYMENT_TARGET = 18.0`; `Core` platforms `.iOS(.v18)`, `.macOS(.v15)` | D34 as amended (v2.4 §5) | Simulator runtimes installed locally: iOS 18.3, 18.6, 26.0–26.4 (`xcrun simctl list runtimes`) |
 | Shared logic | Swift Package **`Core`** (library) + **`core-cli`** (executable) — Foundation only | `Packages/Core` | D33, D42, I14 | `CoreTests` asserts the import boundary (empty scan = FAIL, C3); `swift test` green 2026-09-09 |
-| Math display | **SwiftMath** | **1.7.3 exact** (`XCRemoteSwiftPackageReference`, `exactVersion`) | D32 — the one third-party app dependency; WKWebView + KaTeX fallback per item is designed in the Demo rendering spike | Latest release 1.7.3 (2026-08-03) [SOURCED: https://github.com/mgriebling/SwiftMath/releases]; `swift-tools-version 5.7`, iOS 11+/macOS 12+, no dependencies [SOURCED: https://github.com/mgriebling/SwiftMath/blob/main/Package.swift]; resolved and linked into the app build 2026-09-09 |
+| Math display | **SwiftMath**, imported only by the `Packages/Rendering` package | **1.7.3 exact** (`Package.swift` `exact:` and the app's `XCRemoteSwiftPackageReference`) | D32 — the one third-party app dependency; WKWebView + KaTeX fallback per item is designed in the Demo rendering spike | Latest release 1.7.3 (2026-08-03) [SOURCED: https://github.com/mgriebling/SwiftMath/releases]; `swift-tools-version 5.7`, iOS 11+/macOS 12+, no dependencies [SOURCED: https://github.com/mgriebling/SwiftMath/blob/main/Package.swift]; resolved and linked into the app build 2026-09-09 |
 | Persistence | **`Codable` JSON** in Application Support; state types in `Core` | OS APIs | D32 as amended (v2.4 §1); SwiftData removed | — |
 | Sync | **iCloud** (Drive document container or CloudKit) — chosen at M3 | OS APIs | D36; platform Q1 | Deferred to M3 by ruling |
 | Tier 1 | **Foundation Models** framework, `@Generable` guided generation | OS framework, iOS 26+ | D32, D34 | Runs in the iOS 26+ simulator when the host Mac has Apple Intelligence enabled [SOURCED: https://developer.apple.com/forums/thread/787199; https://developer.apple.com/forums/thread/815397]; macOS 26 required for development [SOURCED: https://azamsharp.com/2025/06/18/the-ultimate-guide-to-the-foundation-models-framework.html]. This Mac: M4 Pro, macOS 26.6.2 |
@@ -51,6 +51,7 @@ and documented log-off controls — revisit at M3 if the no-IP verification fail
 │   ├── mathmath.xcworkspace/       # project + Packages/Core (gives xcodebuild the Core scheme)
 │   └── Sources/                    # SwiftUI app: views, adapters (Foundation Models, persistence, sync)
 ├── Packages/Core/                  # Swift package: Core (lib), CoreCLI → core-cli (exe), CoreTests
+├── Packages/Rendering/             # Swift package over SwiftMath: MathView + RenderCheck (rendering spike; LO W1 5b)
 ├── pipeline/                       # Python (uv): src/mathmath_pipeline, tests; calls core-cli (D42)
 ├── data/                           # JSON bundles: Demo hand-written; later pipeline output (+ L0 report)
 ├── scripts/gate.sh                 # the four gates (§3); scripts/check-no-time-estimates.sh (I11)
@@ -70,8 +71,8 @@ curriculum-spine, content-generation, learning-objects validation, telemetry agg
 1. **Format + lint:** `swift-format lint --strict` over `Packages` and `App/Sources`; `ruff check` and
    `ruff format --check` over `pipeline`.
 2. **Typecheck:** `pyright` (strict) over `pipeline`. (Swift's typecheck is the build in gate 3.)
-3. **Core:** `swift build -c release --product core-cli`; `xcodebuild test -scheme Core` on the iOS
-   simulator (D29 — the agent gate is the simulator, never a device).
+3. **Core:** `swift build -c release --product core-cli`; `xcodebuild test -scheme Core-Package` and
+   `-scheme Rendering` on the iOS simulator (D29 — the agent gate is the simulator, never a device).
 4. **App + pipeline:** `xcodebuild build -scheme mathmath` on the simulator; `pytest`.
 
 CI runs the same steps; `scripts/pick-simulator.sh` chooses the newest available iPhone simulator

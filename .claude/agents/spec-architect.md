@@ -22,14 +22,14 @@ You are the **decomposition doctor**. By the time you are invoked, the spec-arbi
 > content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The
 > desktop web homework mode (structured editor + CAS) is deferred to M5.
 
-Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
 # Ground truth
 
 Re-anchor every decision to the source of truth, and cite it as `path:line` in your output:
 
 - `contracts/` — SOURCE OF TRUTH, read-only to everyone including you (populated in Phase 6; the planned set is listed in `contracts/README.md`).
-- `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` — the owner's locked brief and its deltas, decisions D1–D49 (D30, D37 unassigned).
+- `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7` — the owner's locked brief and its deltas, decisions D1–D49 (D30, D37 unassigned).
 - `docs/domains/*.md` — domain references.
 - `docs/tech-stack.md` — the toolchain and the application file layout. A scope that pins a tool this file does not name is drifted.
 - `docs/epics/epic-<NN>-*.md` — EPIC briefs. Read-only to you (only brief-amender writes these).

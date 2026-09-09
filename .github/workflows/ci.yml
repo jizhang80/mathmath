@@ -30,6 +30,9 @@ jobs:
       - name: Core tests on the simulator (D29)
         working-directory: Packages/Core
         run: xcodebuild test -quiet -scheme Core-Package -destination "${{ steps.sim.outputs.dest }}" CODE_SIGNING_ALLOWED=NO
+      - name: Rendering tests on the simulator
+        working-directory: Packages/Rendering
+        run: xcodebuild test -quiet -scheme Rendering -destination "${{ steps.sim.outputs.dest }}" CODE_SIGNING_ALLOWED=NO
       - name: App build on the simulator
         run: xcodebuild build -quiet -workspace App/mathmath.xcworkspace -scheme mathmath -destination "${{ steps.sim.outputs.dest }}" CODE_SIGNING_ALLOWED=NO
 
