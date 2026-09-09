@@ -83,8 +83,8 @@ A `risk: seam` task, or any task touching `App/Sources`, runs the full build+tes
 
 ```bash
 swift build -c release --product core-cli
-xcodebuild test -scheme Core-Package -destination 'platform=iOS Simulator,name=iPhone 16'
-xcodebuild build -scheme mathmath -destination 'platform=iOS Simulator,name=iPhone 16'
+xcodebuild test -scheme Core-Package -destination "$(scripts/pick-simulator.sh)"
+xcodebuild build -scheme mathmath -destination "$(scripts/pick-simulator.sh)"
 pytest    # pipeline/, full suite
 ```
 
