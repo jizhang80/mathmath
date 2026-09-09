@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mathmath.local/contracts/regions.schema.json",
+  "title": "regions",
+  "type": "object",
+  "properties": {
+    "format_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "regions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "number-operations",
+              "algebra",
+              "functions",
+              "geometry-measurement",
+              "trigonometry",
+              "calculus",
+              "linear-algebra",
+              "differential-equations",
+              "probability-statistics",
+              "discrete",
+              "analysis",
+              "topology",
+              "number-theory",
+              "abstract-algebra",
+              "shore"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "about": {
+            "type": "string",
+            "minLength": 1
+          },
+          "horizon": {
+            "type": "boolean"
+          },
+          "polygon": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "y": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "x",
+                "y"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 3
+          },
+          "neighbours": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "number-operations",
+                "algebra",
+                "functions",
+                "geometry-measurement",
+                "trigonometry",
+                "calculus",
+                "linear-algebra",
+                "differential-equations",
+                "probability-statistics",
+                "discrete",
+                "analysis",
+                "topology",
+                "number-theory",
+                "abstract-algebra",
+                "shore"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "about",
+          "horizon",
+          "polygon",
+          "neighbours"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "format_version",
+    "regions"
+  ],
+  "additionalProperties": false
+}

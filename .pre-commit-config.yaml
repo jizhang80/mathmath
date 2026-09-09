@@ -6,7 +6,7 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-        args: [--strict, feat, fix, docs, chore, refactor, test, ci, build, perf]
+        args: [--strict, feat, fix, docs, chore, refactor, test, ci, build, perf, contract]
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.6
     hooks:

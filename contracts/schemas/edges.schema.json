@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mathmath.local/contracts/edges.schema.json",
+  "title": "edges",
+  "type": "object",
+  "properties": {
+    "format_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "tag": {
+                  "type": "string",
+                  "enum": [
+                    "ministry_prereq",
+                    "textbook_order",
+                    "third_party_structure",
+                    "model_generated"
+                  ]
+                },
+                "origin": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "tag",
+                "origin"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "generation_agreement": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "probe_stats": {
+            "type": "object",
+            "properties": {
+              "probes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "confirmed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "downstream_fail_given_upstream_fail": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "probes",
+              "confirmed"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "sources",
+          "generation_agreement",
+          "confidence",
+          "probe_stats"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "format_version",
+    "edges"
+  ],
+  "additionalProperties": false
+}
