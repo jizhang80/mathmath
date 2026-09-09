@@ -1,0 +1,33 @@
+{
+  "format_version": "0.0.0",
+  "regions": [
+    {
+      "id": "geometry-measurement",
+      "name": "Geometry & Measurement",
+      "about": "Shapes, measures and the arguments that connect them.",
+      "horizon": false,
+      "polygon": [
+        { "x": 0.0, "y": 0.0 },
+        { "x": 0.6, "y": 0.0 },
+        { "x": 0.6, "y": 0.3 },
+        { "x": 0.3, "y": 0.3 },
+        { "x": 0.3, "y": 0.6 },
+        { "x": 0.0, "y": 0.6 }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "algebra",
+      "name": "Algebra",
+      "about": "Expressions, equations and the moves that keep them equal.",
+      "horizon": false,
+      "polygon": [
+        { "x": 0.6, "y": 0.0 },
+        { "x": 1.0, "y": 0.0 },
+        { "x": 1.0, "y": 0.4 },
+        { "x": 0.6, "y": 0.4 }
+      ],
+      "neighbours": []
+    }
+  ]
+}

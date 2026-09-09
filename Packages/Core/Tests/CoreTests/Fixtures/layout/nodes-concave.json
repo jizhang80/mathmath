@@ -1,0 +1,41 @@
+{
+  "format_version": "0.0.0",
+  "nodes": [
+    {
+      "id": "node-concave-in",
+      "name": "node-concave-in",
+      "region_id": "geometry-measurement",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the concave-region layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": [],
+      "layout_hint": {
+        "x": 0.1,
+        "y": 0.1
+      }
+    },
+    {
+      "id": "node-concave-hint-outside",
+      "name": "node-concave-hint-outside",
+      "region_id": "geometry-measurement",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node whose layout_hint falls outside its own region (in algebra, not geometry-measurement) — the clamp must pull it back into geometry-measurement's polygon.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": [],
+      "layout_hint": {
+        "x": 0.8,
+        "y": 0.2
+      }
+    }
+  ]
+}
