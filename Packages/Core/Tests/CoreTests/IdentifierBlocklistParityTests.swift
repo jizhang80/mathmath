@@ -3,7 +3,7 @@ import Testing
 
 @testable import Core
 
-/// I5: `studentStateCodingKeysRejectIdentifierBlocklist()` (in `DecodeRoundTripTests.swift`) uses a
+/// I5: `studentStateWireKeysRejectIdentifierBlocklist()` (in `DecodeRoundTripTests.swift`) uses a
 /// Swift-literal identifier blocklist that is supposed to mirror
 /// `pipeline/tests/test_contracts.py::test_transmitted_shapes_reject_identifier_keys`'s
 /// `IDENTIFIER_BLOCKLIST` exactly (task spec §3, verbatim quote). This suite parses the Python
