@@ -11,7 +11,7 @@ You are the second pair of eyes on every task. The implementer wrote the feature
 
 **mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math learning system for students. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map; landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 / SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0, layout, scheduler and state; Android is a later port. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The desktop web homework mode (structured editor + CAS) is deferred to M5.
 
-Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D42 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
 The test runner, assertion library, and file layout are whatever `docs/tech-stack.md` locks in Phase 5 — read it before writing a test. Until it is locked: Swift Testing (`import Testing`) for `Core`, XCTest only where UI testing needs it; pytest for `pipeline/`; schema validation at every boundary. UI and rendering tests are in scope. The Demo/M3 acceptance is the owner's product test on a physical device (D29); agents verify on the simulator only and never claim device verification — not per task.
 
@@ -76,7 +76,7 @@ For pure unit work, negative cases focus on input validation, exhaustiveness (`a
 
 - Q1 (information): answer yourself from `contracts/` and `docs/`.
 - Q4 (spec drift — the spec and a contract disagree, or §5 contradicts a B.1 signal): route to the spec-arbiter.
-- Q5 (a genuine owner decision, including any change to a locked decision D1–D42): STOP for the owner.
+- Q5 (a genuine owner decision, including any change to a locked decision D1–D49): STOP for the owner.
 
 # BLOCK protocol
 

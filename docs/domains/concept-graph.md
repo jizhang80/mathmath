@@ -19,8 +19,9 @@ checker lives in `Core` and the pipeline invokes it through the `Core` CLI (D33,
 
 ## Core entities
 
-**Node** — `id`, `name`, `strand`, `expectation_codes[]` (owned by `curriculum-spine`), `courses[]` each
-with a `depth` marker, `region` (exactly one, D21, I8), `position` (written by the layout build step, D33;
+**Node** — `id`, `name`, `strand`, `expectation_codes[]` (grade 9–12; owned by `curriculum-spine`) and/or
+`source_ref` (undergraduate: source, edition, chapter/section into a designated CC-licensed source — D2 as
+revised; a node with neither fails L0), `courses[]` each with a `depth` marker, `region` (exactly one, D21, I8), `position` (written by the layout build step, D33;
 an optional `layout_hint` seeds it), and per-node content owned by `learning-objects` (ErrorType, HintTree, ProbeItem),
 referenced by id. **Edge** — "A is prerequisite of B": `from`, `to`, `sources[]`, `generation_agreement`,
 `confidence`, `probe_stats` (§5); directed, and the set is acyclic (I8).
@@ -49,9 +50,10 @@ passing **L0 report** listing every violation and in-degree outlier. Referenced:
 **Steps:**
 1. (Tier 0, `Core` CLI invoked by the pipeline — D42) Load both; stop on a `spine_version` mismatch.
 2. (Tier 0) Check the §5 constraints: acyclic; no later→earlier course edge (via `courses[].depth`);
-   every code maps to ≥ 1 Node and every Node to ≥ 1 code; in-degree outliers flagged; the D14 starting
-   chain connected end-to-end; every node has exactly one region; every trail is a path in the graph
-   (v2 §5). The same function runs again at load on the device (platform W1).
+   every Ministry code maps to ≥ 1 Node and every Node carrying codes maps to ≥ 1 code, while every
+   Node without codes carries a resolvable `source_ref` (I8 as amended, v2.7 §1); in-degree outliers flagged; the D14 starting
+   chain connected end-to-end; every node has exactly one region (ten regions per D21 revised); every
+   generated trail segment is a path in the graph (v2 §5; checked again at trail generation, expedition W8). The same function runs again at load on the device (platform W1).
 3. (Tier 0) Emit the L0 report — pass/fail per check, violating ids, and the in-degree distribution the
    Owner uses to set the threshold empirically at M2 (§11); default the 95th percentile [ESTIMATE: flags a
    handful of nodes], advisory only.
@@ -118,7 +120,7 @@ probed. The walk terminates: acyclic graph, hard cap. Emits `graph.prerequisite_
 
 | Code | When | User sees | Recoverable |
 |---|---|---|---|
-| `GRAPH_L0_FAILED` | Any §5 constraint fails: cycle, backward edge, coverage gap, broken chain, node without exactly one region, trail not a path | Internal; bundle refused | Yes — regenerate, never patch (I9) |
+| `GRAPH_L0_FAILED` | Any §5 constraint fails: cycle, backward edge, coverage gap, node with neither codes nor a resolvable `source_ref`, broken chain, node without exactly one region, trail segment not a path | Internal; bundle refused | Yes — regenerate, never patch (I9) |
 | `GRAPH_NO_PREREQUISITE` | W3 finds no unmastered candidate within 2 levels | "Nothing upstream to check." | Yes — normal |
 
 ## Invariants enforced here
@@ -167,4 +169,5 @@ walked and probed, listed only in the Owner's report. **Trade-off:** keeps the p
 | 2026-09-08 | Drafted (Phase 3b). |
 | 2026-09-08 | Phase 3b consistency fixes (event consumers aligned with telemetry's four event kinds). |
 | 2026-09-08 | Open questions ratified by owner (all defaults; see docs/plans/phase3b-open-questions.md). ProbeStats/Confidence inputs noted as per-batch-capped by telemetry (one observation per edge per batch). |
+| 2026-09-09 | v2.6/v2.7: `source_ref` on undergraduate nodes; coverage check scoped to code-bearing nodes (I8 amended); ten regions; trail path check applies to generated segments. |
 | 2026-09-09 | v2 re-cut: `region` and `position` on Node; two new L0 rules; L0 and the query live in `Core` and are invoked by the pipeline (D33, D42); consumers renamed (`diagnosis`, `map`); deeper gaps marked on the map (v2.5 §3); milestone M6 → M5. No open-question changes. |

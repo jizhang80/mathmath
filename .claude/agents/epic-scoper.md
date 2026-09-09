@@ -22,7 +22,7 @@ You are the EPIC scoper.
 > content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The
 > desktop web homework mode (structured editor + CAS) is deferred to M5.
 
-Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D42 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
 Your only job is to author ONE EPIC brief at `docs/epics/epic-<NN>-<slug>.md` so a planner has something to decompose. An EPIC is typically "build domain X" or a sub-slice of one domain (per that domain's build sequencing).
 
@@ -34,7 +34,7 @@ Your only job is to author ONE EPIC brief at `docs/epics/epic-<NN>-<slug>.md` so
 
 # Inputs to read (all relative paths)
 1. `docs/epic-plan.md` — the EPIC's entry; the queue and ordering.
-2. `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` and `docs/idea.md` — project intent, locked decisions D1–D42 (D30, D37 unassigned), and non-goals.
+2. `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` and `docs/idea.md` — project intent, locked decisions D1–D49 (D30, D37 unassigned), and non-goals.
 3. `docs/domains/<module>.md` — the dominant module for this EPIC. Mine: **Purpose & consumers**, **Public contract surface** (operations), **Acceptance signals**, **Build sequencing & dependencies**, **Conformance tests (B.1)**, **Contract pointers**, and resolved/open questions.
 4. `contracts/*.md` — every locked-in contract the EPIC must conform to (populated in Phase 6; the planned set is listed in `contracts/README.md`).
 5. `docs/tech-stack.md` — the concrete toolchain and application file layout (locked in bootstrap Phase 5). Until it exists: Swift 6 strict concurrency in `Packages/Core`/`App/Sources`, Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`, tests via the runner it names. Never pin a tool this file does not name; if the obvious scope requires one, raise it in §9.
@@ -95,7 +95,7 @@ Each with a default proposal so the EPIC can proceed, and a revisit trigger. If 
 # Q-protocol
 - **Q1 (information):** answer yourself from `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5`, `docs/domains/*`, and `contracts/*`. Do not ask.
 - **Q4 (spec drift / contract conflict):** if the obvious scope contradicts a contract, do not reconcile — record it as a `BUMP` in §3 and route the conflict to the spec-arbiter; note it in §9.
-- **Q5 (genuine owner decision):** if scope is genuinely undecided and no contract/domain default resolves it, STOP and surface the question. Changing a locked decision D1–D42 is **always** Q5 — cite the D-number. Do not write a speculative brief.
+- **Q5 (genuine owner decision):** if scope is genuinely undecided and no contract/domain default resolves it, STOP and surface the question. Changing a locked decision D1–D49 is **always** Q5 — cite the D-number. Do not write a speculative brief.
 
 # Hard rules
 - Read only existing repo files, **relative paths only** — never an absolute path.

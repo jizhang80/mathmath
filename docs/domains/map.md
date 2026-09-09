@@ -7,11 +7,12 @@ amendments; invariants I1–I15 in `CLAUDE.md`.
 
 Door C: the concept graph rendered as one continent the student can see and move across. Regions are
 territories organised by math's own taxonomy (D20, D21); edges are rivers flowing in dependency direction;
-unmastered nodes sit under fog; courses are trails drawn over the map (I7); beyond grade 12 lies a greyed
-horizon of labels only; landmarks — real, sourced things (D22, I15) — sit on the map and link into nodes.
+unmastered nodes sit under fog; the student's one trail is drawn over the map (D47; course segments solid,
+extension segments dashed); beyond the continent lies a greyed horizon of labels only; landmarks — real, sourced things (D22, I15) — sit on the map and link into nodes.
 The map is also **the record** (D4, v2.5 §3): nodes beyond the backtrack cap are marked `blocked` and stay
-visible in fog, enterable by choice, never pushed. This domain owns orientation and presentation only:
-mastery, marker and scheduling belong to **expedition**; the hypothesis machine to **diagnosis**; node
+visible in fog, enterable by choice, never pushed. **Trail first (D44):** the default view is the student's trail, the continent is background reachable by
+zooming out. This domain owns orientation and presentation only: mastery, the course-progress marker,
+trail generation and scheduling belong to **expedition**; the hypothesis machine to **diagnosis**; node
 coordinates arrive precomputed from the pipeline (D33, D42) and are never computed here. Milestones
 **Demo** (hand-written data), **M3** (real M2 data), **M5** (all regions populated, landmarks everywhere).
 
@@ -26,14 +27,20 @@ coordinates arrive precomputed from the pipeline (D33, D42) and are never comput
 
 ## Core entities
 
-**Region** — one of the D21 territories: `id`, `name`, `polygon` (normalised coordinates, hand-authored
+**Region** — one of the ten D21 (revised) territories — Number & Operations · Algebra · Functions · Geometry &
+Measurement · Trigonometry · Calculus · Linear Algebra · Differential Equations · Probability & Statistics ·
+Discrete Mathematics — or a horizon label (Analysis, Topology, Number Theory, Abstract Algebra), or the
+optional "shore" (grade 7–8; drawn, no content, no fog; not in the Demo — decided at M5): `id`, `name`, `polygon` (normalised coordinates, hand-authored
 for the Demo, pipeline-authored later), `horizon: bool`, `neighbours[]`, and one sentence on what the
 territory is about (project's own words, I6). A `horizon` region is a label with no nodes and is not
 tappable. Every `Node` (**concept-graph**) has exactly one region (I8).
 
-**Trail** — a course drawn over the map: `course_code` (**curriculum-spine**) and an ordered `node_ids[]`
-that is a path in the graph (I8). Trails are presentation of `courses[]` membership, not a second graph
-(I7). Each trail carries the student's **start marker** — owned by **expedition** (D28), moved from here.
+**Trail** — the student's one trail (D47), generated in `Core` by **expedition** W8 from the selected
+syllabi, the course-progress marker and mastery state: ordered `segments[]`, each a `course_code`
+(**curriculum-spine**) or `extension`, with `node_ids[]`; every segment is a path in the graph (I8). A
+trail is presentation of `courses[]` membership plus the D47 extension, never a second graph (I7). The
+**course-progress marker** ("we are here in class", a unit of the course — D45) is owned by **expedition**
+and set from here.
 
 **Landmark** — `id`, `name`, `what_it_is` (one plain-language paragraph), `source_url` (required, must
 resolve — D22, I15), `node_ids[]` (≥ 1), `region_ids[]`, `position`. Validated by **learning-objects** W1;
@@ -56,9 +63,10 @@ Referenced elsewhere: **Node**, **Edge**, **Graph bundle** (concept-graph); **Co
 
 ### W1 — Open the map
 **Pre:** bundles loaded (platform); `StudentState` read. **Steps:** 1. Build `MapViewModel` (Tier 0, in
-`Core`). 2. Render at overview zoom: region names, trails, horizon; node names hidden until the zoom
-threshold (Q4). 3. Centre on the current trail's position indicator — the first uncleared trail node at or
-after the marker — or on the marker itself when nothing is cleared. **Post:** `map.opened` emitted.
+`Core`). 2. Render **trail first (D44)**: the camera frames the trail's current unit — the marker's unit
+and the next — with the continent visible around it; zooming out reveals regions, horizon and the whole
+trail; node names appear at the zoom threshold (Q4). 3. The position indicator is the first uncleared
+trail node at or after the marker. **Post:** `map.opened` emitted.
 
 ### W2 — Tap a node
 **Pre:** map open. **Steps:** 1. Open the **node panel**: name, `paraphrase`, expectation codes with the
@@ -77,12 +85,14 @@ cleared (Q2), and the trails that cross it. A `horizon` region is not tappable. 
 "which parts of the map this touches" as jump links, one per linked node, each landing on W2 for that node.
 **Post:** `map.landmark_opened` emitted (a D40 event).
 
-### W5 — Move the start marker
-**Pre:** a trail is selected. **Steps:** 1. Drag the marker; it snaps to trail nodes only, else
-`MAP_MARKER_OFF_TRAIL` and the marker stays. 2. Hand the new node id to **expedition** (`map.marker_moved`),
-which owns the state change and recomputes the frontier (D28). 3. Re-derive fog: nodes upstream of the new
-marker are drawn as fog with an "upstream of your start" note, never as cleared. **Post:** marker persisted
-by expedition; `map.marker_moved` emitted (a D40 event).
+### W5 — Set the course-progress marker
+**Pre:** a course trail segment is selected. **Steps:** 1. Show the course's **unit list** (curriculum-spine
+`Unit`s, D45) with the current one highlighted; the student picks "we are here in class". Dragging the
+marker along the trail is the same action: it snaps to the nearest unit boundary, else
+`MAP_MARKER_OFF_TRAIL` and stays. 2. Hand the unit id to **expedition** (`map.marker_moved`), which owns the
+change, regenerates the trail (D47 — past the last unit the trail extends, drawn dashed) and recomputes the
+fringe (D45/D48). 3. Re-derive fog: nodes upstream of the marker are fog with an "upstream of your class"
+note, never cleared. **Post:** marker persisted by expedition; `map.marker_moved` emitted (a D40 event).
 
 ### W6 — Reflect state changes
 **Pre:** expedition or diagnosis emitted a transition (`expedition.node_cleared`, `diagnosis.node_blocked`,
@@ -101,8 +111,9 @@ B and C).
 - `map.opened` — `{ trail_code }`. Consumer: **telemetry** (session start, D40).
 - `map.node_opened` — `{ node_id, state }`; `map.region_opened` — `{ region_id }`. Consumer: none in MVP.
 - `map.landmark_opened` — `{ landmark_id }`. Consumer: **telemetry** (D40 landmark taps).
-- `map.marker_moved` — `{ trail_code, node_id }`. Consumers: **expedition** (owns the change), **telemetry**
+- `map.marker_moved` — `{ course_code, unit_id }`. Consumers: **expedition** (owns the change), **telemetry**
   (D40 marker placement and moves).
+- `map.unit_expedition_requested` — `{ course_code, unit_id }`. Consumer: **expedition** (D46).
 - `map.check_here_requested` — `{ node_id }`. Consumer: **diagnosis** (W1 entry from the map).
 - `map.include_requested` — `{ node_id }`. Consumer: **expedition** (Q5).
 
@@ -112,7 +123,7 @@ B and C).
 |---|---|---|---|
 | `MAP_LAYOUT_MISSING` | A node in the bundle has no coordinates | Internal; bundle refused at load (platform) | Yes — re-run the pipeline build step (D33) |
 | `MAP_REGION_UNKNOWN` | A node names a region absent from the bundle | Internal; bundle refused (I8) | Yes — pipeline |
-| `MAP_MARKER_OFF_TRAIL` | Marker dropped on a node not on the trail | Marker snaps back | Yes |
+| `MAP_MARKER_OFF_TRAIL` | Marker dropped outside a unit boundary of the selected course | Marker snaps back | Yes |
 | `MAP_LANDMARK_UNSOURCED` | A landmark lacks `source_url` | Internal; bundle refused (I15) | Yes — pipeline |
 
 ## Invariants enforced here
@@ -146,8 +157,8 @@ trail-relative fractions make progress visible in a course; graph-wide fractions
 for every student.
 **Ratified 2026-09-09:** default accepted.
 
-**Q3 — What the horizon shows.** **Default:** the D21 labels only — Linear Algebra, Number Theory, Analysis
-— greyed, not tappable, no content. **Trade-off:** signals that the continent continues without promising
+**Q3 — What the horizon shows.** **Default:** the D21 (revised) labels only — Analysis, Topology, Number
+Theory, Abstract Algebra — greyed, not tappable, no content. **Trade-off:** signals that the continent continues without promising
 anything; a tappable "coming later" panel is speculative content.
 **Ratified 2026-09-09:** default accepted.
 
@@ -157,11 +168,12 @@ always. **Trade-off:** simple and testable, but dense regions may still overlap 
 **Ratified 2026-09-09:** default accepted.
 
 **Q5 — Can the student add a fogged node to the next expedition from the panel?** **Default:** yes, one
-node, queued ahead of the scheduler's pick if it is on the frontier; ignored with a plain message if it is
-upstream of the marker (D28 — that way in is "Check me here"). **Trade-off:** gives the map a reason to be
+node, queued ahead of the scheduler's pick if it is on the fringe; ignored with a plain message if it is
+upstream of the marker (D45 — that way in is "Check me here"). **Trade-off:** gives the map a reason to be
 tapped; a queue longer than one is scheduling policy the student should not have to manage.
 **Ratified 2026-09-09:** default accepted.
 
 ## Change log
 
 | 2026-09-09 | Drafted (Phase 3b, v2 re-cut). Open questions pending owner ratification. |
+| 2026-09-09 | v2.6/v2.7: ten regions + four horizon labels + optional shore (D21 revised); trail first (D44); per-student generated trail with dashed extension (D47); course-progress marker set from the unit list (D45); unit expedition request (D46); fringe wording (D48). |

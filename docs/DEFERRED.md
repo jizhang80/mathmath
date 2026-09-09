@@ -94,3 +94,28 @@ structured editor in homework mode); no OCR in any door.
 **Configuration:** all doors.
 **Revisit trigger:** post-release.
 **Hypothesis (unverified):** none.
+
+### D-9 — Ideas layer (cross-cutting mathematical ideas as internal landmarks)
+
+**Observed:** `AMENDMENT-v2.6.md` §C records it as a queued design candidate, not a decision: a small set of
+ideas (inverse, linearity, rate of change, equivalence, symmetry, limit, …) each linking nodes across regions
+and grades, presented like landmarks, to show mathematics as recurring ideas rather than a staircase.
+**Configuration:** map with regions, trails and real-world landmarks (D20–D22, D47).
+**Revisit trigger:** Demo observations showing how the testers relate to the map.
+**Hypothesis (unverified):** none.
+
+### D-10 — Shore region (grade 7–8 fractions / integers / ratio)
+
+**Observed:** `AMENDMENT-v2.6.md` D21 (revised) allows an optional "shore" region drawn with no content and
+no fog mechanics; `AMENDMENT-v2.7.md` §5 confirms it is not drawn in the Demo.
+**Configuration:** ten-region continent per D21 revised.
+**Revisit trigger:** M5 (product decision after the grade 9–12 strands are covered).
+**Hypothesis (unverified):** none.
+
+### D-11 — Additional syllabi as trails (AP Calculus AB/BC, AP Statistics, IB Mathematics AA/AI, first-year undergraduate)
+
+**Observed:** `AMENDMENT-v2.6.md` D49 — added as trails when their nodes exist; a trail is a node-id list,
+so the cost is the list, not content.
+**Configuration:** per-student generated trails (D47) over one graph (I7).
+**Revisit trigger:** the undergraduate content tier reaching the relevant nodes (D1 order), or a tester request.
+**Hypothesis (unverified):** none.
