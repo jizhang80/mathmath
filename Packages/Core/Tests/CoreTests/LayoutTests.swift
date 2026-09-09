@@ -122,11 +122,19 @@ struct LayoutTests {
     }
 
     // AC6: every tuning constant lives in LayoutConfig, referenced by name; no bare numeric literal at a
-    // call site in LayoutEngine.swift or Polygon.swift. This is a text-level regression guard (not a
-    // semantic one): it scans for numeric literals containing a decimal point, or bare integer literals
-    // with more than one digit, and allows only `0`/`1`/loop-and-array-index usage by excluding lines
-    // matched by common indexing/looping idioms. A literal like `0.0005` typed directly into either file
-    // would make this test fail.
+    // call site in LayoutEngine.swift or Polygon.swift, other than 0, 1, loop indices, and array/tuple
+    // indexing (AC6's exact allowlist). This is a text-level regression guard (not a semantic one): it
+    // scans for ANY bare numeric literal (float or integer, including single digits) and flags every one
+    // except a value-level allowlist of `0`/`1` — every loop index and array/tuple index in these two
+    // files is itself always written as `0` or `1` (e.g. `polygon[0]`, `index + 1`, `polygon.count - 1`),
+    // so that value-level allowlist alone already covers every indexing/loop-bound use here. The one
+    // further, narrowly-scoped exception is the literal `3` where it appears directly compared against
+    // `.count` (`polygon.count >= 3` / `region.polygon.count >= 3`) — the schema-mandated minimum vertex
+    // count for a sequence of points to be a polygon at all (`regions.schema.json`'s `minItems: 3`), a
+    // structural arity check, not a layout tuning knob, so not a `LayoutConfig` candidate; this exception
+    // is matched by position (adjacency to `.count`), not by value, so a `3` appearing anywhere else would
+    // still be flagged. A literal like `0.0005`, `42`, or a bare `5` typed directly into either file
+    // (outside that one arity comparison) would make this test fail.
     @Test("LayoutConfig is the only source of tuning constants")
     func layoutConfigIsTheOnlySourceOfTuningConstants() throws {
         let sourcesDir = URL(fileURLWithPath: #filePath)
@@ -136,11 +144,15 @@ struct LayoutTests {
             .appendingPathComponent("Sources/Core/Layout")
 
         let filesToScan = ["LayoutEngine.swift", "Polygon.swift"]
-        // Matches a float literal (e.g. 0.0005) or a bare integer literal of two or more digits
-        // (e.g. 42), which would indicate a tuning constant typed directly at a call site instead of
-        // read from `LayoutConfig`. Single-digit integers (0-9) are allowed: loop bounds, array
-        // indices and the tolerated `0`/`1`.
-        let literalPattern = try NSRegularExpression(pattern: #"\b\d+\.\d+\b|\b\d{2,}\b"#)
+        // Matches any bare numeric literal: a float (e.g. 0.0005) or a bare integer of any digit count,
+        // including a single digit (e.g. 5) — AC6 permits only 0 and 1 among bare literals, so no digit
+        // count is exempted by width alone.
+        let literalPattern = try NSRegularExpression(pattern: #"\b\d+\.\d+\b|\b\d+\b"#)
+        // The one position-based exception: `3` immediately compared against `.count` — the polygon
+        // minimum-vertex arity check, not a tuning constant (comment above).
+        let countArityPattern = try NSRegularExpression(
+            pattern: #"\.count\s*(>=|<=|<|>)\s*3\b|\b3\s*(<=|>=|<|>)\s*\S*\.count\b"#
+        )
 
         var violations: [String] = []
         for fileName in filesToScan {
@@ -148,11 +160,27 @@ struct LayoutTests {
             let text = try String(contentsOf: url, encoding: .utf8)
             let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
             for (lineNumber, line) in lines.enumerated() {
-                let nsLine = line as NSString
+                // A `//`/`///` doc comment is prose (e.g. "L0-6", "Step 3") and is not a call site AC6
+                // governs — only code lines are scanned, same rule the I14 randomness-source scan in
+                // `LayoutRegressionTests.swift` already applies.
+                if line.trimmingCharacters(in: .whitespaces).hasPrefix("//") {
+                    continue
+                }
+                let stringLine = String(line)
+                let nsLine = stringLine as NSString
                 let searchRange = NSRange(location: 0, length: nsLine.length)
-                let matches = literalPattern.matches(in: String(line), range: searchRange)
+                let isArityLine =
+                    countArityPattern.firstMatch(in: stringLine, range: searchRange) != nil
+                let matches = literalPattern.matches(in: stringLine, range: searchRange)
                 for match in matches {
-                    violations.append("\(fileName):\(lineNumber + 1): \(nsLine.substring(with: match.range))")
+                    let matchedText = nsLine.substring(with: match.range)
+                    if matchedText == "0" || matchedText == "1" {
+                        continue
+                    }
+                    if matchedText == "3" && isArityLine {
+                        continue
+                    }
+                    violations.append("\(fileName):\(lineNumber + 1): \(matchedText)")
                 }
             }
         }

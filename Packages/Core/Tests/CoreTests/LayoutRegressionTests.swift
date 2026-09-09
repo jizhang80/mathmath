@@ -335,16 +335,37 @@ struct LayoutRegressionTests {
     // trusted to catch a real regression either.
     @Test("the I11 literal-scan guard reds when a bare numeric literal is planted")
     func literalScanGuardRedsOnPlantedLiteral() throws {
-        let literalPattern = try NSRegularExpression(pattern: #"\b\d+\.\d+\b|\b\d{2,}\b"#)
+        // Mirrors the tightened scan in `LayoutTests.layoutConfigIsTheOnlySourceOfTuningConstants()`
+        // exactly: every bare numeric literal is a violation except the value-level allowlist {0, 1} and
+        // the one position-based exception (`3` directly compared against `.count` — the polygon
+        // minimum-vertex arity check, not a tuning constant).
+        let literalPattern = try NSRegularExpression(pattern: #"\b\d+\.\d+\b|\b\d+\b"#)
+        let countArityPattern = try NSRegularExpression(
+            pattern: #"\.count\s*(>=|<=|<|>)\s*3\b|\b3\s*(<=|>=|<|>)\s*\S*\.count\b"#
+        )
 
         func violationCount(in text: String) -> Int {
             var count = 0
             for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
-                let nsLine = line as NSString
-                count +=
-                    literalPattern.matches(
-                        in: String(line), range: NSRange(location: 0, length: nsLine.length)
-                    ).count
+                // Doc comments (e.g. "L0-6", "Step 3") are prose, not call sites — skipped, same as the
+                // real scan.
+                if line.trimmingCharacters(in: .whitespaces).hasPrefix("//") {
+                    continue
+                }
+                let stringLine = String(line)
+                let nsLine = stringLine as NSString
+                let range = NSRange(location: 0, length: nsLine.length)
+                let isArityLine = countArityPattern.firstMatch(in: stringLine, range: range) != nil
+                for match in literalPattern.matches(in: stringLine, range: range) {
+                    let matchedText = nsLine.substring(with: match.range)
+                    if matchedText == "0" || matchedText == "1" {
+                        continue
+                    }
+                    if matchedText == "3" && isArityLine {
+                        continue
+                    }
+                    count += 1
+                }
             }
             return count
         }
@@ -352,27 +373,20 @@ struct LayoutRegressionTests {
         let originalText = try String(
             contentsOf: Self.layoutSourcesDir.appendingPathComponent("LayoutEngine.swift"), encoding: .utf8
         )
-        #expect(violationCount(in: originalText) == 0, "the real file must be clean before mutation")
-
-        // Plant exactly the kind of literal AC6 forbids: a bare multi-digit int and a bare float, typed
-        // directly at a call site instead of read from `LayoutConfig`.
-        let mutatedText = originalText + "\nlet plantedTuningConstant = 0.1234\nlet plantedCount = 777\n"
         #expect(
-            violationCount(in: mutatedText) == 2,
-            "the guard's own regex failed to catch a planted bare literal — the guard cannot be trusted"
+            violationCount(in: originalText) == 0,
+            "the real file must be clean before mutation (its one `>= 3` polygon-arity check is the sole allowed structural exception)"
         )
 
-        // Looseness check: the shipped pattern requires >= 2 digits for a bare integer, so a single-digit
-        // non-index/non-loop literal (e.g. `let extra = 5`) would slip past it undetected — looser than
-        // AC6's stated rule ("no bare numeric literal ... other than 0, 1, loop indices, and array/tuple
-        // indexing"), which permits only 0 and 1, not every single digit. Demonstrated, not asserted
-        // against (the shipped guard is not modified by this suite): the shipped files currently contain
-        // no such literal, so this looseness causes no missed regression today, but a future edit adding
-        // e.g. `force * 5` at a call site would pass the shipped guard silently.
-        let singleDigitPlant = originalText + "\nlet extra = 5\n"
+        // Plant exactly the kinds of literal AC6 forbids: a bare multi-digit int, a bare float, and a bare
+        // SINGLE-digit int typed directly at a call site instead of read from `LayoutConfig` — the
+        // tightened scan (unlike the original, looser one it replaces) must catch all three, closing the
+        // gap where a bare single digit 2-9 (e.g. `let extra = 5`) previously slipped through undetected.
+        let mutatedText =
+            originalText + "\nlet plantedTuningConstant = 0.1234\nlet plantedCount = 777\nlet extra = 5\n"
         #expect(
-            violationCount(in: singleDigitPlant) == 0,
-            "documents the shipped regex's looseness: single-digit non-index literals are not caught"
+            violationCount(in: mutatedText) == 3,
+            "the guard's own regex failed to catch a planted bare literal — the guard cannot be trusted"
         )
     }
 
