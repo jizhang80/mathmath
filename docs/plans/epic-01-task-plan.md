@@ -67,3 +67,20 @@ same file for writes**, with one deliberate exception, note [3].
    01.1. The bundle-loader ↔ `Core` validation seam is EPIC 03's and must not be pulled forward.
 10. **No model path.** No task in EPIC 01 calls a model (`contracts/ai-usage.md`); 01.7 states the absence as
     an acceptance line so it cannot drift.
+
+## Wrap-gate ledger items raised during spec review
+
+Two checks that a reader might expect `Core`/L0 to perform are enforced by a **different layer**. Task 01.8
+must name them in the artifact ledger as such, so neither is later mistaken for an L0 responsibility or
+re-implemented in `Core` (RULE 2).
+
+- `manifest.files[].name` is a closed 6-value enum in `contracts/schemas/manifest.schema.json`. `Core` models
+  it as `String` and no L0-1 … L0-10 rule covers manifest filenames. **Enforced by** pipeline JSON-Schema
+  validation (`contracts/data-model.md` § Enforcement, wired in
+  `pipeline/tests/test_contracts.py::test_data_bundles_validate`).
+- `landmarks.json` `region_ids` is the narrower 10-value **non-horizon** enum, while `Core`'s `RegionId`
+  is the 15-case superset. L0-10 checks `node_ids[]` referential integrity and `source_url` presence only —
+  it does not check a landmark's regions against the horizon set. **Enforced by** the same pipeline schema
+  validation: a landmark tagged to a horizon region fails `test_data_bundles_validate` on `data/demo`.
+  Verified against `contracts/schemas/landmarks.schema.json` and `pipeline/tests/test_contracts.py` by the
+  orchestrating session, 2026-09-09 — no contract gap, no Q5, no new L0 rule.
