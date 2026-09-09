@@ -102,3 +102,20 @@ the schema-mandated minimum vertex count of a polygon (`contracts/schemas/region
 `minItems: 3`), a structural constant rather than a tuning knob, so it correctly stays out of `LayoutConfig`.
 The mutation proof in `LayoutRegressionTests.swift` now plants a single-digit literal too. Task 01.8 need
 only confirm this is still the state at wrap.
+
+## Loose ends from task 01.4 (task 01.8 ledger items)
+
+1. **`LayoutCommand` writes `nodes.json` through `JSONSerialization`, not the `Core` types.** `Node`/`NodesFile`
+   (`Packages/Core/Sources/Core/Model/Nodes.swift`) expose no public initializer beyond the synthesized
+   `Decodable.init(from:)`, so the CLI cannot construct a `Node` across the module boundary. The implementer
+   patched each node's `position` key by id at the serialization level, leaving every other key untouched and
+   still using `Core`'s computed positions. This is sound — and `core-cli validate` re-decodes afterwards, so
+   the shape is still checked — but the write path does not exercise the `Core` type round-trip. If EPIC 03
+   needs to construct bundle values from product code, the right fix is a public initializer in `Core`, not a
+   second serialization path. Recorded so the wart is deliberate rather than discovered later.
+2. **A dropped sub-assertion to restore once task 02b lands.** `test_core_seam.py`'s AC6 negative control was
+   written to first confirm `build_bundle` does not raise on an unmodified copy of `contracts/examples/`. It
+   could not: under the pre-02b L0-9 reading, `contracts/examples/courses.json` already fails L0-9 — the very
+   defect task 02b corrects. The implementer dropped that sub-assertion rather than assert something false
+   about committed ground truth. **After 02b lands, restore it**: an unmodified `contracts/examples/` copy
+   must pass, which is precisely the regression guard the whole L0-9 episode argues for.
