@@ -84,3 +84,13 @@ re-implemented in `Core` (RULE 2).
   validation: a landmark tagged to a horizon region fails `test_data_bundles_validate` on `data/demo`.
   Verified against `contracts/schemas/landmarks.schema.json` and `pipeline/tests/test_contracts.py` by the
   orchestrating session, 2026-09-09 — no contract gap, no Q5, no new L0 rule.
+
+## Overlapping literal scans (task 01.8 ledger item)
+
+`LayoutTests.swift`'s `layoutUsesNoBareNumericLiterals` (task 01.3 implementer) and
+`LayoutEngineContractTests.swift`'s `layoutLiteralScanCatchesPlantedConstants` (task 01.3 tester) both scan
+`Sources/Core/Layout/` for bare numeric literals. The implementer's regex misses single-digit literals — the
+tester demonstrated this empirically by planting `* 2`, which the original scan did not catch — so the
+tester's stricter scan is the load-bearing one, and it carries its own planted-literal proof that it reds.
+Both pass today. **If a future task consolidates them, keep the stricter one.** Recorded so the weaker scan
+is not mistaken for the guard.
