@@ -93,5 +93,12 @@ literals with the regex `\b\d+\.\d+\b|\b\d{2,}\b`. The 01.3 tester proved by mut
 documented that it lets a bare **single digit** 2-9 through — `let extra = 5` slips past — which is looser
 than AC6's stated rule ("no bare numeric literal other than 0, 1, loop indices, and array/tuple indices").
 No such literal exists in the sources today, so nothing is missed now. The tester could not tighten it
-without editing a file outside its scope. **Tightened by a follow-up task-commit on this branch**; task 01.8
-must confirm the shipped regex matches AC6's rule rather than only the mutation test's cases.
+without editing a file outside its scope.
+
+**Resolved** by a follow-up task-commit on this branch: the guard now flags every bare numeric literal,
+single digits included, with two documented exceptions — the values `0` and `1` (which cover every loop and
+array index in these two files), and the literal `3` only where it is compared against `.count`. That `3` is
+the schema-mandated minimum vertex count of a polygon (`contracts/schemas/regions.schema.json`
+`minItems: 3`), a structural constant rather than a tuning knob, so it correctly stays out of `LayoutConfig`.
+The mutation proof in `LayoutRegressionTests.swift` now plants a single-digit literal too. Task 01.8 need
+only confirm this is still the state at wrap.
