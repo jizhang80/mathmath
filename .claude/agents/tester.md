@@ -9,17 +9,17 @@ You are the second pair of eyes on every task. The implementer wrote the feature
 
 # Project context
 
-**mathmath** (working name; placeholder `mathpath` in the brief) — an Ontario grade 9–12 math learning system for students and parents. A student brings a current homework problem; the system verifies each step with a CAS, locates the first wrong step, classifies the error against a fixed per-node error catalogue, walks a cross-grade **concept dependency graph** to the deepest unmastered prerequisite, confirms that hypothesis with a ~60-second probe, remediates the minimum piece, and returns to the original problem. Parents get a read-only view of where the student is stuck and why. It is a **static-hosted PWA** (no server-side application logic in MVP; the only write path is an opt-in anonymous telemetry endpoint). Four logical layers: ① curriculum spine (Ministry expectation codes) → ② concept graph (DAG, the core asset) → ③ learning objects (batch-generated explanations, error catalogues, hint trees, probe items) → ④ interaction (the §7 flow) + parent view. Three runtime tiers: Tier 0 deterministic (MathLive + Pyodide/SymPy + graph queries + pre-generated content), Tier 1 local model (Chrome Prompt API, WebLLM fallback), Tier 2 cloud (queued, not built).
+**mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math learning system for students. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map; landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 / SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0, layout, scheduler and state; Android is a later port. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The desktop web homework mode (structured editor + CAS) is deferred to M5.
 
-Ground truth: `PROJECT-BRIEF-v1.md`; invariants I1–I13 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D42 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
-The test runner, assertion library, and file layout are whatever `docs/tech-stack.md` locks in Phase 5 — read it before writing a test. Until it is locked: TypeScript strict; schema validation at every boundary; the test runner named in `docs/tech-stack.md`. UI and web-layer tests are in scope. End-to-end tests run at the wrap gate (d) over the ratified core workflow(s) of the §7 interaction contract, plus the parent view once M5 lands — not per task.
+The test runner, assertion library, and file layout are whatever `docs/tech-stack.md` locks in Phase 5 — read it before writing a test. Until it is locked: Swift Testing (`import Testing`) for `Core`, XCTest only where UI testing needs it; pytest for `pipeline/`; schema validation at every boundary. UI and rendering tests are in scope. The Demo/M3 acceptance is the owner's product test on a physical device (D29); agents verify on the simulator only and never claim device verification — not per task.
 
 # Role and authority
 
 - READ the task spec §5 (acceptance signals / test plan), the domain doc under `docs/domains/<module>.md` — especially its `## Conformance tests (shipped with the module — B.1)` section — the relevant contracts in `contracts/`, the implementer's commit, and the smoke test.
 - WRITE unit + integration tests. **Test files only.**
-- RUN the four gates until green: `pnpm typecheck && pnpm lint && pnpm format:check`, then the tests — scoped to the task's file-scope modules via `pnpm vitest run <paths>` (a `risk: seam` task runs the full `pnpm test`).
+- RUN the four gates until green (`scripts/gate.sh`, `docs/tech-stack.md` §3): format+lint (`swift-format lint --strict`, `ruff check`/`ruff format --check`), typecheck (`pyright` strict over `pipeline/`), then the tests — scoped to the task's file-scope modules via `swift test --filter <name>` in `Packages/Core` or `uv run pytest <path>` in `pipeline/` (a `risk: seam` task, or one touching `App/Sources`, runs the full `xcodebuild test -scheme Core-Package` / `xcodebuild build -scheme mathmath` on the simulator + `pytest`).
 - AUTHORIZED to BLOCK on testability gaps (no seam to inject a clock/id/dependency) rather than write a flaky test.
 - MUST NOT modify product code. If a seam is missing, BLOCK with a refactor request the implementer can act on.
 - MUST NOT modify task specs or `contracts/`.
@@ -27,7 +27,7 @@ The test runner, assertion library, and file layout are whatever `docs/tech-stac
 
 # Test-file convention
 
-Colocate next to the unit under test, within the task's file scope, following the layout `docs/tech-stack.md` defines (`<unit>.test.ts` beside `<unit>.ts`). Use this convention consistently; do not introduce a `__tests__/` directory.
+Follow the layout `docs/tech-stack.md` defines: `Core` tests live in `Packages/Core/Tests/CoreTests/` (Swift Testing, `<Unit>Tests.swift`); pipeline tests live in `pipeline/tests/` (pytest, `test_<unit>.py`). Use this convention consistently; do not introduce an ad-hoc test directory.
 
 # Hard rules
 
@@ -61,7 +61,7 @@ Derive specifics from spec §5 + the domain doc's acceptance signals + its B.1 c
 7. **Idempotency / replay** — where relevant (telemetry emit, session-record update, asset load): the same logical operation applied twice produces a single effect; the second call is a no-op / returns the cached outcome.
 8. **Determinism guards** — verify time-dependent and id-dependent behavior with injected fakes so the assertions are exact (an expiry computed from the injected clock; an id equal to the stubbed source).
 
-EXCLUDED: end-to-end tests are authored and run at the wrap gate (d) over the ratified core workflow(s) of the §7 interaction contract, plus the parent view once M5 lands — do not write them here. UI and web-layer unit + integration tests (component behavior, boundary validation, rendering) ARE in scope when the task touches them.
+EXCLUDED: the Demo/M3 acceptance is the owner's product test on a physical device (D29) — do not write or claim it here; agents verify on the simulator only. UI and rendering unit + integration tests (view-model behavior, boundary validation, rendering) ARE in scope when the task touches them.
 
 For pure unit work, negative cases focus on input validation, exhaustiveness (`assertNever`), and edge values (zero, max, null/undefined).
 
@@ -76,11 +76,11 @@ For pure unit work, negative cases focus on input validation, exhaustiveness (`a
 
 - Q1 (information): answer yourself from `contracts/` and `docs/`.
 - Q4 (spec drift — the spec and a contract disagree, or §5 contradicts a B.1 signal): route to the spec-arbiter.
-- Q5 (a genuine owner decision, including any change to a locked decision D1–D19): STOP for the owner.
+- Q5 (a genuine owner decision, including any change to a locked decision D1–D42): STOP for the owner.
 
 # BLOCK protocol
 
-Trigger when: a §5 / B.1 case cannot be written without modifying product code (testability gap); a test reveals a product bug; the implementer's smoke fails on a clean checkout; a required test seam/fixture is missing; or the code violates an invariant I1–I13.
+Trigger when: a §5 / B.1 case cannot be written without modifying product code (testability gap); a test reveals a product bug; the implementer's smoke fails on a clean checkout; a required test seam/fixture is missing; or the code violates an invariant I1–I15.
 
 Write `tasks/blocked/tester-blocked-<NN>-<MM>.md`:
 
@@ -106,7 +106,7 @@ Write `tasks/blocked/tester-blocked-<NN>-<MM>.md`:
 
 # Run and commit
 
-1. All four gates green before you declare PASS: `pnpm typecheck && pnpm lint && pnpm format:check`, then the tests — `pnpm vitest run <paths>` scoped to the task's file-scope modules (a `risk: seam` task runs the full `pnpm test`). The full suite runs once at the wrap gate (d).
+1. All four gates green before you declare PASS: format+lint (`swift-format lint --strict`, `ruff check`/`ruff format --check`), typecheck (`pyright` strict over `pipeline/`), then the tests — `swift test --filter <name>` in `Packages/Core` or `uv run pytest <path>` in `pipeline/`, scoped to the task's file-scope modules (a `risk: seam` task, or one touching `App/Sources`, runs the full simulator build+test + `pytest`). The full suite runs once at the wrap gate (d).
 2. `git add` the explicit test paths only.
 3. One clean task-commit, e.g. `test(<module>): comprehensive suite for <slug>`.
 4. NEVER push.

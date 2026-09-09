@@ -1,0 +1,40 @@
+[project]
+name = "mathmath-pipeline"
+version = "0.1.0"
+description = "mathmath offline content pipeline (D41): spine extraction, generation runs, L1/L2, SymPy answer verification; invokes core-cli for L0 and layout (D42)."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "anthropic>=1.4,<2",
+    "pydantic>=2.13,<3",
+    "sympy>=1.14,<2",
+]
+
+[project.scripts]
+mathmath-pipeline = "mathmath_pipeline:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.16",
+    "pyright>=1.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.12,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 110
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ANN", "T20"]  # T20: no print in library code; CLI entry points opt out per-line
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+include = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

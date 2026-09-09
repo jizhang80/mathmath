@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swift:
+    name: Swift (Core + App, iOS simulator)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select the newest Xcode 26 on the runner
+        run: |
+          XCODE="$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
+          echo "using $XCODE"; sudo xcode-select -s "$XCODE"; xcodebuild -version
+      - name: swift-format lint
+        run: xcrun swift-format lint --strict --recursive --configuration .swift-format Packages App/Sources
+      - name: Build core-cli
+        run: swift build -c release --product core-cli --package-path Packages/Core
+      - name: Pick a simulator
+        id: sim
+        run: |
+          DEST="$(scripts/pick-simulator.sh)"; echo "dest=$DEST" >> "$GITHUB_OUTPUT"; echo "$DEST"
+      - name: Core tests on the simulator (D29)
+        working-directory: Packages/Core
+        run: xcodebuild test -quiet -scheme Core-Package -destination "${{ steps.sim.outputs.dest }}" CODE_SIGNING_ALLOWED=NO
+      - name: App build on the simulator
+        run: xcodebuild build -quiet -workspace App/mathmath.xcworkspace -scheme mathmath -destination "${{ steps.sim.outputs.dest }}" CODE_SIGNING_ALLOWED=NO
+
+  python:
+    name: Python pipeline
+    runs-on: macos-26  # the seam test runs core-cli, which needs the Swift toolchain
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.12"
+      - run: uv sync --locked
+      - run: uv run ruff check . && uv run ruff format --check .
+      - run: uv run pyright
+      - run: uv run pytest -q

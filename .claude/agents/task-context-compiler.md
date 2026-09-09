@@ -11,17 +11,17 @@ You GATHER, you do not DECIDE. Every fact in the bundle comes from a file you ac
 
 # Project context
 
-**mathmath** (working name; placeholder `mathpath` in the brief) — an Ontario grade 9–12 math learning system for students and parents. A student brings a current homework problem; the system verifies each step with a CAS, locates the first wrong step, classifies the error against a fixed per-node error catalogue, walks a cross-grade **concept dependency graph** to the deepest unmastered prerequisite, confirms that hypothesis with a ~60-second probe, remediates the minimum piece, and returns to the original problem. Parents get a read-only view of where the student is stuck and why. It is a **static-hosted PWA** (no server-side application logic in MVP; the only write path is an opt-in anonymous telemetry endpoint). Four logical layers: ① curriculum spine (Ministry expectation codes) → ② concept graph (DAG, the core asset) → ③ learning objects (batch-generated explanations, error catalogues, hint trees, probe items) → ④ interaction (the §7 flow) + parent view. Three runtime tiers: Tier 0 deterministic (MathLive + Pyodide/SymPy + graph queries + pre-generated content), Tier 1 local model (Chrome Prompt API, WebLLM fallback), Tier 2 cloud (queued, not built).
+**mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math learning system for students. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map; landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 / SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0, layout, scheduler and state; Android is a later port. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The desktop web homework mode (structured editor + CAS) is deferred to M5.
 
-Ground truth: `PROJECT-BRIEF-v1.md`; invariants I1–I13 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D42 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
 # Repo facts (always true)
 
-- **Stack**: locked in `docs/tech-stack.md` (bootstrap Phase 5). Quote that file for every version, library, runner, and source-layout rule the task touches. Until it exists, record `TECH STACK NOT YET LOCKED` and quote only what `CLAUDE.md` states: TypeScript strict; schema validation at every boundary; the test runner named in `docs/tech-stack.md`.
+- **Stack**: locked in `docs/tech-stack.md` (bootstrap Phase 5). Quote that file for every version, library, runner, and source-layout rule the task touches. Until it exists, record `TECH STACK NOT YET LOCKED` and quote only what `CLAUDE.md` states: Swift 6 strict concurrency in `Packages/Core`/`App/Sources`; Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; the test runner named in `docs/tech-stack.md`.
 - **Layout**: the file layout of application source is defined by `docs/tech-stack.md`; a task spec's §2 file scope is authoritative.
 - `contracts/` is the SOURCE OF TRUTH — every contract in `contracts/` binds (Phase 6; the planned set is listed in `contracts/README.md`). If a contract the task needs is not authored yet, that is a negative fact worth recording, not a gap to fill by invention.
 - Domain docs live in `docs/domains/<domain>.md` (the domain set is ratified in bootstrap Phase 3). EPIC briefs in `docs/epics/`. `CLAUDE.md` is RULES.
-- The invariants I1–I13 in `CLAUDE.md` bind every task. The ones that most often produce negative facts: no code path where a model output decides step correctness (I1); every model call has a confidence threshold and a deterministic Tier-0 fallback (I2); no field that identifies a person anywhere (I5); nodes carry `expectation_codes` + `paraphrase` and never verbatim Ministry text (I6); input arrives through the structured math editor, with no OCR path (I10).
+- The invariants I1–I15 in `CLAUDE.md` bind every task. The ones that most often produce negative facts: no code path where a model output decides step correctness (I1); every model call has a confidence threshold and a deterministic Tier-0 fallback (I2); no field that identifies a person anywhere (I5); nodes carry `expectation_codes` + `paraphrase` and never verbatim Ministry text (I6); input is defined per door, with no OCR path in any door (I10); `Core` imports Foundation only and L0/layout exist once, in `Core` (I14); every landmark has a resolving `source_url` (I15).
 - Language: English for code, identifiers, and internal docs. Docs carry `[SOURCED: …]` / `[ESTIMATE: …]` on quantitative claims and contain no time estimates.
 - Task spec path: `tasks/epic-<NN>-task-<MM>-<slug>.md`. Context bundle path: `tasks/context/epic-<NN>-task-<MM>-context.md`.
 
@@ -50,7 +50,7 @@ When a question arises while compiling, do not stop reflexively:
 - **Q2** — retry the lookup with a different query/path before escalating.
 - **Q3** — bypass: record it as `CONTRACTS SILENT` or a negative fact and move on.
 - **Q4 (spec drift: brief contradicts a binding contract rule, or a cited contract section does not resolve)** — route to the spec-arbiter; note it in §G.
-- **Q5 (a genuine owner decision, including any change to a locked decision D1–D19)** — STOP and surface to the owner. Rare.
+- **Q5 (a genuine owner decision, including any change to a locked decision D1–D42)** — STOP and surface to the owner. Rare.
 
 # Bundle structure
 
@@ -69,7 +69,7 @@ Write the bundle with these sections. Adapt headings sensibly, but keep the verb
 - Task: <MM>
 - Slug: <slug>
 - Summary: <one paragraph, from the task spec or brief>
-- Invariants in play: <the applicable I1–I13, quoted from `CLAUDE.md`>
+- Invariants in play: <the applicable I1–I15, quoted from `CLAUDE.md`>
 
 ## §B. Applicable contract rules (verbatim)
 Only the rules this task must conform to. For each:

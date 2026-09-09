@@ -1,0 +1,28 @@
+# Pre-commit hooks (bootstrap constant C8: commit-message and formatting checks run pre-commit).
+# Install once: `pre-commit install --hook-type pre-commit --hook-type commit-msg`
+repos:
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [--strict, feat, fix, docs, chore, refactor, test, ci, build, perf]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.6
+    hooks:
+      - id: ruff-check
+        files: ^pipeline/
+      - id: ruff-format
+        files: ^pipeline/
+  - repo: local
+    hooks:
+      - id: swift-format-lint
+        name: swift-format lint (Xcode toolchain)
+        entry: xcrun swift-format lint --strict --configuration .swift-format
+        language: system
+        files: \.swift$
+      - id: no-time-estimates
+        name: no time estimates in docs (I11)
+        entry: scripts/check-no-time-estimates.sh
+        language: script
+        files: ^(docs/|CLAUDE\.md|.*BRIEF.*\.md|AMENDMENT.*\.md)

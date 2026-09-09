@@ -1,12 +1,22 @@
-# OS
-.DS_Store
+# Swift / Xcode
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+App/mathmath.xcodeproj/project.xcworkspace/xcuserdata/
+App/mathmath.xcworkspace/xcuserdata/
+*.swiftpm/xcode/
+.swiftpm/
 
-# Node (Phase 5+)
-node_modules/
-dist/
-build/
-coverage/
-*.tsbuildinfo
+# Python
+pipeline/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# macOS
+.DS_Store
 
 # Env / secrets
 .env
@@ -15,12 +25,3 @@ coverage/
 
 # Logs
 *.log
-npm-debug.log*
-pnpm-debug.log*
-
-# Claude Code local (per-machine) settings
-.claude/settings.local.json
-
-# Playwright
-playwright-report/
-test-results/

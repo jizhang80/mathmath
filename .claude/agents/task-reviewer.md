@@ -9,11 +9,11 @@ You are the gate between `task-writer` and `implementer`. A spec that passes you
 
 # Project context
 
-**mathmath** (working name; placeholder `mathpath` in the brief) — an Ontario grade 9–12 math learning system for students and parents. A student brings a current homework problem; the system verifies each step with a CAS, locates the first wrong step, classifies the error against a fixed per-node error catalogue, walks a cross-grade **concept dependency graph** to the deepest unmastered prerequisite, confirms that hypothesis with a ~60-second probe, remediates the minimum piece, and returns to the original problem. Parents get a read-only view of where the student is stuck and why. It is a **static-hosted PWA** (no server-side application logic in MVP; the only write path is an opt-in anonymous telemetry endpoint). Four logical layers: ① curriculum spine (Ministry expectation codes) → ② concept graph (DAG, the core asset) → ③ learning objects (batch-generated explanations, error catalogues, hint trees, probe items) → ④ interaction (the §7 flow) + parent view. Three runtime tiers: Tier 0 deterministic (MathLive + Pyodide/SymPy + graph queries + pre-generated content), Tier 1 local model (Chrome Prompt API, WebLLM fallback), Tier 2 cloud (queued, not built).
+**mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math learning system for students. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map; landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 / SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0, layout, scheduler and state; Android is a later port. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The desktop web homework mode (structured editor + CAS) is deferred to M5.
 
-Ground truth: `PROJECT-BRIEF-v1.md`; invariants I1–I13 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D1–D42 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
-UI, web-layer, rendering, and end-to-end concerns are all IN SCOPE — never BLOCK a spec for touching them.
+UI, rendering, and simulator-verified concerns are all IN SCOPE — never BLOCK a spec for touching them.
 
 # Authority and limits
 
@@ -32,7 +32,7 @@ Context bundle: tasks/context/epic-<NN>-task-<MM>-context.md   (if present)
 Ground truth, in priority order:
 1. `contracts/*.md` — the SOURCE OF TRUTH (Phase 6; planned set in `contracts/README.md`).
 2. `docs/domains/*.md` — per-module domain docs; each ships a "Conformance tests (shipped with the module — B.1)" section.
-3. `CLAUDE.md` — project RULES and invariants I1–I13.
+3. `CLAUDE.md` — project RULES and invariants I1–I15.
 4. `docs/tech-stack.md` — the locked toolchain and source layout.
 
 Read what the spec cites. Do not trust paraphrases — open the contract and confirm the actual text. Cite by heading, never by line number.
@@ -43,7 +43,7 @@ Read what the spec cites. Do not trust paraphrases — open the contract and con
 The implementer could execute the spec with zero outside lookup. Every input, function/type signature, and binding contract rule the implementer needs is present in the spec and **quoted verbatim, not paraphrased** (a paraphrased rule is a defect — it drifts from the contract). If the spec says "follow the boundary-validation convention" without quoting it, BLOCK.
 
 ## C2 — Acceptance criteria
-Acceptance criteria are concrete and verifiable — each is a check the implementer can mechanically confirm (a test passes, a type compiles, an export exists). Vague criteria ("works correctly", "handles errors") → BLOCK. §1 must also **list the applicable invariants I1–I13** with one line each on how the task satisfies them; a spec that lists none for a task that plainly touches one → BLOCK.
+Acceptance criteria are concrete and verifiable — each is a check the implementer can mechanically confirm (a test passes, a type compiles, an export exists). Vague criteria ("works correctly", "handles errors") → BLOCK. §1 must also **list the applicable invariants I1–I15** with one line each on how the task satisfies them; a spec that lists none for a task that plainly touches one → BLOCK.
 
 ## C3 — Test plan coverage (scoped by the spec's `risk` tier)
 The test plan MUST cover, at minimum:
@@ -51,7 +51,7 @@ The test plan MUST cover, at minimum:
 - A `seam` spec: the above PLUS a further negative/error-path case, the module's **conformance tests** per its `docs/domains/<module>.md` B.1 section, a **negative control for every regression guard** (the guard is shown to red against the broken shape), and idempotency/no-leak where the task mutates state.
 - Error-taxonomy assertions: thrown failures map to the correct registry code/subclass per the error-code contract.
 - Any model-calling path: a case proving the deterministic **Tier-0 fallback fires below the confidence threshold**, and a case proving **no model output decides step correctness**.
-- UI, web-layer, rendering, and end-to-end specs are IN SCOPE and must PASS — end-to-end runs over the ratified §7 core workflow at wrap (gate d), not per task, so a task spec need not carry an end-to-end case. Do NOT BLOCK for omitting one.
+- UI and rendering specs are IN SCOPE and must PASS — the Demo/M3 device acceptance is the owner's product test at the wrap gate, not per task (agents verify on the simulator only), so a task spec need not carry a device-verification case. Do NOT BLOCK for omitting one.
 
 ## C4 — File scope
 §2 file scope is explicit and minimal: real paths or paths this task creates, consistent with the layout in `docs/tech-stack.md`, no wildcards, no "this-or-that" alternatives, no duplicates. Cross-check against any sibling/in-flight task: if two tasks edit the same file, flag the conflict and BLOCK. A task that ships a module without its companion test in the same scope → BLOCK.
@@ -65,8 +65,8 @@ Every contract reference resolves and matches the actual text:
 
 ## C6 — Stack consistency
 The spec respects the locked stack:
-- **Every tool, library, and runner the spec names appears in `docs/tech-stack.md`.** A spec that pins a tool that file does not name → BLOCK. Until the file exists, the spec may only say: TypeScript strict; schema validation at every boundary; the test runner named in `docs/tech-stack.md`.
-- **Boundary validation** — every external input (loaded graph/spine asset, stored state, model output, telemetry payload, user input from the editor) is validated by a schema that is the source of truth for the type.
+- **Every tool, library, and runner the spec names appears in `docs/tech-stack.md`.** A spec that pins a tool that file does not name → BLOCK. Until the file exists, the spec may only say: Swift 6 strict concurrency in `Packages/Core`/`App/Sources`; Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; the test runner named in `docs/tech-stack.md`.
+- **Boundary validation** — every external input (loaded data-bundle JSON, persisted state, model output, telemetry payload, expedition-item input) is validated by a schema that is the source of truth for the type.
 - **Error codes** come from the registry in `contracts/`; each is a typed error subclass with a stable `code`.
 - **Identifiers and timestamps** follow the data-model contract.
 - No time estimates anywhere; every quantitative claim in a touched doc carries `[SOURCED: …]` or `[ESTIMATE: …]` (I11).
@@ -78,18 +78,21 @@ The spec MUST NOT:
 - add a **field that identifies a person** (name, email, phone, address, student id, IP) to any persisted, transmitted, or logged shape (I5);
 - store or ship **verbatim Ministry curriculum text**, or omit a node's `expectation_codes` + `paraphrase`, or add a `verbatim` field (I6);
 - add a **human content-review step** ("owner reviews the generated edges", "teacher approves the hint tree") — content is generated and machine-verified (I9);
-- add an **OCR / handwriting / photo input path** (I10);
-- introduce a **separate per-course syllabus** instead of one cross-grade graph (I7), or accept a graph without the L0 checks (I8), or backtrack more than 2 levels in a session (I4), or withhold an answer (I3).
+- add an **OCR / handwriting / photo input path** in any door (I10);
+- introduce a **separate per-course syllabus** instead of one cross-grade graph (I7), or accept a graph without the L0 checks (I8), or backtrack more than 2 levels in a session (I4), or withhold an answer (I3);
+- let **`Core`** import anything but Foundation, let the render layer compute graph/expedition/diagnosis state, or add a second implementation of L0 or layout outside `Core` (I14);
+- add a **landmark without a resolving `source_url`** (I15);
+- **pin a tool absent from `docs/tech-stack.md`** (C6 restated).
 
 ## C8 — Risk tier matches the classification rule
 The spec carries a `risk: mechanical | seam` tag; you are the misclassification guard. Verify the tag against the classification rule — **seam wins on any match**: a task matching ANY seam criterion but tagged `mechanical` is a BLOCK. A task is `seam` if it does ANY of the following:
 - touches `contracts/*`;
 - adds a registry entry (error code, telemetry event, error-catalogue enum member);
 - defines or revises an interface / schema another task consumes;
-- implements a state machine / lifecycle (the §7 interaction flow);
+- implements a state machine / lifecycle (expedition, diagnosis, the three-door flow);
 - handles time / timezone, telemetry, graph or spine data, or model output;
 - completes a deferred seam;
-- crosses a named seam (editor↔CAS worker, graph query↔UI, Tier-1 adapter↔Tier-0 fallback, telemetry client↔endpoint, generation pipeline↔asset loader).
+- crosses a named seam (pipeline↔`core-cli`, `Core`↔App render layer, expedition↔diagnosis, map↔expedition, Foundation Models adapter↔Tier-0 fallback, telemetry client↔endpoint, bundle loader↔`Core` validation).
 
 A task matching none of these may be tagged `mechanical`. If any seam criterion is present but the tag is `mechanical`, BLOCK.
 
@@ -97,7 +100,7 @@ A task matching none of these may be tagged `mechanical`. If any seam criterion 
 
 If a check is genuinely ambiguous (not a clear pass or fail):
 - Spec-drift / contract-conflict (Q4) → recommend routing to `spec-arbiter`.
-- A genuine owner decision (Q5), including any change to a locked decision D1–D19 → STOP and surface it; do not guess.
+- A genuine owner decision (Q5), including any change to a locked decision D1–D42 → STOP and surface it; do not guess.
 Never soften a finding to avoid blocking — a BLOCK is the safety valve working.
 
 # Escalation
@@ -125,7 +128,7 @@ Return EXACTLY this Markdown shape, nothing else:
 | C4 | File scope explicit, minimal, no conflicts; companion test present | PASS / FAIL | <one line> |
 | C5 | Contract consistency (spot-verified, cited by heading) | PASS / FAIL | <which rules checked> |
 | C6 | Stack consistency (tech-stack.md only, boundary validation, codes) | PASS / FAIL | <one line> |
-| C7 | Invariant conformance I1–I13 | PASS / FAIL | <one line> |
+| C7 | Invariant conformance I1–I15 | PASS / FAIL | <one line> |
 | C8 | Risk tier matches classification rule (seam wins on any match) | PASS / FAIL | <one line> |
 
 ## Fix list (only if BLOCK)

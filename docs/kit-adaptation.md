@@ -186,8 +186,8 @@ prompts versioned, outputs schema-validated, multi-run intersection for graph ed
 | 2 Idea capture | ✅ `docs/idea.md` re-cut 2026-09-09 as the consolidated extract of `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` |
 | 3 Domain decomposition | ✅ v1 ten domains ratified 2026-09-08; **v2 re-cut 2026-09-09**: `map` and `expedition` added, `tutoring-session` → `diagnosis`, `parent-view` removed (D38), `platform` / `telemetry` / `runtime-tiers` rewritten for native iOS, `verification` moved to M5, the rest edited. **v2 open questions ratified by owner 2026-09-09 (all defaults)** — `docs/plans/phase3b-open-questions-v2.md` |
 | 4 UI/prototype | v1 web prototype (25 pages) is **superseded** for student and parent surfaces; per v2.2 §D the **native Demo is the Phase 4 artifact for Doors B and C** (built as one EPIC after Phase 5). `student-session-*` pages remain reference for the M5 homework mode; `owner-*` reports remain valid; `parent*` pages void |
-| 5 Tech stack lock | **next** — D32/D33 (Swift 6, SwiftUI, `Core` package, SwiftMath, Foundation Models), D41 (Python pipeline), D29 (simulator gate + owner device verification), telemetry endpoint with no IP retention (v2.5 §2); Xcode/iOS SDK versions validated on this machine; then **re-anchor every agent definition and command** (strip pnpm/PWA/MathLive/Pyodide except where scoped to M5 — v2.4 §2) |
-| 6 Contracts | after 5 (planned set in §7, extended by `map-data`, `student-state`, `expedition-scheduling`, `landmarks`; `Core` data shapes from the Demo feed them) |
+| 5 Tech stack lock | ✅ 2026-09-09 — `docs/tech-stack.md` (Swift 6 / SwiftUI / `Core` package / SwiftMath 1.7.3 / Foundation Models; Python 3.14 + uv + ruff + pyright + SymPy + anthropic SDK; GitHub Actions macos-26; pre-commit; `main` ruleset; Cloudflare for content + no-IP telemetry endpoint at M3). Scaffold: `App/`, `Packages/Core`, `pipeline/`, `scripts/gate.sh`, CI. Agents and commands re-anchored per v2.4 §2 (see change log) |
+| 6 Contracts | **next** — planned set in §7, extended by `map-data`, `student-state`, `expedition-scheduling`, `landmarks`; `Core` data shapes from the Demo feed them |
 | 7 EPIC plan | Demo (first), M4′, M1, M2, M3, M4, M5 map to EPIC groups (v2.3 §B renumbering) |
 
 ## 10. Deferred at seed (→ `docs/DEFERRED.md`)
@@ -202,4 +202,5 @@ prompts versioned, outputs schema-validated, multi-run intersection for graph ed
 | Date | Change |
 |---|---|
 | 2026-09-08 | Initial adaptation spec; kit ported per §3–§8. |
+| 2026-09-09 | Phase 5 locked (`docs/tech-stack.md`); `.claude/agents/*` and `.claude/commands/*` re-anchored to the v2 stack per v2.4 §2 (gates → `scripts/gate.sh`; wrap-epic merges via PR + green CI; I14/I15 in BLOCK lists). |
 | 2026-09-09 | v2 pivot: §0 identity rewritten (three doors, native iOS, no parent view, Python pipeline); §1 now points at `CLAUDE.md` I1–I15; §3 layout note; §9 status re-cut (Phase 3 v2 done, Phase 4 superseded by the native Demo, Phase 5 next incl. agent re-anchoring); §10 deferrals re-cut. §4–§7 unchanged pending Phase 5. |

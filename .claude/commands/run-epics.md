@@ -22,4 +22,4 @@ For each `N`:
 ## Rules
 - Owner involvement: **nothing** unless a halt condition fires. No daily summaries, no per-EPIC pushes.
 - On any halt, leave `main` at the last green EPIC, report which EPIC stopped and why, and what decision/fix is needed.
-- The owner pulls progress when they choose (wrap-reports, `git log --oneline`, `pnpm test`).
+- The owner pulls progress when they choose (wrap-reports, `git log --oneline`, `scripts/gate.sh`).
