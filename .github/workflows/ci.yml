@@ -14,7 +14,7 @@ jobs:
     name: Swift (Core + App, iOS simulator)
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Select the newest Xcode 26 on the runner
         run: |
           XCODE="$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
@@ -40,7 +40,7 @@ jobs:
       run:
         working-directory: pipeline
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.12.12"
