@@ -1,0 +1,25 @@
+{
+  "format_version": "0.0.0",
+  "edges": [
+    {
+      "from": "exponent-laws",
+      "to": "exponential-functions",
+      "sources": [
+        {
+          "tag": "ministry_prereq",
+          "origin": "MCR3U-2007"
+        },
+        {
+          "tag": "third_party_structure",
+          "origin": "khan-academy"
+        }
+      ],
+      "generation_agreement": 3,
+      "confidence": 0.8,
+      "probe_stats": {
+        "probes": 0,
+        "confirmed": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,355 @@
+{
+  "format_version": "0.0.0",
+  "regions": [
+    {
+      "id": "number-operations",
+      "name": "Number & Operations",
+      "about": "Numbers, operations and the laws that govern them.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "x": 0.19,
+          "y": 0.0
+        },
+        {
+          "x": 0.19,
+          "y": 0.3
+        },
+        {
+          "x": 0.0,
+          "y": 0.3
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "algebra",
+      "name": "Algebra",
+      "about": "Expressions, equations and the moves that keep them equal.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.2,
+          "y": 0.0
+        },
+        {
+          "x": 0.39,
+          "y": 0.0
+        },
+        {
+          "x": 0.39,
+          "y": 0.3
+        },
+        {
+          "x": 0.2,
+          "y": 0.3
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "functions",
+      "name": "Functions",
+      "about": "Relations that map inputs to outputs and how they transform.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.4,
+          "y": 0.0
+        },
+        {
+          "x": 0.5900000000000001,
+          "y": 0.0
+        },
+        {
+          "x": 0.5900000000000001,
+          "y": 0.3
+        },
+        {
+          "x": 0.4,
+          "y": 0.3
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "geometry-measurement",
+      "name": "Geometry & Measurement",
+      "about": "Shapes, space and how much of it there is.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.6,
+          "y": 0.0
+        },
+        {
+          "x": 0.79,
+          "y": 0.0
+        },
+        {
+          "x": 0.79,
+          "y": 0.3
+        },
+        {
+          "x": 0.6,
+          "y": 0.3
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "trigonometry",
+      "name": "Trigonometry",
+      "about": "Angles, triangles and periodic behaviour.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.8,
+          "y": 0.0
+        },
+        {
+          "x": 0.99,
+          "y": 0.0
+        },
+        {
+          "x": 0.99,
+          "y": 0.3
+        },
+        {
+          "x": 0.8,
+          "y": 0.3
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "calculus",
+      "name": "Calculus",
+      "about": "Change and accumulation, from a single variable to many.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.0,
+          "y": 0.3333333333333333
+        },
+        {
+          "x": 0.19,
+          "y": 0.3333333333333333
+        },
+        {
+          "x": 0.19,
+          "y": 0.6333333333333333
+        },
+        {
+          "x": 0.0,
+          "y": 0.6333333333333333
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "linear-algebra",
+      "name": "Linear Algebra",
+      "about": "Vectors, matrices and linear structure.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.2,
+          "y": 0.3333333333333333
+        },
+        {
+          "x": 0.39,
+          "y": 0.3333333333333333
+        },
+        {
+          "x": 0.39,
+          "y": 0.6333333333333333
+        },
+        {
+          "x": 0.2,
+          "y": 0.6333333333333333
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "differential-equations",
+      "name": "Differential Equations",
+      "about": "Equations whose unknowns are rates of change.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.4,
+          "y": 0.3333333333333333
+        },
+        {
+          "x": 0.5900000000000001,
+          "y": 0.3333333333333333
+        },
+        {
+          "x": 0.5900000000000001,
+          "y": 0.6333333333333333
+        },
+        {
+          "x": 0.4,
+          "y": 0.6333333333333333
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "probability-statistics",
+      "name": "Probability & Statistics",
+      "about": "Uncertainty, data and inference.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.6,
+          "y": 0.3333333333333333
+        },
+        {
+          "x": 0.79,
+          "y": 0.3333333333333333
+        },
+        {
+          "x": 0.79,
+          "y": 0.6333333333333333
+        },
+        {
+          "x": 0.6,
+          "y": 0.6333333333333333
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "discrete",
+      "name": "Discrete Mathematics",
+      "about": "Sequences, counting and structures that come in steps.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.8,
+          "y": 0.3333333333333333
+        },
+        {
+          "x": 0.99,
+          "y": 0.3333333333333333
+        },
+        {
+          "x": 0.99,
+          "y": 0.6333333333333333
+        },
+        {
+          "x": 0.8,
+          "y": 0.6333333333333333
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "analysis",
+      "name": "Analysis",
+      "about": "Beyond the continent; names only.",
+      "horizon": true,
+      "polygon": [
+        {
+          "x": 0.0,
+          "y": 0.6666666666666666
+        },
+        {
+          "x": 0.19,
+          "y": 0.6666666666666666
+        },
+        {
+          "x": 0.19,
+          "y": 0.9666666666666666
+        },
+        {
+          "x": 0.0,
+          "y": 0.9666666666666666
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "topology",
+      "name": "Topology",
+      "about": "Beyond the continent; names only.",
+      "horizon": true,
+      "polygon": [
+        {
+          "x": 0.2,
+          "y": 0.6666666666666666
+        },
+        {
+          "x": 0.39,
+          "y": 0.6666666666666666
+        },
+        {
+          "x": 0.39,
+          "y": 0.9666666666666666
+        },
+        {
+          "x": 0.2,
+          "y": 0.9666666666666666
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "number-theory",
+      "name": "Number Theory",
+      "about": "Beyond the continent; names only.",
+      "horizon": true,
+      "polygon": [
+        {
+          "x": 0.4,
+          "y": 0.6666666666666666
+        },
+        {
+          "x": 0.5900000000000001,
+          "y": 0.6666666666666666
+        },
+        {
+          "x": 0.5900000000000001,
+          "y": 0.9666666666666666
+        },
+        {
+          "x": 0.4,
+          "y": 0.9666666666666666
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "abstract-algebra",
+      "name": "Abstract Algebra",
+      "about": "Beyond the continent; names only.",
+      "horizon": true,
+      "polygon": [
+        {
+          "x": 0.6,
+          "y": 0.6666666666666666
+        },
+        {
+          "x": 0.79,
+          "y": 0.6666666666666666
+        },
+        {
+          "x": 0.79,
+          "y": 0.9666666666666666
+        },
+        {
+          "x": 0.6,
+          "y": 0.9666666666666666
+        }
+      ],
+      "neighbours": []
+    }
+  ]
+}
