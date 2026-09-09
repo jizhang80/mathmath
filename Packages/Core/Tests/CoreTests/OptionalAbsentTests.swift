@@ -21,18 +21,6 @@ struct OptionalAbsentTests {
             .appendingPathComponent("contracts/examples")
     }
 
-    private static var decoder: JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return decoder
-    }
-
-    private static var encoder: JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        return encoder
-    }
-
     // `contracts/examples/nodes.json`'s first node has no `layout_hint`, `source_ref`,
     // `explanation`, or `worked_examples` — all four are Optional on `Node`.
     @Test(
@@ -48,8 +36,8 @@ struct OptionalAbsentTests {
                 sourceNodes[0][key] == nil, "fixture precondition failed: node[0] unexpectedly has \(key)")
         }
 
-        let decoded = try Self.decoder.decode(NodesFile.self, from: data)
-        let reencoded = try Self.encoder.encode(decoded)
+        let decoded = try CoreCoding.decoder.decode(NodesFile.self, from: data)
+        let reencoded = try CoreCoding.encoder.encode(decoded)
         let reencodedJSON = try #require(JSONSerialization.jsonObject(with: reencoded) as? [String: Any])
         let reencodedNodes = try #require(reencodedJSON["nodes"] as? [[String: Any]])
 
@@ -74,9 +62,8 @@ struct OptionalAbsentTests {
                 "fixture precondition failed: exponential-functions unexpectedly has \(key)")
         }
 
-        // `StudentState` requires `.useDefaultKeys` (see the BLOCK filed against this task).
-        let decoded = try JSONDecoder().decode(StudentState.self, from: data)
-        let reencoded = try Self.encoder.encode(decoded)
+        let decoded = try CoreCoding.decoder.decode(StudentState.self, from: data)
+        let reencoded = try CoreCoding.encoder.encode(decoded)
         let reencodedJSON = try #require(JSONSerialization.jsonObject(with: reencoded) as? [String: Any])
         let reencodedNodes = try #require(reencodedJSON["nodes"] as? [String: [String: Any]])
         let reencodedExpFns = try #require(reencodedNodes["exponential-functions"])

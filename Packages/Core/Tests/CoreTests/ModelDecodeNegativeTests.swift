@@ -21,12 +21,6 @@ struct ModelDecodeNegativeTests {
             .appendingPathComponent("contracts/examples")
     }
 
-    private static var decoder: JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return decoder
-    }
-
     private static func loadJSONObject(_ file: String) throws -> [String: Any] {
         let data = try Data(contentsOf: examplesDir.appendingPathComponent(file))
         return try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -39,7 +33,7 @@ struct ModelDecodeNegativeTests {
         // Chop the document mid-stream — guaranteed-invalid JSON regardless of file contents.
         let truncated = data.prefix(data.count / 2)
         #expect(throws: (any Error).self) {
-            try Self.decoder.decode(Manifest.self, from: Data(truncated))
+            try CoreCoding.decoder.decode(Manifest.self, from: Data(truncated))
         }
     }
 
@@ -53,7 +47,7 @@ struct ModelDecodeNegativeTests {
         let mutated = try JSONSerialization.data(withJSONObject: json)
 
         #expect(throws: DecodingError.self) {
-            try Self.decoder.decode(NodesFile.self, from: mutated)
+            try CoreCoding.decoder.decode(NodesFile.self, from: mutated)
         }
     }
 
@@ -65,7 +59,7 @@ struct ModelDecodeNegativeTests {
         let mutated = try JSONSerialization.data(withJSONObject: json)
 
         #expect(throws: DecodingError.self) {
-            try Self.decoder.decode(Manifest.self, from: mutated)
+            try CoreCoding.decoder.decode(Manifest.self, from: mutated)
         }
     }
 
@@ -79,7 +73,7 @@ struct ModelDecodeNegativeTests {
         let mutated = try JSONSerialization.data(withJSONObject: json)
 
         #expect(throws: DecodingError.self) {
-            try Self.decoder.decode(RegionsFile.self, from: mutated)
+            try CoreCoding.decoder.decode(RegionsFile.self, from: mutated)
         }
     }
 
@@ -96,13 +90,11 @@ struct ModelDecodeNegativeTests {
         let mutated = try JSONSerialization.data(withJSONObject: json)
 
         #expect(throws: DecodingError.self) {
-            try Self.decoder.decode(NodesFile.self, from: mutated)
+            try CoreCoding.decoder.decode(NodesFile.self, from: mutated)
         }
     }
 
     // Out-of-enum value inside `StudentState` (I5's own type): `Mastery ∈ {fog, cleared, blocked}`.
-    // `StudentState` needs `.useDefaultKeys` per the explicit snake_case CodingKeys it declares — see
-    // the BLOCK filed against this task for why that decoder exists only in test files today.
     @Test("out-of-enum StudentState mastery value fails decode")
     func outOfEnumMasteryFailsDecode() throws {
         var json = try Self.loadJSONObject("student-state.json")
@@ -114,7 +106,7 @@ struct ModelDecodeNegativeTests {
         let mutated = try JSONSerialization.data(withJSONObject: json)
 
         #expect(throws: DecodingError.self) {
-            try JSONDecoder().decode(StudentState.self, from: mutated)
+            try CoreCoding.decoder.decode(StudentState.self, from: mutated)
         }
     }
 }
