@@ -54,10 +54,15 @@ prompt is expressible (a test lists the items it could not express, empty = FAIL
 are simple). I11 — the rendering-spike outcome and the L0 report carry no untagged numbers.
 
 **MANDATORY artifact line (P4/C4):** `core-cli` (`validate`, `layout`, `version`) — exercised by
-`pipeline/tests` over `data/demo` and `contracts/examples`; `data/demo/*.json` + `data/demo/l0-report.json`
-— exercised by `test_contracts.py` (schemas) and `core-cli validate`; `Rendering.RenderCheck` — exercised by
-the spike test over the bundle and by `RenderingTests`; the `Core` `Codable` types — exercised by the
-decode round-trip test.
+`pipeline/tests` over `data/demo` and `contracts/examples`; `data/demo/*.json` — the bundle files only, each
+named by its schema (`manifest`, `regions`, `nodes`, `edges`, `courses`, `landmarks`, `sources`), exercised
+by `test_contracts.py` (schemas) and `core-cli validate`. The **L0 report is not a bundle file and is not
+committed**: it is `core-cli validate` **stdout**, JSON, in the shape fixed by `contracts/graph-constraints.md`
+§ Report shape; the pipeline wrapper parses it in-process and fails the build on `passed: false`. Nothing
+other than a schema-named bundle file may be written under `data/**` (`contracts/data-model.md` §
+Enforcement: every `*.json` under `data/**` validates against the schema its filename names).
+`Rendering.RenderCheck` — exercised by the spike test over the bundle and by `RenderingTests`; the `Core`
+`Codable` types — exercised by the decode round-trip test.
 
 ## 4. Acceptance criteria
 1. `core-cli validate data/demo` prints a report with `passed: true` and every check listed, empty
@@ -123,3 +128,33 @@ needed: after task 4 (Core/CLI) vs tasks 5–7 (bundle + spike).
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-09-09 | owner planning session (Fable) | Initial brief. |
+| 2026-09-09 | brief-amender (Q4 from EPIC 01 planning) | §3 artifact line: the L0 report is `core-cli validate` stdout, not a committed `data/demo/l0-report.json`; `data/**` holds schema-named bundle files only. Source: `contracts/graph-constraints.md` § Report shape, `contracts/data-model.md` § Enforcement. |
+
+## Amendment log
+
+### Amendment 01.05.1 — 2026-09-09
+
+**Trigger**: tier-6 brief-amender, invoked after a Q4 escalation raised in EPIC 01 planning, ahead of task 01.5 dispatch.
+**Architect escalation**: none on disk — the conflict was raised and verified by the orchestrating planning session (no `tasks/blocked/architect-escalation-01-05.md` was written).
+**Original brief text**:
+> **MANDATORY artifact line (P4/C4):** `core-cli` (`validate`, `layout`, `version`) — exercised by
+> `pipeline/tests` over `data/demo` and `contracts/examples`; `data/demo/*.json` + `data/demo/l0-report.json`
+> — exercised by `test_contracts.py` (schemas) and `core-cli validate`; `Rendering.RenderCheck` — exercised by
+> the spike test over the bundle and by `RenderingTests`; the `Core` `Codable` types — exercised by the
+> decode round-trip test.
+
+**Amended brief text**:
+> **MANDATORY artifact line (P4/C4):** `core-cli` (`validate`, `layout`, `version`) — exercised by
+> `pipeline/tests` over `data/demo` and `contracts/examples`; `data/demo/*.json` — the bundle files only, each
+> named by its schema (`manifest`, `regions`, `nodes`, `edges`, `courses`, `landmarks`, `sources`), exercised
+> by `test_contracts.py` (schemas) and `core-cli validate`. The **L0 report is not a bundle file and is not
+> committed**: it is `core-cli validate` **stdout**, JSON, in the shape fixed by `contracts/graph-constraints.md`
+> § Report shape; the pipeline wrapper parses it in-process and fails the build on `passed: false`. Nothing
+> other than a schema-named bundle file may be written under `data/**` (`contracts/data-model.md` §
+> Enforcement: every `*.json` under `data/**` validates against the schema its filename names).
+> `Rendering.RenderCheck` — exercised by the spike test over the bundle and by `RenderingTests`; the `Core`
+> `Codable` types — exercised by the decode round-trip test.
+
+**Source**: `contracts/graph-constraints.md` § *Report shape* — "**Report shape** (`core-cli validate` stdout, JSON): `{ bundle_id, passed: bool, checks: [...], indegree: {...} }`"; `contracts/data-model.md` § *Enforcement* — "every `*.json` under `data/**` validates against the schema its filename names"; `contracts/README.md` § *The set* (data-model row) — schemas are "per bundle file". `contracts/schemas/` defines no `l0-report` schema, so a committed `data/demo/l0-report.json` would fail `pipeline/tests/test_contracts.py::test_data_bundles_validate`.
+**Effect on deliverables**: NONE (specificity added). The L0 report is still produced, still shaped by the contract, still the acceptance path for the bundle and still parsed by the pipeline wrapper (I8); only its location is pinned — stdout rather than a committed file. No new directory convention is introduced.
+**Effect on owner-facing acceptance**: NONE. Acceptance criteria 1 and 2 already read "prints a report" / "in the report" and are unchanged in wording and substance; §5 is unchanged.

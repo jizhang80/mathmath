@@ -24,12 +24,19 @@ same file for writes**, with one deliberate exception, note [3].
 
 ## Planner notes carried forward
 
-1. **Q4 raised — `l0-report.json` path.** The brief's §3 artifact line names `data/demo/l0-report.json`, but
-   `contracts/data-model.md` §Enforcement (wired in `pipeline/tests/test_contracts.py::test_data_bundles_validate`)
-   requires every `*.json` under `data/**` to validate against the schema its filename names, and there is no
-   `l0-report.schema.json`. Committing the report under `data/demo/` breaks an existing contract test.
-   Routed to `brief-amender` before 01.5 is dispatched. Planner's recommendation: write the report outside
-   `data/`, no contract change.
+1. **Q4 raised and RESOLVED — `l0-report.json` path.** The brief's §3 artifact line named
+   `data/demo/l0-report.json`, but `contracts/data-model.md` §Enforcement (wired in
+   `pipeline/tests/test_contracts.py::test_data_bundles_validate`) requires every `*.json` under `data/**` to
+   validate against the schema its filename names, and there is no `l0-report.schema.json`. Routed to
+   `brief-amender`, resolved as Q1 (amendable from existing ground truth, no owner decision):
+   `contracts/graph-constraints.md` §Report shape already defines the report as **`core-cli validate`
+   stdout**, not a bundle file. The brief was amended in place (amendment 01.05.1). **The L0 report is never
+   written to disk and never committed**: `core-cli validate data/demo` prints it as JSON on stdout, the
+   pipeline wrapper parses it in-process and fails the build on `passed: false`. `data/demo/` holds exactly
+   the seven schema-named bundle files. The planner's `reports/demo/l0-report.json` recommendation is
+   REJECTED — it invents a directory convention no contract names. Task 01.5's file scope drops that path.
+   The same rule forecloses the drift elsewhere: the rendering-spike outcome record of 01.6 lives at
+   `docs/epics/epic-01-rendering-spike-outcome.md`, outside `data/**`.
 2. **Manifest `sha256`.** `core-cli validate` cannot verify SHA-256 without importing CryptoKit into `Core`
    (breaks D33/I14) or hand-rolling it (breaks RULE 2). Default adopted: `core-cli validate` enforces manifest
    *completeness and file presence* (`PLATFORM_BUNDLE_INTEGRITY_FAILED`, exactly what the brief's R-6 line
