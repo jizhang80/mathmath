@@ -85,12 +85,13 @@ re-implemented in `Core` (RULE 2).
   Verified against `contracts/schemas/landmarks.schema.json` and `pipeline/tests/test_contracts.py` by the
   orchestrating session, 2026-09-09 — no contract gap, no Q5, no new L0 rule.
 
-## Overlapping literal scans (task 01.8 ledger item)
+## I11 literal-scan guard in the layout engine (task 01.8 ledger item)
 
-`LayoutTests.swift`'s `layoutUsesNoBareNumericLiterals` (task 01.3 implementer) and
-`LayoutEngineContractTests.swift`'s `layoutLiteralScanCatchesPlantedConstants` (task 01.3 tester) both scan
-`Sources/Core/Layout/` for bare numeric literals. The implementer's regex misses single-digit literals — the
-tester demonstrated this empirically by planting `* 2`, which the original scan did not catch — so the
-tester's stricter scan is the load-bearing one, and it carries its own planted-literal proof that it reds.
-Both pass today. **If a future task consolidates them, keep the stricter one.** Recorded so the weaker scan
-is not mistaken for the guard.
+`LayoutTests.swift`'s `AC6` guard (task 01.3 implementer) scans `Sources/Core/Layout/` for bare numeric
+literals with the regex `\b\d+\.\d+\b|\b\d{2,}\b`. The 01.3 tester proved by mutation
+(`LayoutRegressionTests.swift`) that the guard does red on a planted float or multi-digit integer, but also
+documented that it lets a bare **single digit** 2-9 through — `let extra = 5` slips past — which is looser
+than AC6's stated rule ("no bare numeric literal other than 0, 1, loop indices, and array/tuple indices").
+No such literal exists in the sources today, so nothing is missed now. The tester could not tighten it
+without editing a file outside its scope. **Tightened by a follow-up task-commit on this branch**; task 01.8
+must confirm the shipped regex matches AC6's rule rather than only the mutation test's cases.
