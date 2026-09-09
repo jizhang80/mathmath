@@ -1,0 +1,19 @@
+{
+  "format_version": "0.0.0",
+  "nodes": [
+    {
+      "id": "node-c1",
+      "name": "node-c1",
+      "region_id": "analysis",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    }
+  ]
+}
