@@ -10,6 +10,16 @@ depends_on: [01.1]
 model: sonnet
 ---
 
+**Amendment 01.02.1 (spec-architect, 2026-09-09) — L0-9 successor semantics.** This spec's original §4.3 L0-9
+clause required every `next_courses[]` entry to name a course resident in the same bundle, and its §4.5 `valid/`
+fixture worked around the consequence by blanking `next_courses`. That reading is wrong: it makes
+`contracts/examples/courses.json` — the normative worked example of the same signed-off contract set — fail its
+own contract. §4.3, §4.5, §5 and §7 below are corrected. The **implementation** delta (removing the
+unknown-target violation from `L0Checker.swift`, re-deriving the `valid/` fixture and adding the
+`contracts/examples/` regression guard) is carried by task 02b,
+`tasks/epic-01-task-02b-l0-9-successor-semantics.md`, because this task has already landed. No contract text
+changes; no decision D1–D49 changes (D47 is being conformed to).
+
 ## §1 Goal & acceptance criteria
 
 Goal: `Core` gains one deterministic, Tier-0 validation surface — `L0Checker.validate` — that checks a decoded
@@ -61,6 +71,11 @@ Acceptance criteria:
   `indegree` block (advisory, per the contract's "report only" note).
 - AC5: the fixture scan in `L0CheckerTests` enumerates the fixture directories it reads from a fixed list (not
   a directory glob) and asserts the count before running any case — an empty or partial list is a FAIL (C3).
+- AC6 (amendment 01.02.1): `L0Checker.validate(bundleDir:)` over the repo's own `contracts/examples/`
+  directory, read unmodified, returns a report with `passed == true` and every `checks[i].violations == []`.
+  The contract's normative worked example must satisfy the contract its own rule table states; this assertion
+  is the regression guard that would have caught the L0-9 misreading, and it is load-bearing precisely because
+  `contracts/examples/courses.json:36-38,68-70` names two non-resident successor courses.
 
 ## §2 File scope
 
@@ -85,7 +100,8 @@ Out-of-scope (do not touch even if tempted):
 - `Packages/Core/Sources/CoreCLI/**` — task 01.4 (`core-cli validate` subcommand, stdout JSON printing).
 - `Packages/Core/Package.swift` — not touched (§6 default: no `resources:` declaration is needed).
 - `data/demo/**`, `Packages/Rendering/**`, `pipeline/**`, `contracts/**`, `App/Sources/**` — other tasks/other
-  EPICs, or read-only ground truth.
+  EPICs, or read-only ground truth. `contracts/examples/` is **read** by AC6's regression guard and is never
+  written.
 - L0-T (trail segments) — EPIC 02's; no trail-segment code or type in this task.
 
 ## §3 Inputs (verbatim — do not paraphrase)
@@ -126,6 +142,38 @@ Binding contract rules:
   > **Report shape** (`core-cli validate` stdout, JSON): `{ bundle_id, passed: bool, checks: [{id, passed,
   > violations[]}], indegree: {threshold, outliers[]} }`. A bundle is accepted iff every non-advisory check
   > passed. Empty violation lists are printed, never omitted (C3).
+
+- `contracts/schemas/courses.schema.json:142-145` — the `next_courses[]` item constraint (verbatim), binding on
+  L0-9's reading (amendment 01.02.1):
+  > ```json
+  > "items": {
+  >   "type": "string",
+  >   "pattern": "^[A-Z]{3}[1-4][A-Z]$"
+  > }
+  > ```
+
+- `contracts/examples/courses.json:36-38,68-70` — the normative worked example (verbatim), binding on L0-9's
+  reading (amendment 01.02.1):
+  > ```json
+  >       "next_courses": [
+  >         "MPM2D"
+  >       ]
+  > ```
+  > ```json
+  >       "next_courses": [
+  >         "MHF4U"
+  >       ]
+  > ```
+
+- `AMENDMENT-v2.7.md:25` (D47, verbatim excerpt):
+  > preferring the next course in the same stream per the Ministry's course-prerequisite chart (e.g. MPM2D →
+  > MCR3U → MHF4U → MCV4U) [SOURCED: Ontario secondary mathematics prerequisite chart in the 2007 curriculum
+  > document] … Course succession is data in the spine (`next_courses[]` per course), not logic.
+
+- `docs/domains/expedition.md:112-114` (W8, verbatim excerpt):
+  > 2. If the marker is past the last unit of its course, extend from the course's terminal nodes along
+  > downstream edges into the first `next_courses[]` entry whose nodes exist, then the next, then undergraduate
+  > nodes; mark the segment `extension`.
 
 - `contracts/data-model.md` — heading `### Identifiers` (re-read, byte-compared in this run):
   > `edge_id` is `<from>-->-<to>` (derived, never stored on the edge)
@@ -499,11 +547,33 @@ otherwise fix an order, so the report is deterministic across runs):
   course cannot be reached from that course's own `units` iteration). `passed` = violations is empty. (§6
   default on why `errorCode(forRuleId: "L0-8")` maps uniformly to `.spineUnitEmpty` regardless of which
   sub-condition fired.)
-- **L0-9 (course succession).** Build an adjacency map `courseCode → nextCourses` from `bundle.courses.courses`.
-  For every course, for every entry in `nextCourses`, fail (append the unknown code) if it does not name an
-  existing `courseCode`. Then run the same DFS cycle detection as L0-1 (white/gray/black, visiting course codes
-  sorted) over this adjacency map; on a cycle, append the cycle's course codes in order. `violations` accumulates
-  both kinds (unknown-target violations first, then a cycle if any).
+- **L0-9 (course succession) — corrected by amendment 01.02.1.** Build an adjacency map
+  `courseCode → nextCourses` from `bundle.courses.courses`. Run the same DFS cycle detection as L0-1
+  (white/gray/black, visiting course codes sorted) over this adjacency map; a `nextCourses` entry naming a
+  course that is **not** resident in this bundle terminates that branch of the walk (`continue`) and is **not**
+  a violation. On a cycle, append the cycle's course codes in order. `violations` is that cycle, or empty.
+  There is no unknown-target violation.
+
+  **Why the non-resident reading is the binding one.** `contracts/graph-constraints.md:21`'s phrase "names
+  existing courses" means *courses that exist in the Ministry's prerequisite chart*, not *courses resident in
+  this bundle*, on four independent pieces of ground truth:
+  1. `contracts/examples/courses.json:36-38,68-70` — the normative worked example of this same signed-off
+     contract set — contains exactly two courses whose `next_courses` are `["MPM2D"]` and `["MHF4U"]`, neither
+     of which is a course in that file. A contract's own worked example must satisfy that contract, so the
+     resident reading is refuted by the contract set itself.
+  2. `contracts/schemas/courses.schema.json:142-145` (quoted in §3) constrains a `next_courses[]` entry to the
+     course-code pattern `^[A-Z]{3}[1-4][A-Z]$` and to nothing else — no `$ref`, no residency requirement. The
+     schema is the contract's own machine-checkable statement of what such an entry must satisfy.
+  3. `AMENDMENT-v2.7.md:25` (D47, quoted in §3): succession follows the Ministry's course-prerequisite chart
+     and "is data in the spine (`next_courses[]` per course), not logic." Chart data describes the world, not
+     the shipped subset.
+  4. `docs/domains/expedition.md:112-114` (W8, quoted in §3) extends a trail "into the first `next_courses[]`
+     entry whose nodes exist, then the next" — a rule that is vacuous unless entries whose nodes are absent
+     from the bundle are expected to occur.
+
+  The obligation that remains enforceable at bundle level is therefore exactly the cycle clause; well-formedness
+  of the code itself is the schema's job, checked by `pipeline/tests/test_contracts.py`, not by `Core`. Do not
+  reintroduce a residency check under any name.
 - **L0-10 (landmark referential integrity + https).** For every landmark, fail (append the landmark id) if any
   `nodeIds` entry is absent from `index.nodesById`, OR `sourceUrl` does not start with `"https://"`. (`Landmark.
   sourceUrl` is non-optional per task 01.1 — see §6 default on why "missing `source_url`" cannot be a fixture
@@ -548,15 +618,16 @@ Every fixture is a full bundle directory of seven files (`manifest.json`, `regio
 `edges.json`, `courses.json`, `landmarks.json`, `sources.json`). `Fixtures/l0/valid/` is the baseline every
 other fixture copies verbatim except for the one named mutation.
 
-**`Fixtures/l0/valid/`** — built from `contracts/examples/{manifest,regions,nodes,edges,courses,landmarks,
-sources}.json` (all seven read and confirmed L0-clean in this run for every rule except L0-9, where
-`courses.json`'s `next_courses` name `MPM2D`/`MHF4U`, courses this minimal example set does not define) with
-exactly one deviation: `courses.json`'s `MTH1W.next_courses` and `MCR3U.next_courses` are both set to `[]`
-(instead of `["MPM2D"]` / `["MHF4U"]`) so the fixture is self-contained and L0-9-clean without inventing course
-stubs. `manifest.json` is `contracts/examples/manifest.json` unchanged (its `starting_chain` —
-`["exponent-laws", "exponential-functions"]` — is already connected via the single edge in `edges.json`). This
+**`Fixtures/l0/valid/`** — a byte-for-byte copy of `contracts/examples/{manifest,regions,nodes,edges,courses,
+landmarks,sources}.json`, **with no deviation of any kind** (amendment 01.02.1). In particular `courses.json`
+keeps `MTH1W.next_courses == ["MPM2D"]` and `MCR3U.next_courses == ["MHF4U"]`: under the corrected L0-9 those
+non-resident successors are legal, so the earlier workaround of blanking both arrays to `[]` is removed. That
+workaround masked the defect this amendment fixes, and a fixture that silently diverges from the normative
+example cannot witness the example's own validity. `manifest.json`'s `starting_chain` —
+`["exponent-laws", "exponential-functions"]` — is already connected via the single edge in `edges.json`. This
 fixture must decode and `validate(bundle:)` to `passed: true` with all ten `checks[]` entries `passed: true`
-and empty `violations`.
+and empty `violations`. AC6's guard additionally runs `validate` against `contracts/examples/` in place, so any
+future drift between the fixture and the example is caught rather than absorbed.
 
 Per-fixture mutations (each is a full copy of `valid/`'s seven files with exactly the listed single-file
 change; everything else byte-identical to `valid/`):
@@ -572,7 +643,7 @@ change; everything else byte-identical to `valid/`):
 | `l0-6-unknown-region/` | `nodes.json` | `exponent-laws.region_id`: `"number-operations"` → `"topology"` | L0-6 | `topology` is a horizon region (`horizon: true` in `regions.json`) |
 | `l0-7-position-outside/` | `nodes.json` | `exponent-laws.position`: `{x: 0.08, y: 0.12}` → `{x: 0.9, y: 0.9}` | L0-7 | `(0.9, 0.9)` is outside `number-operations`'s polygon (`x ∈ [0, 0.19], y ∈ [0, 0.3]`) |
 | `l0-8-empty-unit/` | `courses.json` | add a unit `{unit_id: "MTH1W.u2", name: "Empty unit", expectation_codes: []}` to MTH1W's `units[]` | L0-8 | `expectation_codes` is empty |
-| `l0-9-next-courses-cycle/` | `courses.json` | `MTH1W.next_courses`: `[]` → `["MCR3U"]`; `MCR3U.next_courses`: `[]` → `["MTH1W"]` | L0-9 | 2-cycle `MTH1W ↔ MCR3U` |
+| `l0-9-next-courses-cycle/` | `courses.json` | `MTH1W.next_courses`: `["MPM2D"]` → `["MCR3U"]`; `MCR3U.next_courses`: `["MHF4U"]` → `["MTH1W"]` | L0-9 | 2-cycle `MTH1W ↔ MCR3U` between two **resident** courses — the only L0-9 violation the corrected rule admits |
 | `l0-10-not-https/` | `landmarks.json` | `source_url`: `"https://laws-lois.justice.gc.ca/eng/acts/I-15/"` → `"http://laws-lois.justice.gc.ca/eng/acts/I-15/"` | L0-10 | not https |
 | `manifest-missing-file/` | (directory) | copy `valid/`'s `manifest.json` (lists `sources.json` in `files[]`) but omit `sources.json` from the directory | R-6 / `PLATFORM_BUNDLE_INTEGRITY_FAILED` | `BundleIO.read` finds a listed file absent |
 | `manifest-version-mismatch/` | `manifest.json` | `format_version`: `"0.0.0"` → `"1.0.0"` | `PLATFORM_BUNDLE_INTEGRITY_FAILED` | major component differs from `CoreInfo.dataFormatVersion` (`"0.0.0"`) |
@@ -581,13 +652,19 @@ change; everything else byte-identical to `valid/`):
 six files in each directory is `valid/`'s content unchanged; the implementer copies rather than re-derives it,
 so every fixture decodes with the same `Core` types task 01.1 ships.
 
+**Fixture that must NOT exist (amendment 01.02.1):** no fixture asserts that a non-resident `next_courses`
+target fails. Under the corrected rule that is legal data, and `valid/` — which carries exactly such targets —
+is the positive witness.
+
 ### 4.6 `Packages/Core/Tests/CoreTests/L0CheckerTests.swift`
 
 Locate `Fixtures/l0/` the same way task 01.1's `DecodeRoundTripTests` locates `contracts/examples/`: from
 `#filePath` (`Packages/Core/Tests/CoreTests/L0CheckerTests.swift`), two `.deletingLastPathComponent()` calls
 reach `Packages/Core/Tests/CoreTests`, then `.appendingPathComponent("Fixtures/l0")`. No `resources:` entry is
 added to `Package.swift` (§6 default) — fixtures are read via `FileManager`/`Data(contentsOf:)` from that
-resolved path, mirroring the precedent `DecodeRoundTripTests` and `coreImportBoundary()` already set.
+resolved path, mirroring the precedent `DecodeRoundTripTests` and `coreImportBoundary()` already set. AC6's
+guard resolves `contracts/examples/` by the same `#filePath` walk `DecodeRoundTripTests` already uses to reach
+the repo root, so no new path convention is introduced.
 
 ### 4.7 Smoke check
 
@@ -603,6 +680,11 @@ job).
   `checks[i].violations == []` (present, not a missing/omitted key — this is a structural guarantee of
   `L0Check`'s non-optional `[String]`, verified by decoding the re-encoded report and checking the key exists
   with an empty array, not merely checking the Swift value); `indegree.threshold >= 0` (AC1).
+- T1b contract-example regression guard (AC6, amendment 01.02.1): `validate(bundleDir:)` over the repo's
+  `contracts/examples/` directory, read unmodified, returns `passed == true` with every `checks[i].violations
+  == []`. Assert `passed` explicitly, not merely the set of `checks[].id` — an id-only assertion is exactly
+  what let the L0-9 misreading survive in task 01.4's T1. This test reads `contracts/**` and writes nothing
+  there.
 - T2 negative — invalid input rejected at the boundary: each of the 12 mutated fixtures makes `validate`
   produce a report with the corresponding `checks[]` entry `passed == false` and non-empty `violations`, or
   (for the two `manifest-*` fixtures) makes `validate(bundleDir:)` throw `CoreError
@@ -623,6 +705,10 @@ job).
   - L0-4 never appears in `checks[]` (AC4): assert `!report.checks.map(\.id).contains("L0-4")` on the `valid/`
     report, and that `report.indegree` is present and typed (not absorbed into `checks[]`) — this is the
     negative control for a regression that folds the advisory rule into the pass/fail set.
+  - the L0-9 successor guard (AC6, amendment 01.02.1): the negative control is `l0-9-next-courses-cycle/`,
+    which must still red on a **resident** 2-cycle. Together with T1b (non-resident targets pass) this pins the
+    rule from both sides: a re-added residency check reds T1b, and a deleted cycle check reds T2's L0-9 case.
+    Prove both directions by mutation before claiming the guard is load-bearing.
   - `passed` derivation: construct a report by hand (not via `validate`) with nine `passed: true` checks and
     one `passed: false` check and assert `checks.allSatisfy(\.passed) == false` reflects into a `passed ==
     false` bundle-level verdict when fed back through the same predicate `L0Checker.validate` uses — or,
@@ -663,6 +749,12 @@ job).
   reject that design: the task prompt requires "the report shape stays byte-faithful to the contract," so the
   rule-id ↔ error-code mapping lives in the separate, testable `L0Checker.errorCode(forRuleId:)` function
   instead (§4.3).
+- IF a `next_courses[]` entry names a course absent from the bundle THEN it passes L0-9 (amendment 01.02.1,
+  §4.3): succession is Ministry-chart data, not a bundle-residency claim (`AMENDMENT-v2.7.md:25`), the schema
+  imposes only the code pattern (`contracts/schemas/courses.schema.json:142-145`), and
+  `contracts/examples/courses.json:36-38,68-70` ships exactly such entries. Never re-add a residency check, and
+  never blank a fixture's `next_courses` to `[]` to make a bundle pass — blanking hides the rule rather than
+  testing it.
 - IF the contract's AC language ("unknown or second region") suggests testing a node with two `region_id`
   values THEN that mutation is not constructible: `Node.regionId` (task 01.1) is a single non-optional
   `RegionId`, not an array — "exactly one `region_id`" is already a structural guarantee of the Swift type.
@@ -702,9 +794,12 @@ The task is done when ALL gates pass:
 - `Core` build + test green: `( cd Packages/Core && swift build -c release --product core-cli )` and
   `( cd Packages/Core && xcodebuild test -quiet -scheme Core-Package -destination "$SIM"
   CODE_SIGNING_ALLOWED=NO )` (`scripts/gate.sh` gate 3, `$SIM` from `scripts/pick-simulator.sh`).
-- All cases in §5 (T1–T6) pass.
+- All cases in §5 (T1, T1b, T2–T6) pass.
+- `Fixtures/l0/valid/` is byte-identical to `contracts/examples/`'s seven bundle files, with no deviation
+  (amendment 01.02.1) — verifiable by diff.
 - Conforms to every contract section cited in §3 and §4 (`contracts/graph-constraints.md` full rule table and
-  § Report shape; `contracts/data-model.md` § Identifiers, § Versioning; `docs/domains/platform.md` Errors
-  table) and to every invariant listed in §1 (I1, I2, I6, I8, I9, I14, I15).
+  § Report shape; `contracts/schemas/courses.schema.json` `next_courses` items; `contracts/data-model.md`
+  § Identifiers, § Versioning; `docs/domains/platform.md` Errors table) and to every invariant listed in §1
+  (I1, I2, I6, I8, I9, I14, I15).
 - `scripts/gate.sh` gates 1 and 3 green in full (gates 2 and 4 are pipeline/App-scoped and are unaffected by
   this task's file scope).
