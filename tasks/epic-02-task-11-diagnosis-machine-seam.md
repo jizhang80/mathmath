@@ -16,7 +16,7 @@ Goal: Implement the Door A diagnosis state machine (`contracts/interaction-contr
 
 Invariants in play:
 - **I1** — every probe item is checked by `ItemChecker.check` inside `DiagnosisRun.answerProbeItem`; no code path lets a model decide `pass`/`fail`.
-- **I2** — every diagnosis workflow (W1–W6) completes with no adapter; no public function has an adapter parameter; the Tier-0 completeness suite proves this over real `data/demo`.
+- **I2** — every diagnosis workflow (W1–W6) completes with no adapter; no public function has an adapter parameter; the Tier-0 completeness suite proves this over real `data/demo`. The hint-key fallback never substitutes another error type's hint for an abstention: an unresolved key is `nil`, never a guess (`tasks/arbitration/arbiter-02-none-of-these.md`).
 - **I3** — every `answerProbeItem` call returns the checked item's `ItemResult` (with `correctAnswerDisplay` and `why`) on the same `DiagnosisAdvance` that carries the next phase, so an answer is shown before any next item or terminal is reachable. The terminal outcome keeps every probe `ItemResult` in `probeResults`. No path withholds an already-answered item's answer.
 - **I4** — `level` is the **cumulative graph depth from the origin** (sum of `PrerequisiteCandidate.depth` along the chain). Each hypothesis queries only `levelBudget - priorLevel` levels. A `confirmed` probe with `level >= levelBudget` constructs no `FurtherLevelOffer`, so no further-level decision can be taken. The confirmed candidate keeps its W4 effects (`blocked`, one remediation piece, `remediated = true`). W6 then runs in the same advance: the confirmed candidate's own unmastered prerequisite one level up (W6's "deeper candidate") is marked `blocked` in `StudentState` only, with no probe, no remediation and no `remediated`, and the terminal is `capped`. If there is no such prerequisite, the terminal is `confirmed`. `depthReached` counts probed depth only, and `depthReached ≤ levelBudget ≤ 2` holds on every path. Deeper gaps are marked on the map only (`CLAUDE.md` I4; `tasks/arbitration/arbiter-02-11-capped-remediated.md`).
 - **I5** — `DiagnosisOutcome` carries only ids (`nodeId`, `errorTypeId`), enums, booleans and small integers, plus the already-I5-cleared `ItemResult` type (02.07); no new free-text field is added to `StudentState`.
@@ -59,13 +59,25 @@ Acceptance criteria (every AC except AC15 is asserted by driving the **step API*
   Additionally, **driver equivalence**: for every generated `decisions` array, `DiagnosisRun.run(...)` `==` the terminal outcome obtained by feeding the same decisions to the step functions by hand.
 - AC14 (I3 per item): every `answerProbeItem` advance carries `itemResult != nil` with non-empty `correctAnswerDisplay` and `why`, `itemResult.isRetry == false`. The terminal `probeResults` equals the ordered list of every `itemResult` returned along the path.
 - AC15 (no forged phases): `DiagnosisEvent.swift` declares exactly one `public init`, `DiagnosisLevelDecision`'s. `ProbeOffer`, `ProbeInProgress`, `FurtherLevelOffer`, `DiagnosisContext`, `DiagnosisOutcome`, `DiagnosisAdvance`, `DiagnosisProbeResult` and `DiagnosisEvent` rely on Swift's internal memberwise initializer. Instrument: `grep -c 'public init' Packages/Core/Sources/Core/Diagnosis/DiagnosisEvent.swift` prints `1` (0 or ≥ 2 = FAIL).
+- AC16 (hint-key resolution, `DiagnosisMachineTests.swift`; `tasks/arbitration/arbiter-02-none-of-these.md`): the internal `hintKey(originNode:errorTypeId:) -> String?` resolves in this order:
+  1. `errorTypeId`, when `errorTypeId != "none_of_these"` and `originNode.hintTree[errorTypeId]` is non-nil and non-empty;
+  2. else `"none-of-these"` (hyphen: the catalogue id), when `originNode.hintTree["none-of-these"]` is non-nil and non-empty;
+  3. else `nil`.
+
+  It never returns the string `"none_of_these"` and never returns a key other than these two candidates. On every terminal whose `hintNodeId != nil`, `hintErrorTypeId == hintKey(originNode: <origin>, errorTypeId: context.originErrorTypeId)`. When that is non-nil, it is a key whose `hintTree` entry on the origin is non-empty.
+
+  Over the real `data/demo` bundle, for every node, the result is derived from the node's own data, never from a hand-kept list:
+  - `hintKey(node, "none_of_these")` equals `"none-of-these"` if `node.hintTree["none-of-these"]` is non-empty, else `nil`;
+  - every `e` in `node.errorTypes.map(\.id)` with a non-empty `node.hintTree[e]` gives `hintKey(node, e) == e`.
+
+  The node count is > 0 (empty = FAIL).
 
 ## §2 File scope
 
 In-scope (the implementer touches EXACTLY these; nothing else):
 
 - `Packages/Core/Sources/Core/Diagnosis/DiagnosisEvent.swift` — CREATE. Public diagnosis types (`DiagnosisTrigger`, `DiagnosisEvent`, `DiagnosisTerminal`, `ProbeOutcome`, `DiagnosisProbeResult`, `DiagnosisOutcome`, `DiagnosisContext`, `ProbeOffer`, `ProbeInProgress`, `FurtherLevelOffer`, `DiagnosisStep`, `DiagnosisAdvance`, `DiagnosisLevelDecision`) and the `DiagnosisRun` enum namespace. It exposes the public `open`, `start`, `decideProbe`, `answerProbeItem`, `decideFurtherLevel` and `run` (thin driver), and the internal helpers `classify`, `hypothesise`, `drawProbeItems`, `offered`, `remediate`, `capped`, `hintKey`, `terminal`. Sibling of `Packages/Core/Sources/Core/Diagnosis/Classify.swift` (task 02.10).
-- `Packages/Core/Tests/CoreTests/DiagnosisMachineTests.swift` — CREATE. Step-function unit tests, internal-helper tests, the §3 property suite, driver equivalence.
+- `Packages/Core/Tests/CoreTests/DiagnosisMachineTests.swift` — CREATE. Step-function unit tests, internal-helper tests (including AC16), the §3 property suite, driver equivalence.
 - `Packages/Core/Tests/CoreTests/DiagnosisTier0CompletenessTests.swift` — CREATE. AC11.
 - `Packages/Core/Tests/CoreTests/ExpeditionDiagnosisSeamTests.swift` — CREATE. AC12 (C1).
 - `Packages/Core/Tests/CoreTests/Support/PropertyGen.swift` — MODIFY, append-only. Add this task's own generators (a random `DiagnosisLevelDecision` sequence, a random accept/decline + answer-choice script for the step API, a random `FailedProbeAttempt` list) to the existing `PropertyGen` enum; do not alter any existing function in this file.
@@ -74,7 +86,7 @@ Out-of-scope (do not touch even if tempted):
 
 - `Packages/Core/Sources/Core/State/ExpeditionRun.swift` (task 02.07) — call `ExpeditionRun.start`/`.answer`/`.resume` only.
 - `Packages/Core/Sources/Core/Graph/PrerequisiteQuery.swift` (task 02.10) — call `PrerequisiteQuery.deepestUnmasteredPrerequisite` by name only.
-- `Packages/Core/Sources/Core/Diagnosis/Classify.swift` (task 02.10) — call `Classify.classify` by name only.
+- `Packages/Core/Sources/Core/Diagnosis/Classify.swift` and `Packages/Core/Tests/CoreTests/ClassifyTests.swift` (task 02.10) — call `Classify.classify` by name only; its `"none_of_these"` return value is correct as landed (`tasks/arbitration/arbiter-02-none-of-these.md` Ruling 1).
 - `Packages/Core/Sources/Core/State/MasteryTransitions.swift`, `Packages/Core/Sources/Core/State/Expedition.swift`, `Packages/Core/Sources/Core/ItemChecker.swift` — call their public functions only.
 - `Packages/Core/Sources/Core/Events/CoreEvent.swift`, `Packages/Core/Sources/Core/CoreError.swift` — every case this task needs already exists (verified in §3); no edit.
 - `Packages/Core/Sources/Core/Model/*.swift`, `App/**`, `contracts/**`, `data/demo/**`, `docs/**` — read-only.
@@ -123,6 +135,34 @@ Binding contract rules:
     (§6).
   - The `probe` bullet names three probe outcomes (`pass`, `fail`, `declined`) and states the fewer-than-2-items
     case separately as an error code. That is the anchor for the §6 `probe_completed` emission rule.
+
+  **Classify-outcome anchor** (per `tasks/arbitration/arbiter-02-none-of-these.md`): the `classify` bullet's
+  "→ `error_type` or `none_of_these`" states two alternatives. `none_of_these` is the abstention **outcome token**,
+  not an `error_types[].id`. The catalogue id of the node's none-of-these member is the kebab-case
+  `none-of-these` (below). The two are never compared or looked up as each other.
+
+- `contracts/data-model.md` — heading `### Identifiers` (`:12-14`):
+  > - Ids are **stable, opaque, lowercase kebab-case slugs** matching `^[a-z0-9]+(-[a-z0-9]+)*$`, unique within
+  >   their collection. Never parse meaning from an id; never renumber. A renamed concept keeps its id.
+
+- `contracts/data-model.md` — the `nodes.json` row of the bundle-file table (`:50`), excerpt:
+  > `error_types[]` (closed, one `none-of-these`, each `implies_prerequisite?`), `hint_tree {error_type_id →
+  > [tier1, tier2, tier3]}`
+
+- `contracts/schemas/nodes.schema.json` — `error_types[].id` (`:191-193`) carries `"pattern":
+  "^[a-z0-9]+(-[a-z0-9]+)*$"`; `hint_tree` (`:212-222`) is `{"type": "object", "additionalProperties": {"type":
+  "array", "items": {"type": "string", "minLength": 1}, "minItems": 3, "maxItems": 3}}`. It requires no key.
+
+- `docs/domains/learning-objects.md:77-78` (W1 step 4):
+  > 4. **Hint coverage** — every ErrorType but `none_of_these` has a full tier
+  > list, else `LO_HINT_TIER_MISSING`.
+
+  `docs/domains/learning-objects.md:47-48`: "and `none_of_these` is always `null`: abstention, not diagnosis."
+
+- `data/demo/nodes.json` (verified in arbitration): every node's `error_types[]` contains `{"id":"none-of-these",
+  "label":"None of these"}`. **No** node's `hint_tree` has a `"none-of-these"` (or `"none_of_these"`) key: all 20
+  occurrences of `"none-of-these"` in the file are `error_types[]` members. `contracts/examples/nodes.json:168`
+  ships `"hint_tree": {}`.
 
 - `contracts/data-model.md` — heading `### StudentState (`student-state.schema.json`)` (`:143-147`):
   > `remediated` (boolean, optional; absent = false) records that a diagnosis event confirmed this node (probe
@@ -190,6 +230,8 @@ Binding contract rules:
   > `{"code": "DIAG_STATE_WRITE_FAILED", "recoverable": true, "surface": "student", "user_text": "Your progress could not be saved just now; it will be retried."}` — not thrown by this task (§6).
 
 Project invariants (`CLAUDE.md`), verbatim:
+
+> | I2 | **Tier 0 alone must be a usable product**: every model call has a confidence threshold and a deterministic fallback; the system never guesses a diagnosis. | D7 |
 
 > | I4 | Remediation is just-in-time: **backtrack ≤ 2 levels per session**; **deeper gaps are marked on the map only** — no record page, no other consumer. | D4 |
 
@@ -342,6 +384,15 @@ Arbiter ruling (`tasks/arbitration/arbiter-02-11-capped-remediated.md`), binding
 - When no budget remains and no such prerequisite exists, the terminal is `confirmed`.
 - `depthReached` counts probed depth only.
 
+Arbiter ruling (`tasks/arbitration/arbiter-02-none-of-these.md`), Rulings 1–4, binding:
+- `none_of_these` (classify outcome token) and `none-of-these` (catalogue id) are two distinct tokens. Both
+  spellings stand; no contract, landed code, test or data changes.
+- They are never compared or looked up as each other.
+- `hintKey` resolves the classified id, else the catalogue id `"none-of-these"`, else `nil`. It never returns
+  `"none_of_these"` and never substitutes another error type's hint.
+- On real `data/demo` the fallback resolves to `nil` on every node, because no `hint_tree` carries a
+  `"none-of-these"` entry.
+
 `docs/epics/epic-02-core-behaviour.md` §4 items 5–7 (properties, Tier-0 completeness, C1), verbatim:
 
 > 5. **§4 diagnosis.** Property tests over generated graphs and states cover the following:
@@ -374,6 +425,9 @@ Arbiter ruling (`tasks/arbitration/arbiter-02-11-capped-remediated.md`), binding
 > - A hint whose error type has no `hint_tree` entry falls back to the node's `none-of-these` hint.
 > - A `map_check_here` diagnosis outside a run logs no `expedition_log` entry (its effects are the
 >   `blocked` marks and `probe_log` rows). `diagnosis_events` stays ≤ 1 per entry per the schema.
+
+  (The third bullet's "the node's `none-of-these` hint" is the `hint_tree` entry keyed by the catalogue id
+  `none-of-these`. It is absent from every `data/demo` node, which is why `hintKey` ends in `nil`; §6.)
 
 `data/demo/edges.json` (the AC6/AC6b/AC11 recipe), verified entries: `:21-22` `"from": "solving-linear-equations",
 "to": "exponent-laws"` (the only edge into `exponent-laws`); `:37-38` `"from": "exponent-laws", "to": "polynomials"`
@@ -440,8 +494,9 @@ Prior signatures this task calls (verbatim, verified against the current tree):
   ```
   (`:92`: "`nil` iff every item of `node` is excluded or `node.probeItems` is empty.")
 
-- `Packages/Core/Sources/Core/Model/Nodes.swift:23-24` (on `Node`, alongside `id` and `errorTypes`):
+- `Packages/Core/Sources/Core/Model/Nodes.swift:22-24` (on `Node`, alongside `id`):
   ```swift
+  public let errorTypes: [ErrorType]
   public let hintTree: [String: [String]]
   public let probeItems: [ProbeItem]
   ```
@@ -533,8 +588,9 @@ Prior signatures this task calls (verbatim, verified against the current tree):
   ```
   The walk runs `while depth <= levelBudget` (`:38`) and returns the **deepest** unmastered depth (`:62`), with
   `code: .graphNoPrerequisite` when there is no candidate (`:63`, `:76`). Only `.cleared` is excluded from the
-  candidates (`:86-89`). This function emits no `CoreEvent`; the diagnosis machine, its only caller, emits
-  `.graphPrerequisiteReturned` after each call.
+  candidates (`:86-89`). The bias looks `biasErrorTypeId` up in `originNode.errorTypes` (`:97-100`). The outcome
+  token `"none_of_these"` matches no member, so it applies no bias. This function emits no `CoreEvent`; the
+  diagnosis machine, its only caller, emits `.graphPrerequisiteReturned` after each call.
 
 - `Packages/Core/Sources/Core/Diagnosis/Classify.swift` (landed, 02.10):
   ```swift
@@ -544,9 +600,13 @@ Prior signatures this task calls (verbatim, verified against the current tree):
       public init(item: ProbeItem, submittedValue: String)
   }
   public enum Classify {
-      public static func classify(_ attempts: [FailedProbeAttempt]) -> String   // :23; "none_of_these" if no match
+      public static func classify(_ attempts: [FailedProbeAttempt]) -> String   // :23
   }
   ```
+  `:20-22`: "Returns the `errorTypeId` of the first attempt (in `attempts` order) whose submitted value matches
+  a tagged `wrongAnswers[].value` (`.numeric` items) or a tagged `choices[].id` (`.mc` items) on that
+  attempt's own item. `"none_of_these"` if no attempt matches." `:41`: `return "none_of_these"`.
+  A match therefore returns a catalogue id; no match returns the outcome token.
 
 - Test-module access: every `Packages/Core/Tests/CoreTests/*.swift` file uses `@testable import Core`, so the
   `internal` helpers of §4 step 5 are unit-testable without being public.
@@ -586,7 +646,7 @@ Prior signatures this task calls (verbatim, verified against the current tree):
        public let depthReached: Int              // cumulative depth of the deepest candidate probed to pass/fail; 0 if none
        public let blockedNodeIds: [String]       // every node blocked along the path, in order; on `.capped` the last is the W6 node
        public let hintNodeId: String?            // == event.originNodeId whenever a hint is shown; nil otherwise
-       public let hintErrorTypeId: String?       // resolved hint_tree key (with none-of-these fallback); nil otherwise
+       public let hintErrorTypeId: String?       // hintKey(...) when a hint is shown (a hint_tree key of the origin, or nil if none resolves); nil otherwise
        public let probeResults: [ItemResult]     // every probe ItemResult along the path, in order
        public let events: [CoreEvent]            // the full sequence from `start` through this terminal
        public let code: CoreError?               // .diagNoPrerequisite / .diagProbeUnavailable, else nil
@@ -596,7 +656,7 @@ Prior signatures this task calls (verbatim, verified against the current tree):
        public let event: DiagnosisEvent
        public let level: Int                     // cumulative graph depth of the current candidate from the origin
        public let depthReached: Int              // as on DiagnosisOutcome, so far
-       public let originErrorTypeId: String      // Classify.classify(failedAttempts) at start; the origin hint key
+       public let originErrorTypeId: String      // Classify.classify(failedAttempts) at start: a catalogue id, or the outcome token "none_of_these"; input to hintKey
        public let shownItemIdsInRun: Set<String>
        public let blockedNodeIds: [String]
        public let probeResults: [ItemResult]
@@ -749,14 +809,21 @@ Prior signatures this task calls (verbatim, verified against the current tree):
      current).nodeState` and nothing else. `remediated` passes through unchanged (`MasteryTransitions.swift:95`)
      and is never written by this helper (`contracts/data-model.md` § StudentState: "A node blocked by `capped`
      … does not carry it"). Called only on the W6 deeper candidate, never on a probed candidate.
-   - `hintKey(originNode: Node, errorTypeId: String) -> String` — `errorTypeId` if
-     `originNode.hintTree[errorTypeId]` is non-nil and non-empty, else `"none_of_these"`. Returns keys, never
-     hint prose (I5, I14).
+   - `hintKey(originNode: Node, errorTypeId: String) -> String?` — with two file-private constants
+     `classifyAbstention = "none_of_these"` (the outcome token, `Classify.swift:41`) and `noneOfTheseCatalogueId =
+     "none-of-these"` (the catalogue id, `contracts/data-model.md:50`), and `resolves(k) := !(originNode.hintTree[k]
+     ?? []).isEmpty`:
+     1. if `errorTypeId != classifyAbstention && resolves(errorTypeId)` → `errorTypeId`;
+     2. else if `resolves(noneOfTheseCatalogueId)` → `noneOfTheseCatalogueId`;
+     3. else `nil`.
+
+     It never returns `classifyAbstention` and never picks another error type's key (§6). Returns keys, never hint
+     prose (I5, I14).
    - `terminal(_:code:hint:context:state:bundle:) -> DiagnosisOutcome` — builds the outcome. When `hint ==
      true`, `hintNodeId = event.originNodeId` and `hintErrorTypeId = hintKey(originNode: <the origin's
-     bundle node>, errorTypeId: context.originErrorTypeId)`. The hint is always on the **top-level origin**, never
-     an intermediate candidate (W3 step 4 "hint on the origin", W2 step 3 "the origin's hint"). When `hint ==
-     false`, both are `nil`. `events` = the full accumulated sequence.
+     bundle node>, errorTypeId: context.originErrorTypeId)`, which may be `nil`. The hint is always on the
+     **top-level origin**, never an intermediate candidate (W3 step 4 "hint on the origin", W2 step 3 "the origin's
+     hint"). When `hint == false`, both are `nil`. `events` = the full accumulated sequence.
 
 6. **`run` — thin driver (public).** The signature is unchanged from the prior spec:
    ```swift
@@ -821,7 +888,8 @@ and `.diagnosisReturned`.
   Fixtures are small hand-built `ContentBundle`/`StudentState` values, or `data/demo` where it reaches the case
   (AC6/AC6b pin `data/demo`). After every call, assert the exact `step` case. Assert `terminal`, `code`,
   `hintNodeId`/`hintErrorTypeId`, `blockedNodeIds`, `depthReached`, each advance's `events` and `probeResult`, and
-  the concatenated sequence per AC1–AC10.
+  the concatenated sequence per AC1–AC10. The expected `hintErrorTypeId` of a hint terminal is computed by the
+  AC16 rule from the fixture's own origin `hintTree`, never written as a literal.
 
   The `probe_completed` rule (§6) is asserted by exact arrays:
   - The declined advance has `events == [.diagnosisProbeCompleted, .diagnosisReturned]`, `probeResult?.outcome ==
@@ -844,6 +912,8 @@ and `.diagnosisReturned`.
   - The driver with `submittedAnswers` shorter than 2 treats the missing entry as `""` (asserted directly).
   - The driver with `decisions` shorter than the probe offers actually reached never traps: the §6 fallback applies
     and a terminal is reached.
+  - `hintKey` with an `errorTypeId` absent from the origin's `error_types[]` (e.g. `"not-a-type"`) and with an
+    empty `hintTree` (`[:]`, the shape of `contracts/examples/nodes.json:168`) returns per AC16 and never traps.
   - Wrong-phase calls, such as answering a `ProbeOffer`, are unrepresentable because each function takes its phase
     value's type. AC15's instrument is the guard that the App cannot fabricate one.
 - T3 error-taxonomy:
@@ -851,18 +921,21 @@ and `.diagnosisReturned`.
   - `.diagProbeUnavailable` iff `terminal == .unconfirmed` from an unavailable draw (a decline has `code == nil`).
   - No `DiagnosisOutcome` ever carries `.graphNoPrerequisite`, including the AC6b `confirmed` terminal whose W6
     deeper query returned it.
+  - An unresolved hint key raises no code: a hint terminal with `hintErrorTypeId == nil` has the same `code` as the
+    same terminal with a resolving key (§6).
   - `CoreError ⊆` registry is already covered by the existing `ErrorRegistryTests`; no new case is added.
 - T4 conformance per `contracts/interaction-contract.md` § 4 and the applicable invariants. The full FSM is
   exercised end to end via the step API.
   - I1: every probe `ItemResult.correct` equals `ItemChecker.check` on the same item and submission.
-  - I2: AC11.
+  - I2: AC11; and AC16's "never another error type's key".
   - I3: AC14.
   - I4: asserted over generated `levelBudget ∈ {1, 2}`:
     - `depthReached ≤ levelBudget ≤ 2`;
     - no `FurtherLevelOffer` is ever returned with `context.level >= levelBudget`;
     - the W6 node (if any) has no `ItemResult` in `probeResults` and no `probeLog` row.
-  - I5: a type-level check that `DiagnosisOutcome`'s own `String` fields are only `hintNodeId`/`hintErrorTypeId`,
-    always equal to a `Node.id` or a `hintTree` key, never free text.
+  - I5: a type-level check that `DiagnosisOutcome`'s own `String` fields are only `hintNodeId`/`hintErrorTypeId`.
+    `hintNodeId`, when non-nil, equals a `Node.id`. `hintErrorTypeId`, when non-nil, equals a key of the origin's
+    `hintTree` with a non-empty entry. Neither is ever free text, and `hintErrorTypeId` is never `"none_of_these"`.
   - I14: `DiagnosisEvent.swift` imports Foundation only; the existing import-boundary test covers `Sources/Core`.
 - T5 negative control for every regression guard. Each mutation is applied temporarily in a scratch edit, observed
   to fail the named test, and reverted:
@@ -881,7 +954,11 @@ and `.diagnosisReturned`.
   - swapping the `probe_completed` rule (emitting on unavailable, omitting on declined) must fail both T1 exact-array
     assertions (AC3 and AC4); emitting on both, or on neither, must fail exactly one. The two are independent
     `@Test`s;
-  - an `answerProbeItem` that returns `itemResult: nil` for the first item must fail AC14.
+  - an `answerProbeItem` that returns `itemResult: nil` for the first item must fail AC14;
+  - `hintKey` returning the outcome token `"none_of_these"` as its fallback (the pre-arbitration behaviour) must fail
+    T10's fixture F1 (expects `"none-of-these"`), F2 (expects `nil`) and the T10 real-data case;
+  - `hintKey` falling back to the first `errorTypes` member with a hint (a guessed error type) must fail T10's F2 and
+    the T10 real-data case, since on real `data/demo` the derived expectation for `"none_of_these"` is `nil`.
 - T6 idempotency / no-leak: every step function called twice with the same arguments returns `==` advances (pure,
   no hidden mutable state). A `.refuted`, declined, unavailable or `.noPrerequisite` terminal's `state` `==` the
   `start` input state (no side effect on a path that blocked nothing).
@@ -908,6 +985,11 @@ and `.diagnosisReturned`.
   - No adapter parameter exists on any public function, which is itself the I2 proof.
   - `DIAG_PROBE_UNAVAILABLE` uses the arbiter's exact constructed-state recipe (§3, Q-G "Reachability"): the real
     `ExpeditionRun` produces `shownItemIds`, and the sequence contains no `.diagnosisProbeCompleted`.
+  - On every hint terminal reached here (`noPrerequisite`, `refuted`, `unconfirmed`-declined,
+    `unconfirmed`-unavailable), assert `hintNodeId == originNodeId` and `hintErrorTypeId == hintKey(originNode:
+    <real origin node>, errorTypeId: <that run's originErrorTypeId>)`. When non-nil, it must also have a non-empty
+    entry in the real origin's `hintTree`. This is the real-composition check that the key `Core` hands EPIC 04
+    resolves on shipped data or is honestly `nil`.
 - T9 (AC12) C1 seam, `ExpeditionDiagnosisSeamTests.swift`. Steps:
   1. A real `ExpeditionRun.start` on real `data/demo`, then real `.answer` calls on the same node that drive it to
      a second miss (`events` containing `.expeditionDiagnosisRequested`). The test records each missed
@@ -935,6 +1017,27 @@ and `.diagnosisReturned`.
 
   If the test is later extended to the declined/unavailable branches, it applies the same §6 rule T1 asserts,
   never a second convention.
+- T10 (AC16) hint-key resolution, `DiagnosisMachineTests.swift`.
+  - **F1 (catalogue fallback resolves):** a hand-built `Node` with `errorTypes` ids `["sign-error",
+    "none-of-these"]` and `hintTree` keys `"sign-error"` and `"none-of-these"`, each with 3 non-empty tiers.
+    Asserts:
+    - `hintKey(n, "sign-error") == "sign-error"`;
+    - `hintKey(n, "none_of_these") == "none-of-these"`;
+    - `hintKey(n, "not-a-type") == "none-of-these"`;
+    - `hintKey(n, "none-of-these") == "none-of-these"`.
+  - **F2 (no fallback entry, and no guessing):** the same node with `hintTree` keyed by `"sign-error"` only.
+    Asserts:
+    - `hintKey(n, "none_of_these") == nil` (not `"sign-error"`);
+    - `hintKey(n, "not-a-type") == nil`;
+    - `hintKey(n, "sign-error") == "sign-error"`.
+  - **F3 (empty tree):** `hintTree == [:]` → `nil` for every input above.
+  - **Real `data/demo`** (`BundleIO.read(from:)`), for every node, with the node count > 0 (empty = FAIL):
+    - `hintKey(node, "none_of_these") == ((node.hintTree["none-of-these"] ?? []).isEmpty ? nil : "none-of-these")`;
+    - for every `e` in `node.errorTypes.map(\.id)` with `!(node.hintTree[e] ?? []).isEmpty`, `hintKey(node, e) == e`;
+    - no call in this case returns `"none_of_these"`.
+
+    The expectation is derived from each node's own data, never from a hand-kept list. On the current `data/demo`
+    it yields `nil` for `"none_of_these"` on every node (§3, data fact).
 
 ## §6 Decision defaults
 
@@ -991,7 +1094,7 @@ and `.diagnosisReturned`.
   `CurrentItem.item` values and the exact strings it submitted to `ExpeditionRun.answer`
   (`FailedProbeAttempt(item:submittedValue:)`, `Classify.swift:11`). This passes inputs, not state: `ExpeditionRun`
   exposes no submitted value, and `Classify.classify` is still what decides the error type. For `map_check_here`,
-  `failedAttempts == []`, so `originErrorTypeId == "none_of_these"`.
+  `failedAttempts == []`, so `originErrorTypeId == "none_of_these"` (the outcome token).
 - IF `PrerequisiteQuery` returns `code == .graphNoPrerequisite` in `formHypothesis` THEN the diagnosis outcome
   carries `code == .diagNoPrerequisite` (`CoreError.swift:23, :26`; contract § 4 `hypothesise`: "none →
   `DIAG_NO_PREREQUISITE`"). The graph code never appears on a `DiagnosisOutcome`.
@@ -1016,10 +1119,26 @@ and `.diagnosisReturned`.
   no associated value is added. A declined probe produces no `ItemResult` and no `probeLog` row, and therefore no
   telemetry `item_result` or `edge_observation`, whose `downstream_result ∈ {pass, fail}` (`contracts/telemetry.md`
   § Event kinds). That derivation is EPIC 11 scope.
-- IF the classified `errorTypeId` names a key absent from the origin node's `hintTree` (including
-  `"none_of_these"` itself being absent) THEN `hintKey` returns the literal key `"none_of_these"` regardless. The
-  renderer handles a still-missing entry at render time, outside `Core`'s I14 scope. No new error code is raised,
-  since none is registered and adding one is a contract bump.
+- IF a hint key is needed for `originErrorTypeId` THEN:
+  - The two none-of-these spellings are two tokens and are never looked up as each other:
+    - `"none_of_these"` is `Classify`'s abstention outcome (`contracts/interaction-contract.md` § 4 `classify`: "→
+      `error_type` or `none_of_these`"; `Classify.swift:41`);
+    - `"none-of-these"` is the node's catalogue id (`contracts/data-model.md` § Identifiers kebab-case rule;
+      `contracts/data-model.md:50` "one `none-of-these`"; `nodes.schema.json:193`).
+  - `hintKey` resolves the classified id if it resolves, else the catalogue id `"none-of-these"` if the origin's
+    `hintTree` carries a non-empty entry for it, else `nil` (per `tasks/arbitration/arbiter-02-none-of-these.md`
+    Ruling 3). This realises `docs/epics/epic-02-core-behaviour.md` § 9 "falls back to the node's `none-of-these`
+    hint" on the catalogue key.
+  - `hintNodeId` stays `originNodeId` whether or not a key resolves; it marks where the hint belongs.
+  - On real `data/demo` no node carries that entry (`learning-objects.md:77-78` exempts it from hint coverage), so
+    the fallback is `nil` on every node.
+  - What the App shows for a hint terminal with `hintErrorTypeId == nil` is EPIC 04's presentation decision,
+    outside `Core` (I14).
+  - No new error code is raised, since none is registered and adding one is a contract bump.
+- IF a fallback could reuse another error type's hint (e.g. the node's first real `errorTypes` member) THEN it does
+  not. On an abstention, showing a specific misconception's hint would present a diagnosis the classifier did not
+  make ("the system never guesses a diagnosis", `CLAUDE.md` I2; "`none_of_these` is always `null`: abstention, not
+  diagnosis", `docs/domains/learning-objects.md:47-48`).
 - IF a `.confirmed` candidate's or the W6 deeper candidate's `NodeState` is absent from `state.nodes` THEN
   `remediate` / `capped` is called with `fogDefault = NodeState(mastery: .fog, correctCount: 0, lastProbe: nil,
   nextDue: nil, ladderRung: 0, remediated: nil)`. This is the "absent means fresh fog" convention
@@ -1043,11 +1162,11 @@ The task is done when ALL gates pass:
 - format + lint clean (`swift-format lint --strict` over `Packages`)
 - `Core` build + test green (`swift build -c release --product core-cli`; `xcodebuild test -scheme
   Core-Package` on the simulator, or `swift test --package-path Packages/Core` locally)
-- tests green for every case in §5 (T1–T9), including `DiagnosisMachineTests.swift`,
+- tests green for every case in §5 (T1–T10), including `DiagnosisMachineTests.swift`,
   `DiagnosisTier0CompletenessTests.swift`, `ExpeditionDiagnosisSeamTests.swift`
 - `grep -c 'public init' Packages/Core/Sources/Core/Diagnosis/DiagnosisEvent.swift` prints `1` (AC15)
 - `scripts/gate.sh` green end to end
 - conforms to every contract section cited in §3 and §4 (`interaction-contract.md` § 4, § 2 `compose` and § 5,
-  `data-model.md` § StudentState, `domain-glossary.md` Probe entry, `telemetry.md` Event kinds,
-  `graph-constraints.md` Query rules, `error-codes.json`'s three `DIAG_*` entries) and to every invariant listed in
-  §1 (I1, I2, I3, I4, I5, I14, D27)
+  `data-model.md` § Identifiers, the `nodes.json` row and § StudentState, `nodes.schema.json` `error_types`/`hint_tree`,
+  `domain-glossary.md` Probe entry, `telemetry.md` Event kinds, `graph-constraints.md` Query rules, `error-codes.json`'s
+  three `DIAG_*` entries) and to every invariant listed in §1 (I1, I2, I3, I4, I5, I14, D27)
