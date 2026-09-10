@@ -1,6 +1,6 @@
 # Contract: Graph constraints — L0 (LOCK-FIRST)
 
-**Contract version:** v1.0.0 · Source: brief v2 §5, I8 as amended (v2.7 §1), `concept-graph.md` W1, `expedition.md` W8
+**Contract version:** v1.1.0 · Source: brief v2 §5, I8 as amended (v2.7 §1), `concept-graph.md` W1, `expedition.md` W8; v1.1.0 rewrites L0-T's trail-segment definition — a course segment is ordered by unit then topological within unit (ties by node id), an edge against unit order is a warning not a failure, and every extension-segment node must be reachable from the segment before it (owner Q5 ruling 02-QE, 2026-09-10, `tasks/blocked/Q5-RULING-02-QE.md`)
 
 > The structural rules every accepted bundle passes. Implemented **once**, in `Core` (`validate`), exposed by
 > `core-cli validate <bundle-dir>` and run (a) by the pipeline build step — failing data is **not emitted**
@@ -20,7 +20,7 @@
 | L0-8 | Every unit of every course references only expectations of that course, every expectation is in exactly one unit, no unit is empty. | `SPINE_UNIT_EMPTY` / `GRAPH_L0_FAILED{L0-8}` | D45 |
 | L0-9 | Every course's `next_courses[]` names existing courses and contains no cycle. | `GRAPH_L0_FAILED{L0-9}` | D47 succession is data |
 | L0-10 | Every landmark's `node_ids[]` are existing nodes and `source_url` is present (https). | `MAP_LANDMARK_UNSOURCED` | resolution checked by the pipeline (I15) |
-| L0-T | **Trail segments** (generated at runtime, expedition W8): every segment's `node_ids[]` is a directed path in the graph; a course segment contains only that course's nodes. | `EXP_TRAIL_INVALID` | same `Core` function; runs at generation, not on the bundle |
+| L0-T | **Trail segments** (generated at runtime, expedition W8, never over the bundle): a course segment is exactly that course's nodes resident in the bundle — a node's unit is the unit of its lowest-ordered expectation code of that course — ordered by unit order, then topologically by the edge set within each unit, ties broken by node id (ascending); an edge between two nodes of the same course segment that runs against unit order is listed as a warning in the trail generation's own report, never a failure; every node of an extension segment is reachable along directed edges from some node of the segment placed before it. | `EXP_TRAIL_INVALID` | same `Core` function family as L0-1…L0-10 conceptually, but runs at trail generation (expedition W8), never via `core-cli validate`; the warning list's concrete shape is fixed by the implementing task (02.5), not by this contract |
 
 **Report shape** (`core-cli validate` stdout, JSON): `{ bundle_id, passed: bool, checks: [{id, passed,
 violations[]}], indegree: {threshold, outliers[]} }`. A bundle is accepted iff every non-advisory check
