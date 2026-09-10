@@ -1,7 +1,10 @@
 # Contract: Interaction contract — three doors over one base
 
-**Contract version:** v0.9.0 (discovery zone — finalized just-in-time by the Demo EPIC) · Source: brief v2
-§7, D23, D27, D44–D48, v2.7 §3; `map.md`, `expedition.md`, `diagnosis.md`
+**Contract version:** v0.9.1 (discovery zone — finalized just-in-time by the Demo EPIC) · Source: brief v2
+§7, D23, D27, D44–D48, v2.7 §3; `map.md`, `expedition.md`, `diagnosis.md`; v0.9.1 adds the numeric
+normalisation rule (expedition Q4), the `remediated(p)` predicate and its two ripples (arbiter Q-A,
+`tasks/arbitration/arbiter-02-predispatch.md`), the `past_last_unit` marker text (arbiter Q-F), and the
+probe "available" definition (arbiter Q-G)
 
 > The three doors as state machines with named states, events and guards, so `Core` implements them as
 > pure transition functions and `CoreTests` proves the properties. Screens are in the domain docs; this
@@ -14,7 +17,7 @@ returns). Transitions:
 
 | From | Event | Guard | To | Side effects |
 |---|---|---|---|---|
-| fog / blocked | `item_correct(node)` | `correct_count + 1 ≥ 2` on **distinct items** (expedition Q1) | cleared | `next_due = today + ladder[0]`, `ladder_rung = 0`, emit `node_cleared` |
+| fog / blocked | `item_correct(node)` | `correct_count + 1 ≥ 2` on **distinct items** (expedition Q1) | cleared | `next_due = today + ladder[0]`, `ladder_rung = 0`, emit `node_cleared`, remove `remediated` |
 | fog / blocked | `item_correct(node)` | otherwise | same | `correct_count += 1` |
 | cleared | `item_correct(node)` (review) | — | cleared | `ladder_rung += 1`, `next_due = today + ladder[rung]` |
 | cleared | `item_miss(node)` (review) | — | cleared | `ladder_rung = 0`, `next_due = today + ladder[0]`; tolerance per §2 |
@@ -31,8 +34,22 @@ States: `idle → composing → item → (retry | diagnosing | item) → summary
   requested unit only) ∪ `{n : mastery(n) = blocked}`. Slots = up to 5: map-queued node first (map Q5, if on
   the fringe), then fringe nodes in trail order, then due cleared nodes (`next_due ≤ today`, oldest
   `last_probe` first), **≤ 2 review slots** (expedition Q3). Empty → `EXP_NO_FRINGE`.
+  `remediated(p)` ≡ `nodes[p].remediated == true` (`data-model.md` § StudentState; absent = false).
 - `answer(item)`: deterministic check (expedition Q4: normalised exact match, per-item tolerance; `mc` by
   choice id); always show correct answer + `why` (I3); log `probe_log`; emit `item_answered`.
+- **Numeric normalisation (expedition Q4):** a submitted numeric answer and the item's `answer.value`
+  (`data-model.md` § ProbeItem) are each parsed under the same grammar before comparison: an optional
+  leading sign (`+` or `-`; absent = positive), one or more digits, an optional `.` followed by one or
+  more digits, and an optional `/` followed by one or more digits (a rational `a/b`, `b ≠ 0`); leading and
+  trailing whitespace is stripped and has no other effect. A string that does not parse under this
+  grammar is a **miss** — never a crash, never a retry that skips its item. Every value that parses is
+  reduced to an **exact rational**: leading zeros in the integer part (`007`) and trailing zeros after
+  the decimal point (`0.750`) carry no significance; a decimal parses to its exact fraction (`0.75 =
+  3/4`). Two parsed values match iff their exact-rational values are equal, or their absolute difference
+  is ≤ the item's `answer.tolerance` (non-negative, default `0`, per `data-model.md` § ProbeItem).
+  Comparison is exact-rational arithmetic; no floating-point comparison is used anywhere in this rule
+  (I1). This is the entire `numeric`-item rule; `mc` items are compared by `choices[].id` only, never by
+  value (I10).
 - **Tolerance (D27):** first miss on a node in this run → `retry` with a second item of the same node; second
   miss → if `diagnosis_used == false` → `diagnosing` (set `diagnosis_used = true`), else mark the node
   `blocked` (expedition Q5: "We'll come back to this one") and continue. **At most one diagnosis per run.**
@@ -46,6 +63,12 @@ item shown ends with its answer visible.
 
 - `set_marker(course, unit)` → regenerate trail → recompute fringe. Marker default = first unit of the
   selected course. Nodes upstream of the marker keep their mastery.
+  The marker is past the course's last unit iff `marker.past_last_unit == true`, whichever unit `unit_id`
+  names; setting it writes the course's last unit as `unit_id`. While past the last unit, the
+  `marker.unit ∪ next(marker.unit)` window of §2 `compose` is the nodes of the `extension` segment (empty
+  when there is none). Nodes of the course are then upstream of the marker. A marker whose `course_code` is
+  not in `syllabi[]`, or whose `unit_id` is not a unit of that course in the bundle, is off the trail
+  (`MAP_MARKER_OFF_TRAIL`, default marker) regardless of `past_last_unit`.
 - `generate_trail`: course segments in unit order; if the marker is past the course's last unit, an
   `extension` segment along downstream edges preferring `next_courses[]`, then undergraduate nodes; every
   segment a path (L0-T) else `EXP_TRAIL_INVALID` and the previous trail stands.
@@ -61,8 +84,12 @@ terminal branch.
 - `hypothesise`: candidate = deepest unmastered prerequisite within remaining levels (graph query), biased by
   `implies_prerequisite`; none → `DIAG_NO_PREREQUISITE` → hint → returned.
 - `probe` (declinable, diagnosis Q2): 2 items on the candidate; `pass` → `refuted` → hint on origin →
-  returned; `fail` → `confirmed` → candidate `blocked`, one remediation piece; `declined` → `unconfirmed` →
-  hint → returned. Fewer than 2 items → `DIAG_PROBE_UNAVAILABLE` → `unconfirmed`.
+  returned; `fail` → `confirmed` → candidate `blocked`, one remediation piece, candidate `remediated =
+  true` once that piece is shown; `declined` → `unconfirmed` → hint → returned. Fewer than 2 items →
+  `DIAG_PROBE_UNAVAILABLE` → `unconfirmed`. An item is *available* for the probe iff it belongs to the
+  candidate and its answer has not been shown in the current expedition run (trigger
+  `expedition_second_miss`); under `map_check_here` every item of the candidate is available. Among
+  available items the draw order of learning-objects W3 applies.
 - After `confirmed`, a further level is **offered, never automatic** (diagnosis Q3); beyond the budget →
   `capped`: candidate `blocked`, "further upstream — it's on your map", returned (I4).
 - `returned` always hands control back to the suspended expedition (its next item) or the map node panel.
@@ -88,5 +115,5 @@ learning_objects.hint_tier_served · graph.prerequisite_returned`
 Payloads are ids, enums, booleans and small integers only (I5).
 
 ## Finalization owed by the Demo EPIC
-Exact item-normalisation rules for numeric answers; the unit-boundary snap for dragging the marker; the
-timing of the answer card; whether the summary shows region tint deltas. Bump to v1.0.0 on wrap.
+The unit-boundary snap for dragging the marker; the timing of the answer card; whether the summary shows
+region tint deltas. Bump to v1.0.0 on wrap.
