@@ -85,13 +85,23 @@ public enum MarkerTrail {
     }
 
     /// W6. Builds the new `Marker` from the given course/unit/`pastLastUnit`, then calls
-    /// `generateTrail(syllabi:marker:bundle:)` with it. Throws (and returns nothing) if trail generation
-    /// throws — per §6's decision default, the caller's previously-held marker AND trail both stay
-    /// untouched on failure (this function does not partially apply the marker change).
+    /// `generateTrail(syllabi:marker:bundle:)` with it. When `pastLastUnit` is `true`, the marker's
+    /// `unitId` is the course's last unit in `bundle` whatever `unitId` the caller passed
+    /// (`contracts/interaction-contract.md` § 3: "setting it writes the course's last unit as
+    /// `unit_id`"); if the course is absent from `bundle` or has no units, the caller's `unitId` is kept
+    /// and W7's `reconcileMarker` classifies the marker. Throws (and returns nothing) if trail generation
+    /// throws — the caller's previously-held marker AND trail both stay untouched on failure (this
+    /// function does not partially apply the marker change).
     public static func setMarker(
         courseCode: String, unitId: String, pastLastUnit: Bool, syllabi: [String], bundle: ContentBundle
     ) throws -> SetMarkerResult {
-        let marker = Marker(courseCode: courseCode, unitId: unitId, pastLastUnit: pastLastUnit)
+        var resolvedUnitId = unitId
+        if pastLastUnit,
+            let lastUnit = bundle.courses.courses.first(where: { $0.courseCode == courseCode })?.units.last
+        {
+            resolvedUnitId = lastUnit.unitId
+        }
+        let marker = Marker(courseCode: courseCode, unitId: resolvedUnitId, pastLastUnit: pastLastUnit)
         let report = try generateTrail(syllabi: syllabi, marker: marker, bundle: bundle)
         return SetMarkerResult(
             marker: marker, trail: report.trail, warnings: report.warnings,
