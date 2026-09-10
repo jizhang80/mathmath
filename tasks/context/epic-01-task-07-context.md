@@ -1,251 +1,170 @@
-# Task 01.7 context bundle
+# Task 01.7 context bundle (REFRESHED 2026-09-09)
 
-> Compiler: task-context-compiler
-> Date: 2026-09-09
-> Slug: epic-01-task-07-pipeline-content-verification
+> Compiler: task-context-compiler  
+> Date: 2026-09-09  
+> Slug: pipeline-content-verification  
 > Authoritative input for the task-writer / implementer. Every fact below is grounded against its named source. If a fact is not here, it is unknown — downstream must flag it as conditional, not assert it.
 
 ## §A. Task identity
+
 - Epic: 01
 - Task: 07
-- Slug: epic-01-task-07-pipeline-content-verification
-- Summary: Pipeline-side verification of `data/demo` — SymPy re-derivation of every numeric answer (I1), distractor tags on-enum, landmark `source_url` resolution (I15).
-- Invariants in play: I1 (CAS, never model), I9 (no human review), I10 (input defined per door, no OCR), I15 (landmarks real and sourced)
+- Slug: pipeline-content-verification
+- Summary: Implement three pipeline verification checks: (a) every `numeric` ProbeItem's declared answer is re-derived by SymPy from its `check` field alone, (b) every `mc` distractor and every `wrong_answers[]` entry names an `error_type_id` from its node's own `error_types[]` and is never `"none-of-these"`, (c) the landmark's `source_url` resolves (HTTP 2xx) and its page contains the landmark's `source_title` (not its `name`).
+- Invariants in play: I1 (correctness decided by CAS, never model, never prompt parsing), I9 (zero human review; machine-verified), I10 (only `numeric`/`mc` ProbeItems), I15 (landmarks real, verifiable; unresolvable dropped, never edited).
 
 ## §B. Applicable contract rules (verbatim)
 
-### contracts/content-policy.md — Generated content (excerpt on answer re-derivation and renderability)
-> Probe answers are re-derived by SymPy before persistence (I1); prompts and hints must render in SwiftMath or carry `render_fallback: "katex"` (learning-objects W1 5b).
+### contracts/data-model.md — ProbeItem's `check` field (v1.1.0, added by task 01.6.1)
 
-Source: `contracts/content-policy.md:29-30`
-Binds this task: specifies the SymPy re-derivation requirement; task 01.6 handles rendering, task 01.7 handles answers.
+> Every `numeric` item additionally carries **`check`** — the machine-readable declaration the CAS re-derives the answer from (I1). An `mc` item never carries `check`: its correctness is `correct_choice_id` plus the on-enum distractor rule (`content-policy.md` § Generated content). Extending `check` to `mc` items is a further versioned change.
+>
+> `check` is `{ kind ∈ {evaluate, solve} }` plus, by kind:
+> - **`evaluate`** — `expr` (required): one SymPy-source expression; `at` (optional): a map from symbol name to a numeric string, substituted before evaluation. `equations`, `unknown`, `select` are absent.
+> - **`solve`** — `equations[]` (required): one or more `Eq(lhs, rhs)` in SymPy source; `unknown` (required): the symbol whose value is the answer; `select ∈ {only, max, min}` (optional, default `only`): which solution is the answer when a well-posed problem has more than one. `expr` and `at` are absent.
+>
+> `expr` and `equations[]` hold **SymPy source, never LaTeX** (§ Text is unaffected); they are never rendered and never shown to a student. `expr` may not be a bare numeric literal — a check that restates `answer.value` proves nothing, and the schema rejects it. `answer.value` is the claim, `check` is the derivation, and the two are compared, never merged: a disagreement is a build failure, never a correction of one from the other.
 
-### contracts/content-policy.md — Generated content (excerpt on distractor tags)
+Source: `contracts/data-model.md:318-335` (v1.1.0, added by task 01.6.1)  
+Binds this task: AC2 derives the answer from the item's `check` field exactly as specified; derives it from `check` alone, never from `prompt_latex`.
+
+### contracts/data-model.md — Probe answer derivation (normative, v1.1.0, added by task 01.6.1)
+
+> The pipeline derives every `numeric` answer from `check` alone. **`prompt_latex` is never parsed** — it is a presentation string that may embed an English question, and a parser that mis-reads it does not fail, it silently confirms whatever answer was authored. No model participates at any point (I1).
+>
+> Parsing is `sympy.parse_expr` with `standard_transformations + (rationalize,)` — so decimal literals become exact `Rational`s — and a **closed name allow-list**: `Eq`, `Rational`, `sqrt`, `log`, `exp`, `Abs`, `diff`, `pi`, `E`. Any other name parses to a free symbol; calling one raises, and the item fails. Extending the allow-list is a versioned change.
+>
+> - `evaluate`: parse `expr`; every key of `at` must be a free symbol of `expr`; substitute; the result must have no free symbols left.
+> - `solve`: parse each equation; `unknown` must be a free symbol of the set; call `sympy.solve(equations, sorted(free_symbols), dict=True)`; keep the solutions that bind `unknown`; `select: only` requires exactly one distinct bound value, `max`/`min` take the extreme of them.
+>
+> The derived value must be an exact rational after `sympy.simplify` (`.is_Rational` true). A parse failure, an unknown name, a leftover free symbol, an unbound `unknown`, zero solutions, more than one solution under `select: only`, or a non-rational result is `LO_PROBE_UNCHECKABLE` and **fails the build**. Nothing is rounded, nothing is approximated, nothing is inferred. The derived value is then compared to `answer.value` within `answer.tolerance` (default `0`); a mismatch fails the build.
+
+Source: `contracts/data-model.md:340-360` (v1.1.0, added by task 01.6.1)  
+Binds this task: this is the normative algorithm AC2 must implement exactly; no shortcuts, no second paths, no numeric fallback.
+
+### contracts/content-policy.md — Generated content answer re-derivation (v1.1.0, amended by task 01.6.1)
+
+> Probe answers are re-derived by SymPy before persistence (I1): every `numeric` ProbeItem carries `check` and the CAS derives the answer from `check` alone — never by parsing `prompt_latex`, never by a model (`data-model.md` § ProbeItem, § Probe answer derivation). An item the CAS cannot derive exactly, or whose derived value differs from `answer.value` beyond `tolerance`, is `LO_PROBE_UNCHECKABLE` and fails the build; nothing ships unchecked. `mc` correctness is `correct_choice_id` plus the distractor rule below; extending `check` to `mc` is a further versioned change. Prompts and hints must render in SwiftMath or carry `render_fallback: "katex"` (learning-objects W1 5b).
+
+Source: `contracts/content-policy.md:376-383` (v1.1.0, amended by task 01.6.1)  
+Binds this task: AC2 (answers re-derived from `check`), AC3 (mismatch fails).
+
+### contracts/content-policy.md — Distractor tags (v1.1.0)
+
 > Distractor tags: every `mc` distractor and every anticipated numeric wrong answer names an `ErrorType` of its node (diagnosis Q1); `none-of-these` is never a tag.
 
-Source: `contracts/content-policy.md:31-32`
-Binds this task: the distractor tag validation rule — every wrong choice/answer must name an enum member.
+Source: `contracts/content-policy.md:381` (v1.1.0, General content section)  
+Binds this task: AC4 validates every distractor `error_type_id` is on-enum.
 
-### contracts/content-policy.md — Landmarks (full)
-> Real, named, verifiable; `source_url` required and resolving at build (HTTP 2xx) with the page text containing the landmark's name; ≥ 1 node id. Unsourced → dropped, never invented, never "hypothetical".
+### contracts/content-policy.md — Landmarks (v1.1.0, amended by task 01.6.1)
 
-Source: `contracts/content-policy.md:34-36`
-Binds this task: `source_url` resolution and landmark name verification are build-time checks in the pipeline.
+> Real, named, verifiable; `source_url` required and resolving at build (HTTP 2xx); `source_title` required — the title of the real, named thing the landmark cites, as that title appears on the source page — and the fetched page text must contain it (case-insensitive substring). The landmark's `name` is the project's own descriptive claim about the mathematics and is by design not a term from the source, so it is never asserted against the page; a landmark's `name` is never edited to make a check pass. ≥ 1 node id. Unsourced → dropped, never invented, never "hypothetical".
 
-### contracts/data-model.md — ProbeItem (inside nodes.json)
-> `id`, `type ∈ {numeric, mc}`, `prompt_latex`, `why`, and either `answer {value (string, normalised decimal or rational), tolerance (≥ 0, default 0)}` with `wrong_answers[] {value, error_type_id}` (numeric) or `choices[] {id, latex, error_type_id?}` + `correct_choice_id` (mc; every non-correct choice carries an `error_type_id`). No free-text answer field exists (I1, I10).
+Source: `contracts/content-policy.md:389-394` (v1.1.0, amended by task 01.6.1)  
+Binds this task: AC5 fetches the `source_url`, asserts the page contains the landmark's `source_title` (case-insensitive substring, never its `name`); on failure, raises `LO_LANDMARK_UNSOURCED` and the landmark is dropped (I15).
 
-Source: `contracts/data-model.md:58-62`
-Binds this task: defines the exact shape the task must validate: `answer.value`, `wrong_answers[].error_type_id`, `choices[].error_type_id`, and `correct_choice_id` for `mc` items.
+### contracts/graph-constraints.md — L0-3b source_ref resolver
 
-### contracts/graph-constraints.md — L0-3b (source_ref resolution)
 > Every node without `expectation_codes` carries a `source_ref` whose `source` exists in `sources.json` and whose `locator` is non-empty; the pipeline additionally checks that the locator resolves (HTTP 2xx) at build. A node with neither codes nor `source_ref` fails. | `GRAPH_L0_FAILED{L0-3b, node}` / `SPINE_SOURCE_REF_UNRESOLVED` | resolution is a build-time check; the app checks presence only
 
-Source: `contracts/graph-constraints.md:15`
-Binds this task: the pipeline (not the app) performs HTTP resolution of `source_ref` locators; task may reuse this for landmark URLs.
+Source: `contracts/graph-constraints.md:15` (quoted in task spec 01.7 §3)  
+Binds this task: AC7 scans for `source_ref` entries; for `data/demo`, zero found (all nodes carry `expectation_codes`); test asserts and prints "0 source_refs scanned — vacuous by bundle scope".
 
-### contracts/graph-constraints.md — L0-10 (landmark validation)
-> Every landmark's `node_ids[]` are existing nodes and `source_url` is present (https). | `MAP_LANDMARK_UNSOURCED` | resolution checked by the pipeline (I15)
+### contracts/error-codes.md — Rules on code registration
 
-Source: `contracts/graph-constraints.md:22`
-Binds this task: the pipeline checks landmark `source_url` resolution; contract delegates the check to pipeline via (I15) note.
-
-### contracts/error-codes.md — Rules (excerpt on code registration)
 > A code appears in exactly one domain doc and in the registry.
 
-Source: `contracts/error-codes.md:11`
-Binds this task: the three error codes below must be registered in both domain doc and registry.
+Source: `contracts/error-codes.md:11`  
+Binds this task: the three error codes this task uses must be registered in both domain docs and registry; `LO_LANDMARK_UNSOURCED` is in `docs/domains/learning-objects.md` (not `MAP_LANDMARK_UNSOURCED` from `docs/domains/map.md`, which is Core's L0-10).
 
-### contracts/error-codes.json — relevant entries
-```
+### contracts/error-codes.json — Error codes this task uses
+
+```json
 {"code": "LO_PROBE_UNCHECKABLE", "recoverable": true, "surface": "internal", "user_text": null},
 {"code": "LO_BAD_DISTRACTOR_TAG", "recoverable": true, "surface": "internal", "user_text": null},
-{"code": "MAP_LANDMARK_UNSOURCED", "recoverable": true, "surface": "internal", "user_text": null},
+{"code": "LO_LANDMARK_UNSOURCED", "recoverable": true, "surface": "internal", "user_text": null},
 ```
 
-Source: `contracts/error-codes.json:30, 31, 12`
-Binds this task: the error codes this task uses when validation fails.
-
-### contracts/ai-usage.md — No model policy (FULL)
-> ## Two places, and only two
-> 1. **Offline generation (pipeline, owner-run, Claude API)** — graph edge candidates, learning objects, paraphrases, landmarks, the M4′ synthetic set. Never on a device, never at runtime.
-> 2. **On-device Tier 1 (Foundation Models)** — `classify` and `reword` only (`runtime-tiers.md`).
->
-> No third place. A spec that calls a model from `Core`, from the App outside the Tier 1 adapter, from the telemetry path, or from any server is BLOCKed (D36, I14).
-
-Source: `contracts/ai-usage.md:7-13`
-Binds this task: zero model calls in content verification. Task 01.7 verifies generated content (no generation in this task); SymPy is CAS, not ML.
-
-### contracts/ai-usage.md — Verification before shipping
-> Verification before shipping: probe answers re-derived by SymPy (I1); paraphrases pass the 6-gram overlap check (I6); landmarks resolve (I15); items render in SwiftMath; all before a bundle is cut.
-
-Source: `contracts/ai-usage.md:30-31`
-Binds this task: the four verification gates before a bundle is emitted.
+Source: `contracts/error-codes.json` (verified present)  
+Binds this task: these three codes are raised by this task's checks. Note: `MAP_LANDMARK_UNSOURCED` (Core's presence check) is NOT used here; `LO_LANDMARK_UNSOURCED` (pipeline's resolution check) is.
 
 ## §C. Relevant domain-doc excerpts (verbatim)
 
-### docs/domains/learning-objects.md — Workflow W1, step 5 (probe checkability) and 5c (landmark validation)
+### docs/domains/learning-objects.md — Probe checkability and landmarks (W1, step 5/5c)
+
 > 5. **Probe checkability** — every ProbeItem answer re-derived by SymPy in the pipeline and every WorkedExample step CAS-checked there (D41), else `LO_PROBE_UNCHECKABLE`; every `mc` item has ≥ 1 distractor tag and every tag names a member of the node's enum, else `LO_BAD_DISTRACTOR_TAG`. 5c. **Landmarks** — `source_url` present and resolving at build (HTTP 2xx), `node_ids[]` non-empty and known, else `LO_LANDMARK_UNSOURCED` (D22, I15).
 
-Source: `docs/domains/learning-objects.md:78-83`
-Acceptance path: these are the workflow steps task 01.7 implements.
+Source: `docs/domains/learning-objects.md:240-245`  
+Binds this task: this is what this task implements — the three machine checks and the error codes.
 
-### docs/domains/learning-objects.md — Errors produced (three codes)
-> | `LO_PROBE_UNCHECKABLE` | Answer not re-derivable by SymPy in the pipeline | Internal | Yes |
-> | `LO_BAD_DISTRACTOR_TAG` | An `mc` item lacks tags, or a tag is off-enum | Internal | Yes |
+### docs/domains/learning-objects.md — Landmark error code (Errors produced)
+
 > | `LO_LANDMARK_UNSOURCED` | `source_url` missing or not resolving; no node ids | Internal; landmark dropped (I15) | Yes — re-source, never invent |
 
-Source: `docs/domains/learning-objects.md:127-130`
-Acceptance path: the error rows.
-
-### docs/domains/learning-objects.md — Core entities (ProbeItem with error tags)
-> **ProbeItem** — a short item tagged with a node id, of type `numeric | mc` (I10): a `prompt` (LaTeX subset SwiftMath renders — the rendering spike, v2.2 §B), an `answer` (numeric, with an optional declared tolerance) or `choices[]` with the correct id, a one-line `why` shown with the answer (D5), and `distractor_error_types` — every distractor and each anticipated numeric wrong answer tagged with an `ErrorType` id, the Tier 0 classifier (diagnosis Q1). The answer is re-derived by SymPy in the pipeline (D41, I1); on the device it is checked in code, with no grader model and no free text.
-
-Source: `docs/domains/learning-objects.md:54-60`
-Acceptance path: defines the structure task validates.
+Source: `docs/domains/learning-objects.md:233` (the resolution-check code, not the presence-check code)  
+Binds this task: this task raises `LO_LANDMARK_UNSOURCED` for resolution failures; it is the pipeline's code (live HTTP fetch), not Core's `MAP_LANDMARK_UNSOURCED` (presence check).
 
 ## §D. Prior task outputs this task depends on
-None — no prior pipeline task outputs consumed. The task reads `data/demo/nodes.json` and `data/demo/landmarks.json`, produced by task 01.5 and 01.6, which are predecessor dependencies managed by EPIC coordination.
+
+- `ProbeCheck` type with `kind: ProbeCheckKind`, `expr`, `at`, `equations`, `unknown`, `select` fields — source: `Packages/Core/Sources/Core/Model/Nodes.swift` (added by task 01.6.1)
+- `ProbeCheckKind` enum with cases `evaluate`, `solve` — source: `Packages/Core/Sources/Core/Model/Nodes.swift` (added by task 01.6.1)
+- `ProbeCheckSelect` enum with cases `only`, `max`, `min` — source: `Packages/Core/Sources/Core/Model/Nodes.swift` (added by task 01.6.1)
+- `ProbeItem.check: ProbeCheck?` field — source: `Packages/Core/Sources/Core/Model/Nodes.swift:54-64` (added by task 01.6.1)
+- `Landmark.sourceTitle: String` field — source: `Packages/Core/Sources/Core/Model/Landmarks.swift:11-19` (added by task 01.6.1)
+- Contracts v1.1.0 (data-model, content-policy, nodes.schema.json, landmarks.schema.json) — all amended by task 01.6.1
+- `data/demo/nodes.json` with `check` objects on all 20 `numeric` probe items — source: the file (populated by task 01.6.1)
+- `data/demo/landmarks.json` with `source_title: "Interest Act"` on the landmark — source: the file (populated by task 01.6.1)
 
 ## §E. Negative facts (confirmed ABSENT)
-- `data/demo/` directory — confirmed absent. Glob pattern `data/demo` returned no match. Source: task 01.6 produces the demo bundle; task 01.7 runs after it.
-- `pipeline/src/mathmath_pipeline/verify/` — confirmed absent. Glob pattern `pipeline/src/mathmath_pipeline/**/*.py` returned only `__init__.py`. Source: task 01.7 creates the `verify/` subpackage with `__init__.py`, `answers.py`, `distractors.py`, `landmarks.py`.
-- No pytest marker registration for network tests. Grep pattern `markers|pytest.mark` in `pipeline/pyproject.toml` returned no match. Source: `pipeline/pyproject.toml` (lines 1–42). If task 01.7 fetches URLs live, it may need to register a `network` marker and update gate.sh invocation.
-- `sympy` is already a declared dependency. Source: `pipeline/pyproject.toml:10` lists `"sympy>=1.14,<2"`.
+
+- No `pipeline/src/mathmath_pipeline/verify/` subpackage exists. Glob `pipeline/src/mathmath_pipeline/verify/**` returns empty.
+- No `pipeline/tests/test_demo_bundle.py` exists. Glob `pipeline/tests/test_demo_bundle.py` returns empty (file created by this task).
+- The `network` pytest marker is not registered in `pipeline/pyproject.toml`. Grep `markers` in the file returns empty (if task adds network tests, must register the marker).
+- No L1/L2 (model-based) verification code in the pipeline yet (later EPICs only).
 
 ## §F. File scope
+
 Files this task may create or touch.
 
-- CREATE `pipeline/src/mathmath_pipeline/verify/__init__.py` — module entry point and public interface (may re-export submodule functions).
-- CREATE `pipeline/src/mathmath_pipeline/verify/answers.py` — SymPy re-derivation of numeric answers.
-- CREATE `pipeline/src/mathmath_pipeline/verify/distractors.py` — validation that every distractor tag names an enum member.
-- CREATE `pipeline/src/mathmath_pipeline/verify/landmarks.py` — HTTP fetch and `source_url` resolution, name verification.
-- CREATE `pipeline/tests/test_demo_bundle.py` — integration test over `data/demo` (runs after task 01.6 completes).
-- MODIFY `data/demo/nodes.json` — answer / distractor-tag corrections only (shared with task 01.6; strictly after 01.6 completes).
-- MODIFY `data/demo/landmarks.json` — landmark corrections only (shared with task 01.6; strictly after 01.6 completes).
+- CREATE `pipeline/src/mathmath_pipeline/verify/__init__.py` — module re-exports; confirmed absent.
+- CREATE `pipeline/src/mathmath_pipeline/verify/answers.py` — SymPy re-derivation from `check` field; confirmed absent.
+- CREATE `pipeline/src/mathmath_pipeline/verify/distractors.py` — on-enum tag validation; confirmed absent.
+- CREATE `pipeline/src/mathmath_pipeline/verify/landmarks.py` — HTTP resolution + L0-3b scan; confirmed absent.
+- CREATE `pipeline/tests/test_demo_bundle.py` — companion test over `data/demo`; confirmed absent (per spec §2: "reserved for this task").
+- MODIFY `pipeline/pyproject.toml` — add `markers` stanza to `[tool.pytest.ini_options]` if network tests marked; confirmed present.
+- MODIFY `data/demo/nodes.json` — answer/distractor corrections only (where this task's checks find violations); confirmed present.
+- (OUT-OF-SCOPE) `data/demo/landmarks.json` — this task may NOT touch this file; out-of-scope per spec §2.
 
 ## §G. Stack constraints relevant here
 
-**Python version and dependencies:**
-> **Python 3.14** | `.python-version` = 3.14; local 3.14.7 ... **sympy** ≥ 1.14,<2 (exact pins in `pipeline/uv.lock`) ... resolved 2026-09-09: anthropic 1.4.0, pydantic 2.13.5, sympy 1.14.0
-
-Source: `docs/tech-stack.md:25, 27`
-Constraint: Python 3.14; sympy already pinned ≥ 1.14,<2 in `pipeline/pyproject.toml:10`.
-
-**Pyright strict and pytest:**
-> **pyright** strict | ≥ 1.1 (lock pins the resolved release) ... **pytest** | ≥ 8
-
-Source: `docs/tech-stack.md:29, 30`
-Constraint: type-check with `pyright --pythonversion 3.14 src/` (gate 2); test with `pytest` (gate 4). No time estimates on probe counts or iterations — tag empirical thresholds with `[ESTIMATE: …]`.
-
-**Pipeline ownership of learning-objects validation:**
-> Ownership by domain ... `pipeline/` — curriculum-spine, content-generation, learning-objects validation, telemetry aggregation (W4).
-
-Source: `docs/tech-stack.md:67`
-Binds this task: learning-objects validation (includingProbeItem answer/tag checks and landmark resolution) is owned by the pipeline, not the app.
-
-**Gate 4 (pipeline tests):**
-> 4. **App + pipeline:** `xcodebuild build -quiet -workspace "$ROOT/App/mathmath.xcworkspace" -scheme mathmath -destination "$SIM" CODE_SIGNING_ALLOWED=NO`
-> ( cd "$ROOT/pipeline" && uv run pytest -q )
-
-Source: `scripts/gate.sh:22-23`
-Constraint: `uv run pytest -q` with no `-m` flag — all tests run, including network tests (if marked). If task 01.7 marks URL-fetch tests, update gate.sh or pyproject.toml to skip them by default.
-
-**No model anywhere in EPIC 01:**
-> `contracts/ai-usage.md` — no model anywhere in this EPIC. `READ-ONLY`.
-
-Source: `docs/epics/epic-01-core-data-l0-layout-demo-bundle.md:34`
-Constraint: SymPy (CAS) is deterministic; no Claude API, no foundation-models, no probabilistic output.
-
-**Full nodes.schema.json for task enumeration:**
-
-The schema at `contracts/schemas/nodes.schema.json` defines:
-- `nodes[].probe_items[].type` — enum: `numeric | mc`
-- `nodes[].probe_items[].answer` — object (numeric items only), with `value` (string, pattern decimal/rational) and optional `tolerance` (≥ 0)
-- `nodes[].probe_items[].wrong_answers[]` — array of `{value, error_type_id}` (numeric items)
-- `nodes[].probe_items[].choices[]` — array of `{id, latex, error_type_id?}` (`mc` items only)
-- `nodes[].probe_items[].correct_choice_id` — string pattern (mc items only)
-- `nodes[].error_types[]` — array of `{id, label, implies_prerequisite?}` (each node has ≥ 1, exactly one is `none-of-these` per invariant)
-
-The task validates:
-- Each `numeric` item: `answer.value` is re-derivable by SymPy from `prompt_latex` (I1).
-- Each `wrong_answers[]` entry: `error_type_id` is a member of the node's `error_types[]`.
-- Each `mc` item: every non-correct `choices[]` entry carries an `error_type_id` (not optional for incorrect choices).
-- No `error_type_id` is ever `none-of-these` (content-policy.md).
-
-**Full landmarks.schema.json for task enumeration:**
-
-The schema at `contracts/schemas/landmarks.schema.json` defines:
-- `landmarks[].id` — string, pattern `^[a-z0-9]+(-[a-z0-9]+)*$`
-- `landmarks[].name` — string, ≥ 1 char
-- `landmarks[].what_it_is` — string, ≥ 1 char (the project's own prose, I6)
-- `landmarks[].source_url` — string, pattern `^https://` (required, https only)
-- `landmarks[].node_ids[]` — array of node ids, minItems 1
-- `landmarks[].region_ids[]` — array of region ids from the fixed vocabulary, minItems 1
-
-The task validates:
-- `source_url` resolves (HTTP 2xx) at build time (I15).
-- The fetched page text contains `name` (case-insensitive, unescaped substring match acceptable per domain doc).
-- All `node_ids[]` are present in the graph bundle.
-- All `region_ids[]` are in the fixed vocabulary.
-
-**EPIC 01 acceptance criteria 7 and 8:**
-> 7. The landmark's `source_url` resolves (2xx) and the fetched text contains the landmark's name (I15).
-> 8. The bundle contains ≥ 18 and ≤ 24 nodes, all on or adjacent to the D14 chain, with `starting_chain` in the manifest connected (L0-5), two courses with ≥ 3 units each, `next_courses` MTH1W → MPM2D and MCR3U → MHF4U, and every `mc` distractor tagged.
-
-Source: `docs/epics/epic-01-core-data-l0-layout-demo-bundle.md:81-84`
-Acceptance: criterion 7 is landmark URL fetch; criterion 8 includes "every `mc` distractor tagged" — distractor validation is part of this acceptance test.
-
-**Mandatory invariant line from §3 (full quote):**
-> **MANDATORY invariant line:** I8 — L0 lives in `Core` and is the only acceptance path; the pipeline wrapper refuses to emit a bundle whose report has `passed: false` (test). I14 — `Core` gains no import beyond Foundation (existing boundary test); layout is a pure function with an injected seeded RNG (determinism test: two runs, byte-equal positions). I6 — the demo bundle's paraphrases are the project's own words; the `verbatim` grep and the 140-char schema bound apply; no Ministry prose is pasted (the author of the bundle writes from the codes, not from the document). I15 — the landmark's `source_url` is fetched by the pipeline test (HTTP 2xx, page text contains "Interest Act"); on failure the landmark is dropped, never edited into truth. I9 — no review step: the bundle is hand-written *data* (D26 allows it for the Demo), validated by machine; a failing item is rewritten, not approved. I1 / I10 — every item is `numeric` or `mc` with a checked `answer`/`correct_choice_id`; the pipeline re-derives every numeric answer with SymPy where the prompt is expressible (a test lists the items it could not express, empty = FAIL for this bundle since all are simple). I11 — the rendering-spike outcome and the L0 report carry no untagged numbers.
-
-Source: `docs/epics/epic-01-core-data-l0-layout-demo-bundle.md:43-54`
-Binds this task: the "Interest Act" landmark example means the pipeline must fetch `source_url`, verify the page text contains the name, and reject (drop) unsourced landmarks (I15). The SymPy re-derivation must succeed for all numeric items in the demo (I1).
-
-**Source availability:**
-
-The demo bundle includes one landmark: the Canadian mortgage semi-annual compounding, source `laws-lois.justice.gc.ca/eng/acts/I-15/`. The task must verify this URL resolves and the page contains "Interest Act" (the landmark name). Source: `docs/epics/epic-01-core-data-l0-layout-demo-bundle.md:19`.
-
-**Pytest structure and markers:**
-
-Existing `pipeline/tests/test_contracts.py` uses parameterized tests (`@pytest.mark.parametrize`). If task 01.7 adds network-dependent tests (landmark URL fetch), it should:
-1. Decide whether to mark tests with `@pytest.mark.network` and update `pyproject.toml` to register the marker.
-2. Decide whether gate.sh should skip network tests by default (no evidence for/against; task discretion per Q1 protocol).
-3. If registered, document in a comment why the marker exists.
-
-Current gate.sh (line 23): `( cd "$ROOT/pipeline" && uv run pytest -q )` — no `-m` flag, so all tests run.
-
-**Test framework and import structure:**
-
-Source: `pipeline/tests/test_contracts.py:15` imports `pytest`; `pipeline/pyproject.toml:18` lists `pytest>=8`.
+- **Boundary validation**: `pipeline/tests/test_contracts.py` validates all Python code against schemas (Source: `contracts/data-model.md:75-79`). Every check must raise one of the three registered error codes.
+- **Storage / asset access**: This task writes no new bundle files; it corrects only `answer.value` and `error_type_id` fields in `data/demo/nodes.json` where its checks find violations (Source: spec 01.7 §4 step 8).
+- **Error codes to use**: `LO_PROBE_UNCHECKABLE`, `LO_BAD_DISTRACTOR_TAG`, `LO_LANDMARK_UNSOURCED` (registered). NOT `MAP_LANDMARK_UNSOURCED` (Core's presence check, not pipeline's).
+- **Model-calling paths**: ZERO. No `anthropic` import anywhere. Correctness by SymPy (CAS), set membership (tags), HTTP status (landmarks). No threshold, no fallback.
+- **Tooling**: Python 3.14, uv, pytest, pyright strict, sympy ≥ 1.14, standard library `urllib` for HTTP (Source: `docs/tech-stack.md:25-27`).
+- **HTTP in tests**: Tests making live HTTPS requests are marked `@pytest.mark.network` (register in `pyproject.toml`). Gate 4 runs `uv run pytest -q` with no `-m` flag; network tests execute unfiltered (Source: spec 01.7 §3 planner note [6]).
 
 ---
 
-## Quote audit
+# Normative algorithm: Probe answer derivation (verbatim from contracts/data-model.md v1.1.0)
 
-1. `contracts/content-policy.md:29-30` — re-read: ✓ byte-exact match
-2. `contracts/content-policy.md:31-32` — re-read: ✓ byte-exact match
-3. `contracts/content-policy.md:34-36` — re-read: ✓ byte-exact match
-4. `contracts/data-model.md:58-62` — re-read: ✓ byte-exact match
-5. `contracts/graph-constraints.md:15` — re-read: ✓ byte-exact match
-6. `contracts/graph-constraints.md:22` — re-read: ✓ byte-exact match
-7. `contracts/error-codes.md:11` — re-read: ✓ byte-exact match
-8. `contracts/error-codes.json:30, 31, 12` — re-read: ✓ byte-exact match (lines 30, 31 for LO_PROBE_UNCHECKABLE and LO_BAD_DISTRACTOR_TAG; line 12 for MAP_LANDMARK_UNSOURCED)
-9. `contracts/ai-usage.md:7-13` — re-read: ✓ byte-exact match
-10. `contracts/ai-usage.md:30-31` — re-read: ✓ byte-exact match
-11. `docs/domains/learning-objects.md:78-83` — re-read: ✓ byte-exact match
-12. `docs/domains/learning-objects.md:127-130` — re-read: ✓ byte-exact match
-13. `docs/domains/learning-objects.md:54-60` — re-read: ✓ byte-exact match
-14. `docs/tech-stack.md:25, 27` — re-read: ✓ byte-exact match
-15. `docs/tech-stack.md:29, 30` — re-read: ✓ byte-exact match
-16. `docs/tech-stack.md:67` — re-read: ✓ byte-exact match
-17. `scripts/gate.sh:22-23` — re-read: ✓ byte-exact match
-18. `docs/epics/epic-01-core-data-l0-layout-demo-bundle.md:34` — re-read: ✓ byte-exact match
-19. `contracts/schemas/nodes.schema.json` — re-read full file (lines 1–397): ✓ byte-exact match against source
-20. `contracts/schemas/landmarks.schema.json` — re-read full file (lines 1–99): ✓ byte-exact match against source
-21. `docs/epics/epic-01-core-data-l0-layout-demo-bundle.md:81-84` — re-read: ✓ byte-exact match
-22. `docs/epics/epic-01-core-data-l0-layout-demo-bundle.md:43-54` — re-read: ✓ byte-exact match
-23. `docs/epics/epic-01-core-data-l0-layout-demo-bundle.md:19` — re-read: ✓ byte-exact match
-24. `pipeline/pyproject.toml:10` — re-read: ✓ byte-exact match (contains `"sympy>=1.14,<2"`)
-25. `pipeline/tests/test_contracts.py:15` — re-read: ✓ byte-exact match (`import pytest`)
-26. `pipeline/pyproject.toml:18` — re-read: ✓ byte-exact match (`"pytest>=8"`)
+This is the exact algorithm AC2 must implement. Do not deviate. Source: `contracts/data-model.md:340-360` (added by task 01.6.1, v1.1.0).
+
+> The pipeline derives every `numeric` answer from `check` alone. **`prompt_latex` is never parsed** — it is a presentation string that may embed an English question, and a parser that mis-reads it does not fail, it silently confirms whatever answer was authored. No model participates at any point (I1).
+>
+> Parsing is `sympy.parse_expr` with `standard_transformations + (rationalize,)` — so decimal literals become exact `Rational`s — and a **closed name allow-list**: `Eq`, `Rational`, `sqrt`, `log`, `exp`, `Abs`, `diff`, `pi`, `E`. Any other name parses to a free symbol; calling one raises, and the item fails. Extending the allow-list is a versioned change.
+>
+> - `evaluate`: parse `expr`; every key of `at` must be a free symbol of `expr`; substitute; the result must have no free symbols left.
+> - `solve`: parse each equation; `unknown` must be a free symbol of the set; call `sympy.solve(equations, sorted(free_symbols), dict=True)`; keep the solutions that bind `unknown`; `select: only` requires exactly one distinct bound value, `max`/`min` take the extreme of them.
+>
+> The derived value must be an exact rational after `sympy.simplify` (`.is_Rational` true). A parse failure, an unknown name, a leftover free symbol, an unbound `unknown`, zero solutions, more than one solution under `select: only`, or a non-rational result is `LO_PROBE_UNCHECKABLE` and **fails the build**. Nothing is rounded, nothing is approximated, nothing is inferred. The derived value is then compared to `answer.value` within `answer.tolerance` (default `0`); a mismatch fails the build.
+
+## Repo state facts at 2026-09-09
+
+- Current contracts versions: `data-model.md` v1.1.0 (set by task 01.6.1), `content-policy.md` v1.1.0 (set by task 01.6.1)
+- `data/demo/nodes.json` contains exactly 20 `numeric` ProbeItems, each carrying a `check` field (populated by task 01.6.1)
+- `data/demo/landmarks.json` contains one landmark with `source_title: "Interest Act"` (populated by task 01.6.1)
+- `sympy` version pinned in `pipeline/uv.lock`: 1.14.0 (Source: `docs/tech-stack.md:27`, resolved 2026-09-09)
+- HTTP library: Python standard library `urllib.request` (no third-party client pinned)
+- Test runner: pytest ≥ 8 via `uv run pytest -q`
+- Swift 6 / iOS 18 simulator for gate 4 (Core tests alongside pipeline tests)
