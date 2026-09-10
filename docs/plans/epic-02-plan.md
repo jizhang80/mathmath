@@ -23,6 +23,7 @@ One id space; specs at `tasks/epic-02-task-<MM>-<slug>.md`. Pre-dispatch rulings
 | 02.10 | b | prerequisite-query-classify | impl | 02.8 | seam | — |
 | 02.11 | b | diagnosis-machine-seam | impl | 02.10 | seam | expedition ↔ diagnosis |
 | 02.12 | b | state-merge | impl | 02.9 | seam | — |
+| 02.5b | b | fix-set-marker-past-last-unit (added by `tasks/arbitration/arbiter-03-07-past-last-unit.md`; corrects 02.5; R-7 rework) | fix | 02.11 | seam | — |
 | 02.13 | b | epic-02b-wrap | wrap | all | mechanical | — |
 
 ## Task scopes
