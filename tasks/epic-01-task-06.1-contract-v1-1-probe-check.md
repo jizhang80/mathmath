@@ -97,7 +97,7 @@ In-scope (the implementer touches EXACTLY these; nothing else):
 - `Packages/Core/Sources/Core/Model/Nodes.swift` — MODIFY. `ProbeCheck`, `ProbeCheckKind`,
   `ProbeCheckSelect`; `check` on `ProbeItem`.
 - `Packages/Core/Sources/Core/Model/Landmarks.swift` — MODIFY. `sourceTitle` on `Landmark`.
-- `Packages/Core/Tests/CoreTests/DecodeRoundTripTests.swift` — MODIFY. Add the two tests of §5 T1 and T5b.
+- `Packages/Core/Tests/CoreTests/DecodeRoundTripTests.swift` — MODIFY. Add the three tests of §5: T1, T2 and T5b. T2 (mutate `check.kind` to `"guess"`, assert `DecodingError`) is new — the pre-existing `unrecognizedEnumValueFailsDecode` mutates `region_id`, not `ProbeCheckKind`, so it does not cover it.
 - `data/demo/nodes.json` — MODIFY. **Add the `check` key to the 20 `numeric` probe items and nothing
   else.** Every other key in the file is byte-unchanged.
 - `data/demo/landmarks.json` — MODIFY. **Add `"source_title": "Interest Act"` and nothing else.** The

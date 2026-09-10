@@ -119,3 +119,12 @@ only confirm this is still the state at wrap.
    defect task 02b corrects. The implementer dropped that sub-assertion rather than assert something false
    about committed ground truth. **After 02b lands, restore it**: an unmodified `contracts/examples/` copy
    must pass, which is precisely the regression guard the whole L0-9 episode argues for.
+
+## Contract v1.1 guard coverage (task 01.8 ledger item)
+
+`contracts/schemas/nodes.schema.json`'s anti-vacuity guard on `ProbeItem.check.expr` (task 01.6.1) rejects a
+bare numeric literal, so a `check` cannot simply restate `answer.value`. It does **not** reject a trivially
+equivalent restatement such as `4+0`. The spec does not overclaim — it promises rejection of a bare literal
+and delivers exactly that — and the gap is inherent to a syntactic guard: only a semantic check could close
+it, and a semantic check of "is this derivation real?" is the thing the field exists to make possible in the
+first place. Recorded so the guard's actual strength is on the record rather than assumed.
