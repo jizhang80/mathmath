@@ -245,3 +245,116 @@ def test_marker_past_last_unit_must_be_boolean() -> None:
     example["marker"]["past_last_unit"] = 1
     errors = _errors("student-state", example)
     assert errors, "an integer past_last_unit value did not fail validation"
+
+
+def test_schema_version_1_document_without_new_fields_still_validates() -> None:
+    """v1.3.0 migration identity (arbiter Q-A): "a version-1 document is a valid version-2 document
+    with every `remediated` absent" (contracts/data-model.md § StudentState). A v1-shaped document —
+    `schema_version: 1`, no `remediated` on any node, no `past_last_unit` on `marker` — must still
+    validate against the amended (v1.3.0) schema, because both new properties are optional and
+    `schema_version`'s own fragment is `{"type": "integer", "minimum": 1}` with no upper bound."""
+    example = json.loads((EXAMPLES / "student-state.json").read_text())
+    example["schema_version"] = 1
+    del example["nodes"]["matrix-multiplication"]["remediated"]
+    assert "past_last_unit" not in example["marker"], "fixture precondition: marker already carries it"
+    errors = _errors("student-state", example)
+    assert not errors, f"a v1-shaped document failed against the v1.3.0 schema: {errors}"
+
+
+def test_remediated_required_guard_is_real() -> None:
+    """C2 negative control for T5 guard 2: reconstructs the defect an implementer could introduce
+    (adding `remediated` to the node-entry `required` array, contrary to arbiter Q-A: "It is not in
+    `required`") and proves the pre-existing `exponent-laws` entry — which carries no `remediated` key —
+    would fail validation under that defect, then confirms the real (un-mutated) schema accepts it."""
+    schema = _schema("student-state")
+    node_schema = schema["properties"]["nodes"]["additionalProperties"]
+    assert "remediated" not in node_schema["required"], "fixture precondition: already required"
+
+    broken_schema = json.loads(json.dumps(schema))
+    broken_schema["properties"]["nodes"]["additionalProperties"]["required"].append("remediated")
+    Draft202012Validator.check_schema(broken_schema)
+    broken_validator = Draft202012Validator(broken_schema)
+
+    example = json.loads((EXAMPLES / "student-state.json").read_text())
+    assert "remediated" not in example["nodes"]["exponent-laws"], "fixture precondition failed"
+
+    broken_errors = sorted(
+        e.message
+        for e in broken_validator.iter_errors(example)  # pyright: ignore[reportUnknownMemberType]
+    )
+    assert broken_errors, "guard failed to fail: a required remediated did not reject exponent-laws"
+
+    real_errors = _errors("student-state", example)
+    assert not real_errors, f"the real schema wrongly rejects exponent-laws: {real_errors}"
+
+
+def test_past_last_unit_required_guard_is_real() -> None:
+    """C2 negative control for T5 guard 2: same reconstruction for `marker.past_last_unit` (arbiter
+    Q-F: "It is not required") — the pre-existing `marker` object carries no `past_last_unit` key."""
+    schema = _schema("student-state")
+    marker_schema = schema["properties"]["marker"]
+    assert "past_last_unit" not in marker_schema["required"], "fixture precondition: already required"
+
+    broken_schema = json.loads(json.dumps(schema))
+    broken_schema["properties"]["marker"]["required"].append("past_last_unit")
+    Draft202012Validator.check_schema(broken_schema)
+    broken_validator = Draft202012Validator(broken_schema)
+
+    example = json.loads((EXAMPLES / "student-state.json").read_text())
+    assert "past_last_unit" not in example["marker"], "fixture precondition failed"
+
+    broken_errors = sorted(
+        e.message
+        for e in broken_validator.iter_errors(example)  # pyright: ignore[reportUnknownMemberType]
+    )
+    assert broken_errors, "guard failed to fail: a required past_last_unit did not reject marker"
+
+    real_errors = _errors("student-state", example)
+    assert not real_errors, f"the real schema wrongly rejects marker: {real_errors}"
+
+
+def test_remediated_type_guard_is_real() -> None:
+    """C2 negative control for T5 guard 1: reconstructs the defect of an open (untyped) `remediated`
+    property (`{}` instead of `{"type": "boolean"}`) and proves that, under that defect,
+    `test_node_state_remediated_must_be_boolean`'s mutated instance (a string `remediated`) would
+    wrongly validate — showing the type constraint in the real schema is load-bearing, not vacuous."""
+    schema = _schema("student-state")
+    node_props = schema["properties"]["nodes"]["additionalProperties"]["properties"]
+    assert node_props["remediated"] == {"type": "boolean"}, "fixture precondition failed"
+
+    broken_schema = json.loads(json.dumps(schema))
+    broken_schema["properties"]["nodes"]["additionalProperties"]["properties"]["remediated"] = {}
+    Draft202012Validator.check_schema(broken_schema)
+    broken_validator = Draft202012Validator(broken_schema)
+
+    example = json.loads((EXAMPLES / "student-state.json").read_text())
+    example["nodes"]["matrix-multiplication"]["remediated"] = "true"
+
+    assert broken_validator.is_valid(example), (  # pyright: ignore[reportUnknownMemberType]
+        "guard reconstruction is wrong: the open schema still rejects a string remediated"
+    )
+    real_errors = _errors("student-state", example)
+    assert real_errors, "the real schema failed to reject the same string remediated value"
+
+
+def test_past_last_unit_type_guard_is_real() -> None:
+    """C2 negative control for T5 guard 1: same reconstruction for `marker.past_last_unit` — an open
+    (untyped) property would let `test_marker_past_last_unit_must_be_boolean`'s mutated instance (an
+    integer `past_last_unit`) wrongly validate."""
+    schema = _schema("student-state")
+    marker_props = schema["properties"]["marker"]["properties"]
+    assert marker_props["past_last_unit"] == {"type": "boolean"}, "fixture precondition failed"
+
+    broken_schema = json.loads(json.dumps(schema))
+    broken_schema["properties"]["marker"]["properties"]["past_last_unit"] = {}
+    Draft202012Validator.check_schema(broken_schema)
+    broken_validator = Draft202012Validator(broken_schema)
+
+    example = json.loads((EXAMPLES / "student-state.json").read_text())
+    example["marker"]["past_last_unit"] = 1
+
+    assert broken_validator.is_valid(example), (  # pyright: ignore[reportUnknownMemberType]
+        "guard reconstruction is wrong: the open schema still rejects an integer past_last_unit"
+    )
+    real_errors = _errors("student-state", example)
+    assert real_errors, "the real schema failed to reject the same integer past_last_unit value"
