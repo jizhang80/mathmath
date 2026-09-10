@@ -49,7 +49,8 @@ the device (I5).
 
 ### W1 — Launch
 **Pre:** app start. **Steps:** 1. Load the active `ContentBundle` (installed hosted set, else the offline
-snapshot); verify hashes; a failure falls back to the snapshot (`PLATFORM_BUNDLE_INTEGRITY_FAILED`).
+snapshot); verify hashes; a failure falls back to the snapshot (`PLATFORM_BUNDLE_INTEGRITY_FAILED`). If the
+snapshot itself fails, `PLATFORM_SNAPSHOT_REFUSED` and no map is rendered.
 2. Read `StudentState` (W3); none → a fresh default. 3. Collect `CapabilityFacts`. 4. Hand control to
 **map** W1. Tier 0. **Post:** `platform.launched` emitted.
 
@@ -98,6 +99,7 @@ No unsupported page: the OS floor is enforced at install (D34).
 |---|---|---|---|
 | `PLATFORM_BUNDLE_FETCH_FAILED` | A hosted bundle could not be fetched | "Could not refresh content; still using the installed version" | Yes |
 | `PLATFORM_BUNDLE_INTEGRITY_FAILED` | Hash mismatch or a bundle failing load-time validation (`MAP_LAYOUT_MISSING`, I8) | Same message; the snapshot or installed set stays | Yes, never tolerated |
+| `PLATFORM_SNAPSHOT_REFUSED` | The offline snapshot shipped in the build fails a load-time check (manifest completeness, format major, L0) and no other set is installed | "The map could not be loaded from this copy of the app; reinstall the app to fix it." No map is rendered | No — needs a new build |
 | `PLATFORM_STATE_WRITE_FAILED` | The JSON write failed | Banner from the calling domain | Yes — retried |
 | `PLATFORM_STATE_UNREADABLE` | Migration failed | "Earlier progress could not be read; it has been kept" | Yes — file retained |
 | `PLATFORM_SYNC_UNAVAILABLE` | Not signed in, or iCloud errored | Nothing (silent); status in Settings | Yes |
