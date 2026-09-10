@@ -1,4 +1,4 @@
-# Epic 02 · Task 11: Diagnosis machine (§4 state machine) + C1 expedition↔diagnosis seam
+# Epic 02 · Task 11: Diagnosis machine (§4 state machine, step-wise) + C1 expedition↔diagnosis seam
 
 ---
 epic: 02
@@ -12,42 +12,63 @@ model: opus
 
 ## §1 Goal & acceptance criteria
 
-Goal: Implement the Door A diagnosis state machine (`contracts/interaction-contract.md` § 4; `docs/domains/diagnosis.md` W1–W6) as a pure `Core` module — `opened → hypothesis → (probe | hint) → (remediation | hint) → returned`, with `capped` as a terminal branch — reachable from either of the two triggers, budget-checked at every level, and ship its Tier-0 completeness suite and the C1 expedition↔diagnosis seam test that drives a real `ExpeditionRun` into a real diagnosis and back.
+Goal: Implement the Door A diagnosis state machine (`contracts/interaction-contract.md` § 4; `docs/domains/diagnosis.md` W1–W6) as a pure, **step-wise** `Core` module. The states are `opened → hypothesis → (probe | hint) → (remediation | hint) → returned`, with `capped` as a terminal branch. There is one public function per student decision point, each returning the next phase value, the threaded `StudentState` and that call's `CoreEvent`s. This mirrors `ExpeditionRun`. The machine is reachable from either trigger and is budget-checked on cumulative graph depth. The task also ships a thin batch driver built only on the step functions, its Tier-0 completeness suite, and the C1 expedition↔diagnosis seam test. That test drives a real `ExpeditionRun` into a real step-wise diagnosis and back. The step-wise shape is mandated by `tasks/arbitration/arbiter-02-11-stepwise-api.md`: a touch UI (EPIC 04) learns each decision only after showing the previous screen, and the render layer may not compute state (I14).
 
 Invariants in play:
-- **I1** — every probe item is checked by `ItemChecker.check` (task 02.07); no code path lets a model decide `pass`/`fail`.
-- **I2** — every diagnosis workflow (W1–W6) completes with no adapter; the Tier-0 completeness suite proves this over real `data/demo`.
-- **I3** — every terminal that shows a hint carries `why`/answer display data already on the shown probe `ItemResult`s (task 02.07's `ItemResult`); no path withholds an already-answered item's answer.
-- **I4** — `depthReached ≤ levelBudget ≤ 2` from the origin, enforced before any probe or remediation at the next level; a level beyond the budget is never probed — it becomes `capped` instead, and the capped candidate is `blocked` in `StudentState` only (no other consumer). Concretely: once `levelReached == levelBudget`, a `.confirmed` probe at that level goes straight to `.capped` — the further-level offer is never constructed and `decision.acceptFurtherLevel` is never read.
+- **I1** — every probe item is checked by `ItemChecker.check` inside `DiagnosisRun.answerProbeItem`; no code path lets a model decide `pass`/`fail`.
+- **I2** — every diagnosis workflow (W1–W6) completes with no adapter; no public function has an adapter parameter; the Tier-0 completeness suite proves this over real `data/demo`.
+- **I3** — every `answerProbeItem` call returns the checked item's `ItemResult` (with `correctAnswerDisplay` and `why`) on the same `DiagnosisAdvance` that carries the next phase, so an answer is shown before any next item or terminal is reachable. The terminal outcome keeps every probe `ItemResult` in `probeResults`. No path withholds an already-answered item's answer.
+- **I4** — `level` is the **cumulative graph depth from the origin** (sum of `PrerequisiteCandidate.depth` along the chain). Each hypothesis queries only `levelBudget - priorLevel` levels. A `confirmed` probe with `level >= levelBudget` constructs no `FurtherLevelOffer`, so no further-level decision can be taken. The confirmed candidate keeps its W4 effects (`blocked`, one remediation piece, `remediated = true`). W6 then runs in the same advance: the confirmed candidate's own unmastered prerequisite one level up (W6's "deeper candidate") is marked `blocked` in `StudentState` only, with no probe, no remediation and no `remediated`, and the terminal is `capped`. If there is no such prerequisite, the terminal is `confirmed`. `depthReached` counts probed depth only, and `depthReached ≤ levelBudget ≤ 2` holds on every path. Deeper gaps are marked on the map only (`CLAUDE.md` I4; `tasks/arbitration/arbiter-02-11-capped-remediated.md`).
 - **I5** — `DiagnosisOutcome` carries only ids (`nodeId`, `errorTypeId`), enums, booleans and small integers, plus the already-I5-cleared `ItemResult` type (02.07); no new free-text field is added to `StudentState`.
-- **I14** — `Sources/Core/Diagnosis/DiagnosisEvent.swift` imports Foundation only; every function is a pure value transformation; no `Date()` call (an injected `CalendarDay` `today` is threaded through, per `MasteryTransitions`/`ExpeditionRun` precedent).
-- **D27** — at most one diagnosis per expedition run; this task never re-triggers itself — the caller controls how many times `DiagnosisRun.run` is invoked.
+- **I14** — `Sources/Core/Diagnosis/DiagnosisEvent.swift` imports Foundation only; every function is a pure value transformation; no `Date()` call (an injected `CalendarDay` `today` is threaded through, per the `MasteryTransitions`/`ExpeditionRun` precedent). The App drives the machine only through the public step functions. The internal helpers are not reachable from `App/Sources`, and no phase value has a public initializer, so the App cannot compute or forge a diagnosis state.
+- **D27** — at most one diagnosis per expedition run; this task never re-triggers itself — the caller decides whether to call `DiagnosisRun.start`.
 
-Acceptance criteria:
+Acceptance criteria (every AC except AC15 is asserted by driving the **step API** directly; "the sequence" means the concatenation of every `DiagnosisAdvance.events` from `start` through the terminal advance):
 
-- AC1: `DiagnosisRun.open(originNodeId:trigger:levelBudget:)` returns a `DiagnosisEvent` for both `trigger` values (`.expeditionSecondMiss`, `.mapCheckHere`); `DiagnosisRun.run` always emits `.diagnosisOpened` first and `.diagnosisReturned` last, exactly once each, regardless of terminal.
-- AC2: A `run` call whose `hypothesise` step finds no candidate at level 1 ends with `terminal == .noPrerequisite`, `code == .diagNoPrerequisite`, `hintNodeId == originNodeId`, no `.diagnosisHypothesisFormed`/`.diagnosisProbeCompleted` event, and `state.nodes` unchanged from the input.
-- AC3: A `run` call whose probe is declined (`decisions[0].declineProbe == true`) ends with `terminal == .unconfirmed`, `code == nil`, `hintNodeId == originNodeId`, no items drawn (`probeResults == []`), `state.probeLog` unchanged from the input, and exactly one `.diagnosisProbeCompleted` event — the declined probe outcome (payload value `declined`, carried by `DiagnosisProbeResult.outcome == .declined`; §6, `tasks/arbitration/arbiter-02-11-probe-completed.md`). `events == [.diagnosisOpened, .graphPrerequisiteReturned, .diagnosisHypothesisFormed, .diagnosisProbeCompleted, .diagnosisReturned]`.
-- AC4: A `run` call on a candidate with fewer than 2 available items (per the Q-G "available" rule) ends with `terminal == .unconfirmed`, `code == .diagProbeUnavailable`, `hintNodeId == originNodeId`, `probeResults == []`, and **no** `.diagnosisProbeCompleted` event — no probe was formed, and `unavailable` is not a probe outcome (§6). `events == [.diagnosisOpened, .graphPrerequisiteReturned, .diagnosisHypothesisFormed, .diagnosisReturned]`.
-- AC5: A `run` call whose 2 drawn probe items are both answered correctly ends with `terminal == .refuted`, `hintNodeId == originNodeId`, the candidate's `state.nodes[candidateId]` unchanged (not `blocked`), and `probeResults.count == 2`.
-- AC6: A `run` call whose 2 drawn probe items include at least one incorrect answer, at budget 1 (Demo), ends with `terminal == .capped` **regardless of `decisions[0].acceptFurtherLevel`'s value** — budget is exhausted at level 1 (`1 == levelBudget`), so the further-level offer is never made and `acceptFurtherLevel` is never read (`contracts/interaction-contract.md` § 4: "beyond the budget → `capped`"). It also ends with `state.nodes[candidateId]!.mastery == .blocked`, `state.nodes[candidateId]!.remediated == true`, `blockedNodeIds == [candidateId]`, events include `.diagnosisNodeBlocked`, `.diagnosisRemediationShown`, `.diagnosisCapped` in that order before the final `.diagnosisReturned`, and no hint is shown (`hintNodeId == nil`).
-- AC7: The same confirmed-candidate case at budget 2, level 1, where budget remains (`1 < 2`) so the further-level offer is made and `decisions[0].acceptFurtherLevel == false` (declined): ends with `terminal == .confirmed` (not `.capped`), the same `blocked`/`remediated` state, and no `.diagnosisCapped` event.
-- AC8: The same case at budget 2, level 1, where budget remains so the offer is made and `decisions[0].acceptFurtherLevel == true` (accepted): `run` recurses — `hypothesise`/`probe` run again on the level-1 candidate as the new origin of the query. A level-2 `confirmed` outcome then hits `level == levelBudget == 2`: budget is exhausted at level 2, so the offer is never made there and `decisions[1].acceptFurtherLevel` (whatever it is, including absent/defaulted) is never read. `blockedNodeIds` contains both candidates, `depthReached == 2`, and `terminal == .capped`.
-- AC9: `remediated` is set `true` only via the `remediate` step (on a `confirmed` outcome, after the remediation piece is "shown" — i.e., unconditionally as part of that step, since `Core` has no separate "shown" event to wait on); it is never set on a `capped`-only path that did not first pass through `remediate` (there is none — every `capped` in this design was `confirmed` and remediated one step earlier, per §4).
-- AC10: `trigger == .mapCheckHere` never appends to `state.expeditionLog`; only `state.nodes` and `state.probeLog` change, matching the epic brief's technical default.
-- AC11 (Tier-0 completeness, `DiagnosisTier0CompletenessTests.swift`): every one of `{noPrerequisite, refuted, confirmed-then-capped, unconfirmed-declined, unconfirmed-unavailable}` is reached by a call into `DiagnosisRun.run` over the real `data/demo` bundle, Demo budget 1, with no adapter parameter anywhere in the call chain. `DIAG_PROBE_UNAVAILABLE` is reached via the arbiter's constructed-state recipe (§4.6).
-- AC12 (C1 seam, `ExpeditionDiagnosisSeamTests.swift`): a real `ExpeditionRun.start`/`.answer` sequence on real `data/demo` reaches a second miss (`AnswerOutcome.events` containing `.expeditionDiagnosisRequested`), a real `DiagnosisRun.run` call (not a stub) drives that event to a terminal, `ExpeditionRun.resume(run:)` is called on the resulting `run`, and the run continues to its next item using a `StudentState` built by folding the diagnosis outcome's `state` forward. Exactly one diagnosis is driven; the diagnosis's blocked candidate is visible in the threaded `StudentState`; every prior answered item's `ItemResult` is still present in `run.results`.
-- AC13 (properties, `DiagnosisMachineTests.swift`, generated graphs/states): the 9 properties of §4.7 hold, including the Q3 tie-break on constructed ties, "every path terminates in `.diagnosisReturned`", "every `capped` or `confirmed` candidate is `blocked` in state" and "`depthReached ≤ levelBudget ≤ 2`" — the last two are asserted specifically over the budget-exhaustion branch: a `.confirmed` outcome at `level == levelBudget` always yields `terminal == .capped` and `blocked`, never `.confirmed`, independent of the generated `decision.acceptFurtherLevel` value at that level.
+- AC1: `DiagnosisRun.open(originNodeId:trigger:levelBudget:)` returns a `DiagnosisEvent` carrying exactly its three arguments for both `trigger` values (`.expeditionSecondMiss`, `.mapCheckHere`). `start`'s advance begins with `.diagnosisOpened`. Every path's terminal advance (`step == .returned`) ends with `.diagnosisReturned`. In the sequence each of the two appears exactly once, first and last. The sequence `==` the terminal `DiagnosisOutcome.events`, and every non-terminal advance's `step` is not `.returned`.
+- AC2: A `start` whose hypothesis finds no candidate returns `.returned` directly with `terminal == .noPrerequisite`, `code == .diagNoPrerequisite`, `hintNodeId == originNodeId`, `outcome.events == [.diagnosisOpened, .graphPrerequisiteReturned, .diagnosisReturned]`, and `state.nodes` unchanged from the input.
+- AC3: `start` → `.probeOffer`, then `decideProbe(accept: false)`, gives `.returned` with `terminal == .unconfirmed`, `code == nil`, `hintNodeId == originNodeId`, `probeResults == []`, and `state.probeLog` unchanged. The advance's `probeResult == DiagnosisProbeResult(outcome: .declined, results: [], incorrectAttempts: [], code: nil)` and its `events == [.diagnosisProbeCompleted, .diagnosisReturned]`. The full sequence `== [.diagnosisOpened, .graphPrerequisiteReturned, .diagnosisHypothesisFormed, .diagnosisProbeCompleted, .diagnosisReturned]` (`tasks/arbitration/arbiter-02-11-probe-completed.md`).
+- AC4: `decideProbe(accept: true)` on a candidate with fewer than 2 available items (per the Q-G "available" rule) gives `.returned` with `terminal == .unconfirmed`, `code == .diagProbeUnavailable`, `hintNodeId == originNodeId` and `probeResults == []`. The advance's `probeResult?.outcome == .unavailable`, and its `events == [.diagnosisReturned]`, with **no** `.diagnosisProbeCompleted`. The full sequence `== [.diagnosisOpened, .graphPrerequisiteReturned, .diagnosisHypothesisFormed, .diagnosisReturned]`.
+- AC5: `decideProbe(accept: true)` with ≥ 2 available items returns `.probeItem(p)` with `p.items.count == 2`, `p.levelResults == []`, `events == []`. The first `answerProbeItem` returns `.probeItem(p')` with `p'.levelResults.count == 1`, `itemResult != nil`, `events == []`. When both items are answered correctly, the second call returns `.returned` with `terminal == .refuted`, `hintNodeId == originNodeId`, `state.nodes[candidateId]` unchanged, `probeResults.count == 2`, and advance `events == [.diagnosisProbeCompleted, .diagnosisReturned]`.
+- AC6 (capped, budget 1): Fixture: the real `data/demo` bundle, `open(originNodeId: "polynomials", trigger: .mapCheckHere, levelBudget: 1)`, and a constructed `StudentState` in which `exponent-laws` and `solving-linear-equations` are absent from `state.nodes` (fog). The candidate is `c == "exponent-laws"` and its only prerequisite is `d == "solving-linear-equations"` (`data/demo/edges.json:21-22`, `:37-38`). A second `answerProbeItem` with at least one incorrect answer among the 2 returns `.returned` with `terminal == .capped` directly. No `.furtherLevelOffer` step is ever returned on this path, because the budget is exhausted (`level 1 == levelBudget 1`). The advance's `state` has:
+  - `state.nodes[c]!.mastery == .blocked` and `state.nodes[c]!.remediated == true` (confirmed, remediation piece shown);
+  - `state.nodes[d]!.mastery == .blocked` and `state.nodes[d]!.remediated == nil` (a `capped` node never has `remediated` written; `contracts/data-model.md` § StudentState);
+  - no `probeLog` row with `nodeId == d`.
+
+  The outcome has `blockedNodeIds == [c, d]`, `depthReached == 1` and `hintNodeId == nil`. The advance `events == [.diagnosisProbeCompleted, .diagnosisNodeBlocked, .diagnosisRemediationShown, .graphPrerequisiteReturned, .diagnosisNodeBlocked, .diagnosisCapped, .diagnosisReturned]`. The thin driver `run` on the same fixture yields `.capped` both for `decisions[0].acceptFurtherLevel == false` and for `== true`.
+- AC6b (exhausted budget, no deeper gap): the AC6 fixture with `solving-linear-equations` set to `cleared` in `state.nodes`, and the same failed probe. The call returns `.returned` with `terminal == .confirmed`, `code == nil` and `hintNodeId == nil`. The outcome has `state.nodes[c]!.mastery == .blocked`, `state.nodes[c]!.remediated == true`, `state.nodes["solving-linear-equations"]` unchanged from the input, `blockedNodeIds == [c]` and `depthReached == 1`. The advance `events == [.diagnosisProbeCompleted, .diagnosisNodeBlocked, .diagnosisRemediationShown, .graphPrerequisiteReturned, .diagnosisReturned]`. The sequence contains no `.diagnosisCapped`, and no `.furtherLevelOffer` is ever returned.
+- AC7: The same confirmed case at budget 2 with a depth-1 candidate (`1 < 2`, budget remains) returns `.furtherLevelOffer(f)` with `f.candidateId == candidateId`. Its `state` has `state.nodes[candidateId]!.mastery == .blocked` and `state.nodes[candidateId]!.remediated == true`, and its `events == [.diagnosisProbeCompleted, .diagnosisNodeBlocked, .diagnosisRemediationShown]`. `decideFurtherLevel(f, accept: false)` then returns `.returned` with `terminal == .confirmed` (not `.capped`), `hintNodeId == nil` and `events == [.diagnosisReturned]`. The sequence contains no `.diagnosisCapped`.
+- AC8: The same offer, `decideFurtherLevel(f, accept: true)`: the advance's `events` begin `[.graphPrerequisiteReturned, …]`, and the hypothesis uses the level-1 candidate `c1` as query origin with `levelBudget - 1` levels. On a found level-2 candidate `c2`, the step is `.probeOffer` with `context.level == 2`. Accept that probe and fail it at `level == levelBudget == 2`, on a fixture where `c2` has an unmastered prerequisite `c3` one level up. The call returns `.returned` directly with:
+  - `terminal == .capped`, `blockedNodeIds == [c1, c2, c3]` and `depthReached == 2`;
+  - `remediated == true` on `c1` and `c2`;
+  - `c3`'s `remediated` equal to its input value (`nil` on a fresh fog node), and no `probeLog` row for `c3`.
+
+  No second `.furtherLevelOffer` is returned.
+- AC8b (I4, cumulative depth): at budget 2, a level-1 candidate `c` at graph depth 2 (`PrerequisiteCandidate.depth == 2`) gives `.probeOffer` with `context.level == 2`. Fail its probe, on a fixture where `c` has an unmastered prerequisite `d` one level up (graph depth 3 from the origin). The call returns `.returned` with `terminal == .capped`, `blockedNodeIds == [c, d]` and `depthReached == 2`: `d` is marked, not probed, so its depth is not counted. It never returns a `.furtherLevelOffer`.
+- AC9: `remediated` is set `true` only by the confirmed branch of `answerProbeItem`, and only on the probed candidate that failed (via the internal `remediate` helper). It is set unconditionally at that step, since `Core` has no separate "shown" event to wait on. The internal `capped` helper never writes it: the W6 node's `remediated` equals its input value (absent stays absent). No other path writes it: `refuted`, declined, unavailable, `noPrerequisite` and `decideFurtherLevel`. `contracts/data-model.md` § StudentState: "A node blocked by `capped` … does not carry it".
+- AC10: no step function ever changes `state.expeditionLog` (for both triggers); only `state.nodes` and `state.probeLog` change, and only in the confirmed branch of `answerProbeItem`.
+- AC11 (Tier-0 completeness, `DiagnosisTier0CompletenessTests.swift`): each of the following is reached by step API calls over the real `data/demo` bundle, at Demo budget 1, with no adapter parameter anywhere in the call chain: `noPrerequisite`, `refuted`, `confirmed` (the AC6b recipe), `capped` (the AC6 recipe), `unconfirmed`-declined and `unconfirmed`-unavailable. `DIAG_PROBE_UNAVAILABLE` is reached via the arbiter's constructed-state recipe (§3).
+- AC12 (C1 seam, `ExpeditionDiagnosisSeamTests.swift`): a real `ExpeditionRun.start`/`.answer` sequence on real `data/demo` reaches a second miss (`AnswerOutcome.events` containing `.expeditionDiagnosisRequested`). Real step calls (`open` → `start` → `decideProbe` → `answerProbeItem` × 2, none stubbed) drive that miss to a terminal. `ExpeditionRun.resume(run:)` is then called on the suspended run, and the run continues to its next item with the terminal advance's `state` threaded into the next `ExpeditionRun.answer`. Exactly one diagnosis is driven. The diagnosis's probed candidate is visible in the threaded `StudentState` as `blocked` with `remediated == true`. Every prior answered item's `ItemResult` is still present in `run.results`.
+- AC13 (properties, `DiagnosisMachineTests.swift`, generated graphs/states): the 9 properties of §3 (epic §4 item 5) hold when the machine is driven step by step with generated accept/decline and answer choices. This includes:
+  - the Q3 tie-break on constructed ties;
+  - "every path terminates in `.diagnosisReturned`";
+  - "every `capped` or `confirmed` candidate is `blocked` in state";
+  - "a `confirmed` candidate carries `remediated = true` once its remediation piece is shown; a `capped` candidate does not" (asserted as: each failed probed candidate has `remediated == true`; when `terminal == .capped`, the W6 node `blockedNodeIds.last` has `remediated` equal to its input value);
+  - "`depthReached ≤ levelBudget ≤ 2`".
+
+  Additionally, **driver equivalence**: for every generated `decisions` array, `DiagnosisRun.run(...)` `==` the terminal outcome obtained by feeding the same decisions to the step functions by hand.
+- AC14 (I3 per item): every `answerProbeItem` advance carries `itemResult != nil` with non-empty `correctAnswerDisplay` and `why`, `itemResult.isRetry == false`. The terminal `probeResults` equals the ordered list of every `itemResult` returned along the path.
+- AC15 (no forged phases): `DiagnosisEvent.swift` declares exactly one `public init`, `DiagnosisLevelDecision`'s. `ProbeOffer`, `ProbeInProgress`, `FurtherLevelOffer`, `DiagnosisContext`, `DiagnosisOutcome`, `DiagnosisAdvance`, `DiagnosisProbeResult` and `DiagnosisEvent` rely on Swift's internal memberwise initializer. Instrument: `grep -c 'public init' Packages/Core/Sources/Core/Diagnosis/DiagnosisEvent.swift` prints `1` (0 or ≥ 2 = FAIL).
 
 ## §2 File scope
 
 In-scope (the implementer touches EXACTLY these; nothing else):
 
-- `Packages/Core/Sources/Core/Diagnosis/DiagnosisEvent.swift` — CREATE. The diagnosis types (`DiagnosisTrigger`, `DiagnosisEvent`, `DiagnosisTerminal`, `DiagnosisLevelDecision`, `DiagnosisOutcome`, `ProbeOutcome`, `DiagnosisProbeResult`, `DiagnosisHypothesisResult`) and the `DiagnosisRun` enum namespace (`open`, `classify`, `hypothesise`, `probe`, `offered`, `remediate`, `capped`, `returned`, `run`). Sibling of `Packages/Core/Sources/Core/Diagnosis/Classify.swift` (task 02.10).
-- `Packages/Core/Tests/CoreTests/DiagnosisMachineTests.swift` — CREATE. Unit tests per named step and the §4.7 property suite.
+- `Packages/Core/Sources/Core/Diagnosis/DiagnosisEvent.swift` — CREATE. Public diagnosis types (`DiagnosisTrigger`, `DiagnosisEvent`, `DiagnosisTerminal`, `ProbeOutcome`, `DiagnosisProbeResult`, `DiagnosisOutcome`, `DiagnosisContext`, `ProbeOffer`, `ProbeInProgress`, `FurtherLevelOffer`, `DiagnosisStep`, `DiagnosisAdvance`, `DiagnosisLevelDecision`) and the `DiagnosisRun` enum namespace. It exposes the public `open`, `start`, `decideProbe`, `answerProbeItem`, `decideFurtherLevel` and `run` (thin driver), and the internal helpers `classify`, `hypothesise`, `drawProbeItems`, `offered`, `remediate`, `capped`, `hintKey`, `terminal`. Sibling of `Packages/Core/Sources/Core/Diagnosis/Classify.swift` (task 02.10).
+- `Packages/Core/Tests/CoreTests/DiagnosisMachineTests.swift` — CREATE. Step-function unit tests, internal-helper tests, the §3 property suite, driver equivalence.
 - `Packages/Core/Tests/CoreTests/DiagnosisTier0CompletenessTests.swift` — CREATE. AC11.
 - `Packages/Core/Tests/CoreTests/ExpeditionDiagnosisSeamTests.swift` — CREATE. AC12 (C1).
-- `Packages/Core/Tests/CoreTests/Support/PropertyGen.swift` — MODIFY, append-only. Add this task's own generator(s) (e.g. a random `DiagnosisLevelDecision` sequence, a random `FailedProbeAttempt` list) to the existing `PropertyGen` enum; do not alter any existing function in this file.
+- `Packages/Core/Tests/CoreTests/Support/PropertyGen.swift` — MODIFY, append-only. Add this task's own generators (a random `DiagnosisLevelDecision` sequence, a random accept/decline + answer-choice script for the step API, a random `FailedProbeAttempt` list) to the existing `PropertyGen` enum; do not alter any existing function in this file.
 
 Out-of-scope (do not touch even if tempted):
 
@@ -55,14 +76,14 @@ Out-of-scope (do not touch even if tempted):
 - `Packages/Core/Sources/Core/Graph/PrerequisiteQuery.swift` (task 02.10) — call `PrerequisiteQuery.deepestUnmasteredPrerequisite` by name only.
 - `Packages/Core/Sources/Core/Diagnosis/Classify.swift` (task 02.10) — call `Classify.classify` by name only.
 - `Packages/Core/Sources/Core/State/MasteryTransitions.swift`, `Packages/Core/Sources/Core/State/Expedition.swift`, `Packages/Core/Sources/Core/ItemChecker.swift` — call their public functions only.
-- `Packages/Core/Sources/Core/Events/CoreEvent.swift`, `Packages/Core/Sources/Core/CoreError.swift` — every case this task needs already exists (verified below); no edit.
-- `Packages/Core/Sources/Core/Model/*.swift`, `contracts/**`, `data/demo/**`, `docs/**` — read-only.
+- `Packages/Core/Sources/Core/Events/CoreEvent.swift`, `Packages/Core/Sources/Core/CoreError.swift` — every case this task needs already exists (verified in §3); no edit.
+- `Packages/Core/Sources/Core/Model/*.swift`, `App/**`, `contracts/**`, `data/demo/**`, `docs/**` — read-only.
 
 ## §3 Inputs (verbatim — do not paraphrase)
 
 Binding contract rules:
 
-- `contracts/interaction-contract.md` — heading `## 4. Diagnosis (Door A)`:
+- `contracts/interaction-contract.md` — heading `## 4. Diagnosis (Door A)` (`:76-99`):
   > States: `opened → hypothesis → (probe | hint) → (remediation | hint) → returned`, with `capped` as a
   > terminal branch.
   >
@@ -86,13 +107,54 @@ Binding contract rules:
   > no path reaches `remediation` without a `fail` probe outcome; no path withholds an already-answered item's
   > answer (I3); Tier 0 completes every path with the adapter absent (I2).
 
-  Byte-verified against `contracts/interaction-contract.md:76-99` in the current tree. The line "beyond the
-  budget → `capped`: candidate `blocked`" (`:93-94`) is the sole textual anchor for the capped branch:
-  `capped` is the terminal that fires exactly when the level reached is at or beyond the budget, with no
-  condition on whether the student would have accepted a further level — the offer clause ("offered, never
-  automatic") only governs the case where budget still remains. The `probe` bullet names three probe outcomes
-  (`pass`, `fail`, `declined`) and states the fewer-than-2-items case separately as an error code — the anchor
-  for the §6 `probe_completed` emission rule.
+  **Capped anchor** (per `tasks/arbitration/arbiter-02-11-capped-remediated.md`).
+  - The `probe` bullet's `fail` arrow applies to **every** failed probe, including the one at the last budgeted
+    level: "candidate `blocked`, one remediation piece, candidate `remediated = true` once that piece is shown".
+  - "beyond the budget → `capped`: candidate `blocked`, "further upstream — it's on your map"" (`:93-94`) names
+    **no** remediation piece. W4 step 3 ("beyond the cap, W6") and W6 ("no probe, no remediation; the deeper
+    candidate is marked `blocked`") identify its subject: the next unmastered gap upstream of the confirmed
+    candidate, which the budget forbids probing.
+  - A `capped` node is therefore never the same node as a `fail` candidate, and it never has `remediated`
+    (`contracts/data-model.md` § StudentState, below).
+  - The contract property "every capped or failed candidate is `blocked`" lists the two as distinct candidates.
+  - "Depth ≤ 2 from origin" is the backtrack depth (probed and remediated). The W6 node is beyond it by
+    definition and is "marked on the map only" (`CLAUDE.md` I4).
+  - "within remaining levels" (`:84`) and "depth ≤ 2 from origin" (`:97`) anchor the cumulative-depth convention
+    (§6).
+  - The `probe` bullet names three probe outcomes (`pass`, `fail`, `declined`) and states the fewer-than-2-items
+    case separately as an error code. That is the anchor for the §6 `probe_completed` emission rule.
+
+- `contracts/data-model.md` — heading `### StudentState (`student-state.schema.json`)` (`:143-147`):
+  > `remediated` (boolean, optional; absent = false) records that a diagnosis event confirmed this node (probe
+  > outcome `fail`) and showed its one remediation piece (diagnosis W4). It is written `true` only by that step
+  > and only on a node whose `mastery` is `blocked`; it is removed whenever the node becomes `cleared`. A node
+  > blocked by `capped` or by a second miss after the run's Door A event was spent does not carry it. It is a
+  > fact about a node, never about a person, device, install or session (I5).
+
+- `contracts/interaction-contract.md` — heading `## 2. Expedition (Door B)`, `compose` bullet (`:32-37`), the
+  consumer of `remediated`:
+  > - `compose` (D48, D45, D46, v2.7 §3): fringe = `{n : mastery(n) ≠ cleared ∧ ∀ p ∈ prereq(n): mastery(p) =
+  >   cleared ∨ (mastery(p) = blocked ∧ remediated(p))}` ∩ (nodes of `marker.unit ∪ next(marker.unit)`, or the
+  >   requested unit only) ∪ `{n : mastery(n) = blocked}`. …
+  >   `remediated(p)` ≡ `nodes[p].remediated == true` (`data-model.md` § StudentState; absent = false).
+
+  Landed guard, `Packages/Core/Sources/Core/State/Expedition.swift:183-194` (read-only here):
+  ```swift
+  private static func isRemediated(_ nodeId: String, in state: StudentState) -> Bool {
+      state.nodes[nodeId]?.remediated ?? false
+  }
+
+  private static func prerequisiteGuardSatisfied(
+      _ nodeId: String, state: StudentState, edgesByTo: [String: [Edge]]
+  ) -> Bool {
+      (edgesByTo[nodeId] ?? []).allSatisfy { edge in
+          let p = edge.from
+          return mastery(of: p, in: state) == .cleared
+              || (mastery(of: p, in: state) == .blocked && isRemediated(p, in: state))
+      }
+  }
+  ```
+  A `remediated == true` on a capped node would open this guard for a gap the student was never remediated on.
 
 - `contracts/interaction-contract.md` — heading `## 5. Notifications (in-process names, exact)`:
   > `map.opened · map.node_opened · map.region_opened · map.landmark_opened · map.marker_moved ·
@@ -127,7 +189,20 @@ Binding contract rules:
   > `{"code": "DIAG_PROBE_UNAVAILABLE", "recoverable": true, "surface": "student", "user_text": "No quick check is available for this one yet; here's a hint instead."}`
   > `{"code": "DIAG_STATE_WRITE_FAILED", "recoverable": true, "surface": "student", "user_text": "Your progress could not be saved just now; it will be retried."}` — not thrown by this task (§6).
 
-Domain-doc workflows (`docs/domains/diagnosis.md`), verbatim:
+Project invariants (`CLAUDE.md`), verbatim:
+
+> | I4 | Remediation is just-in-time: **backtrack ≤ 2 levels per session**; **deeper gaps are marked on the map only** — no record page, no other consumer. | D4 |
+
+> | I14 | **`Core` is renderer-free and single-source**: `Core` imports Foundation only; the render layer never computes state; L0 and layout exist once, in `Core`. A test asserts the import boundary. | D33, D42 |
+
+Downstream consumers (the reason the API is step-wise), verbatim:
+
+- `docs/epic-plan.md:23`, EPIC 04 row (excerpt): "**App: Expedition (Door B) + Diagnosis (Door A) + acceptance instrument** — item view (numeric keypad / choices), answer card with `why`, retry, hypothesis card, probe, remediation, return, summary; … | App↔`Core` state transitions (every screen action is a `Core` call) | App build; one full expedition + one diagnosis completable by touch on the simulator (§8)".
+- `docs/epics/epic-03-app-map-shell.md:58-59`: "**Check me here** → `DiagnosisRun.open(originNodeId:trigger:levelBudget:)` with trigger `map_check_here` and the Demo budget of 1 (02b, task 02.11)."
+- `docs/epics/epic-03-app-map-shell.md:268` (W6 test): "a **real** `DiagnosisRun.run` `confirmed` outcome (block), both on `data/demo`" — the reason the thin driver `run` is kept.
+- `docs/epics/epic-03-app-map-shell.md:473-476`: "**Note for EPIC 04, not in scope here.** The 02.11 spec gives `DiagnosisRun.run` a batch signature that takes every level's decisions up front (`decisions: [DiagnosisLevelDecision]`). A touch UI decides one step at a time." (Resolved by `tasks/arbitration/arbiter-02-11-stepwise-api.md`.)
+
+Domain-doc workflows (`docs/domains/diagnosis.md:52-91`), verbatim:
 
 > ### W1 — Open a diagnosis event
 > **Pre:** `expedition.diagnosis_requested` (D27) or `map.check_here_requested` (D28). **Steps:** 1. Create
@@ -251,6 +326,22 @@ Arbiter ruling (`tasks/arbitration/arbiter-02-11-probe-completed.md`), verbatim:
 >    `DiagnosisProbeResult.outcome`, mapped `refuted → pass`, `confirmed → fail`, `declined → declined`;
 >    `unavailable` has no payload value, which is why it emits no event.
 
+  (`depthReached == level - 1` in item 3 is written for probe-ordinal levels. Under the cumulative-depth
+  convention of `tasks/arbitration/arbiter-02-11-stepwise-api.md` Ruling 4 it reads "the depth reached before
+  this candidate". The two are identical for depth-1 candidates, which is every Demo case; see §6.)
+
+Arbiter ruling (`tasks/arbitration/arbiter-02-11-stepwise-api.md`), Rulings 1–4, binding: the public API is
+`open` / `start` / `decideProbe` / `answerProbeItem` / `decideFurtherLevel` plus the thin driver `run`. The former
+step helpers are `internal`. No phase value has a public initializer. `level` is cumulative graph depth from the
+origin.
+
+Arbiter ruling (`tasks/arbitration/arbiter-02-11-capped-remediated.md`), binding:
+- `remediated` is written only by `remediate`, on the probed candidate that failed. `capped` never writes it.
+- The `capped` node is W6's deeper candidate: the confirmed candidate's unmastered prerequisite one level up, found
+  when no budget remains. It is marked `blocked` with no probe, no remediation and no `probeLog` row.
+- When no budget remains and no such prerequisite exists, the terminal is `confirmed`.
+- `depthReached` counts probed depth only.
+
 `docs/epics/epic-02-core-behaviour.md` §4 items 5–7 (properties, Tier-0 completeness, C1), verbatim:
 
 > 5. **§4 diagnosis.** Property tests over generated graphs and states cover the following:
@@ -284,7 +375,11 @@ Arbiter ruling (`tasks/arbitration/arbiter-02-11-probe-completed.md`), verbatim:
 > - A `map_check_here` diagnosis outside a run logs no `expedition_log` entry (its effects are the
 >   `blocked` marks and `probe_log` rows). `diagnosis_events` stays ≤ 1 per entry per the schema.
 
-Prior signatures this task calls (verbatim, byte-verified against the current tree):
+`data/demo/edges.json` (the AC6/AC6b/AC11 recipe), verified entries: `:21-22` `"from": "solving-linear-equations",
+"to": "exponent-laws"` (the only edge into `exponent-laws`); `:37-38` `"from": "exponent-laws", "to": "polynomials"`
+(confidence 0.95, `:46`); `:229-230` `"from": "simplifying-expressions", "to": "polynomials"` (confidence 0.7, `:238`).
+
+Prior signatures this task calls (verbatim, verified against the current tree):
 
 - `Packages/Core/Sources/Core/Model/StudentState.swift`:
   ```swift
@@ -316,50 +411,43 @@ Prior signatures this task calls (verbatim, byte-verified against the current tr
       public let retry: Bool
   }
   ```
+  (Field order is the one `ExpeditionRun.swift:116-118` and `:158-162` construct these values with.)
 
-- `Packages/Core/Sources/Core/State/MasteryTransitions.swift`:
+- `Packages/Core/Sources/Core/State/MasteryTransitions.swift:85-98`:
   ```swift
-  public struct MasteryTransitionResult: Equatable {
-      public let nodeState: NodeState
-      public let event: CoreEvent?
+  public static func diagnosisBlocked(current: NodeState) -> MasteryTransitionResult {
+      guard current.mastery == .fog else {
+          return MasteryTransitionResult(nodeState: current, event: nil)
+      }
+      let node = NodeState(
+          mastery: .blocked,
+          correctCount: current.correctCount,
+          lastProbe: current.lastProbe,
+          nextDue: current.nextDue,
+          ladderRung: current.ladderRung,
+          remediated: current.remediated
+      )
+      return MasteryTransitionResult(nodeState: node, event: .diagnosisNodeBlocked)
   }
-  /// The `fog | diagnosis_blocked(node) | — | blocked` row only. Called on a node whose
-  /// `mastery != .fog`, this is a no-op (§6 default): returns `current` unchanged, `event: nil`.
-  public static func diagnosisBlocked(current: NodeState) -> MasteryTransitionResult
   ```
+  (`MasteryTransitionResult { nodeState: NodeState; event: CoreEvent? }`. `remediated` passes through unchanged.)
 
-- `Packages/Core/Sources/Core/State/Expedition.swift`:
+- `Packages/Core/Sources/Core/State/Expedition.swift:93-95`:
   ```swift
   public static func selectItem(
       from node: Node, excluding excludedItemIds: Set<String>, probeLog: [ProbeLogEntry]
-  ) -> ProbeItem?
+  ) -> ProbeItem? {
+  ```
+  (`:92`: "`nil` iff every item of `node` is excluded or `node.probeItems` is empty.")
+
+- `Packages/Core/Sources/Core/Model/Nodes.swift:23-24` (on `Node`, alongside `id` and `errorTypes`):
+  ```swift
+  public let hintTree: [String: [String]]
+  public let probeItems: [ProbeItem]
   ```
 
-- `Packages/Core/Sources/Core/Model/Nodes.swift`:
+- `Packages/Core/Sources/Core/Events/CoreEvent.swift:25-31, :49` (bare names; `:3-8`: "`CoreEvent` is a bare name registry — it carries no payload"):
   ```swift
-  public struct Node: Codable, Equatable {
-      public let id: String
-      // ...
-      public let errorTypes: [ErrorType]
-      public let hintTree: [String: [String]]
-      public let probeItems: [ProbeItem]
-  }
-  public struct ErrorType: Codable, Equatable {
-      public let id: String
-      public let label: String
-      public let impliesPrerequisite: String?
-  }
-  ```
-
-- `Packages/Core/Sources/Core/Events/CoreEvent.swift` (`:3-8` doc comment, then every case this task needs, already registered):
-  ```swift
-  /// The closed set of in-process notification names (`contracts/interaction-contract.md` § 5), one case
-  /// per name, raw value the exact dotted string. `CoreEvent` is a bare name registry — it carries no
-  /// payload; payloads are ids, enums, booleans and small integers only (I5), and a caller that needs to
-  /// pair an event with data defines its own pairing type (e.g. `MasteryTransitionResult`) rather than
-  /// this enum growing an associated value.
-  public enum CoreEvent: String, CaseIterable, Equatable {
-  case expeditionDiagnosisRequested = "expedition.diagnosis_requested"
   case diagnosisOpened = "diagnosis.opened"
   case diagnosisHypothesisFormed = "diagnosis.hypothesis_formed"
   case diagnosisProbeCompleted = "diagnosis.probe_completed"
@@ -370,29 +458,17 @@ Prior signatures this task calls (verbatim, byte-verified against the current tr
   case graphPrerequisiteReturned = "graph.prerequisite_returned"
   ```
 
-- `Packages/Core/Sources/Core/CoreError.swift` (every case this task needs already registered):
+- `Packages/Core/Sources/Core/CoreError.swift:23-26`:
   ```swift
   case diagNoPrerequisite = "DIAG_NO_PREREQUISITE"
   case diagProbeUnavailable = "DIAG_PROBE_UNAVAILABLE"
   case diagStateWriteFailed = "DIAG_STATE_WRITE_FAILED"
+  case graphNoPrerequisite = "GRAPH_NO_PREREQUISITE"
   ```
 
-- `tasks/epic-02-task-07-item-checker-expedition-run.md:593-611` (`ExpeditionRunState`, produced by 02.07):
+- `Packages/Core/Sources/Core/State/ExpeditionRun.swift` (landed, 02.07):
   ```swift
-  public struct ExpeditionRunState: Equatable {
-      public var queue: [ComposeSlot]
-      public var currentItem: CurrentItem?
-      public var diagnosisUsed: Bool
-      public var missCounts: [String: Int]
-      public var shownItemIds: Set<String>
-      public var itemPoolEmptyNodeIds: [String]
-      public var results: [ItemResult]
-      public var clearedNodeIds: [String]
-      public var blockedNodeIds: [String]
-      public var itemsAnswered: Int
-      public var suspendedForDiagnosisNodeId: String?
-  }
-  public struct ItemResult: Equatable {
+  public struct ItemResult: Equatable {            // :4-11
       public let nodeId: String
       public let itemId: String
       public let correct: Bool
@@ -400,44 +476,80 @@ Prior signatures this task calls (verbatim, byte-verified against the current tr
       public let why: String
       public let isRetry: Bool
   }
-  public static func answer(
+  public struct CurrentItem: Equatable {           // :15-20
+      public let nodeId: String
+      public let item: ProbeItem
+      public let kind: SlotKind
+      public let isRetry: Bool
+  }
+  public struct ExpeditionRunState: Equatable {    // :26-44 (excerpt)
+      public var currentItem: CurrentItem?
+      public var diagnosisUsed: Bool
+      public var shownItemIds: Set<String>
+      public var results: [ItemResult]
+      public var suspendedForDiagnosisNodeId: String?
+      // … queue, missCounts, itemPoolEmptyNodeIds, clearedNodeIds, blockedNodeIds, itemsAnswered
+  }
+  public struct AnswerOutcome: Equatable {         // :51-56
+      public let run: ExpeditionRunState
+      public let state: StudentState
+      public let result: ItemResult
+      public let events: [CoreEvent]
+  }
+  public static func start(compose: ComposeResult) -> StartOutcome                      // :87
+  public static func answer(                                                            // :100-103
       run: ExpeditionRunState, state: StudentState, bundle: ContentBundle, submitted: String,
       today: CalendarDay
   ) -> AnswerOutcome
-  public static func resume(run: ExpeditionRunState) -> ExpeditionRunState
+  public static func resume(run: ExpeditionRunState) -> ExpeditionRunState              // :166
+  ```
+  Hand-off note (`:77-85`): "Diagnosis (02.11) runs its own state machine entirely in its own file, over its own
+  copy of `StudentState`, and — once it reaches `returned` — calls `ExpeditionRun.resume(run:)` with nothing else
+  … the diagnosis's effect on mastery/`remediated` is already carried inside whatever `StudentState` the diagnosis
+  produced, which the caller threads into the next call to `ExpeditionRun.answer(run:, state:, ...)`."
+  `ItemResult`'s memberwise init is internal; `DiagnosisEvent.swift` is in the same module and constructs it.
+
+- `Packages/Core/Sources/Core/ItemChecker.swift:168, :185`:
+  ```swift
+  public static func check(item: ProbeItem, submitted: String) -> Bool
+  public static func correctAnswerDisplay(for item: ProbeItem) -> String
   ```
 
-- `tasks/epic-02-task-07-item-checker-expedition-run.md:539-560` (`ItemChecker`, produced by 02.07):
+- `Packages/Core/Sources/Core/Graph/PrerequisiteQuery.swift` (landed, 02.10):
   ```swift
-  public enum ItemChecker {
-      public static func check(item: ProbeItem, submitted: String) -> Bool
-      public static func correctAnswerDisplay(for item: ProbeItem) -> String
+  public struct PrerequisiteCandidate: Equatable {   // :6-10
+      public let node: Node
+      public let depth: Int
+      public let edgeConfidence: Double
   }
-  ```
-
-- `tasks/epic-02-task-10-prerequisite-query-classify.md:306-338` (`PrerequisiteQuery`, produced by 02.10):
-  ```swift
-  public struct PrerequisiteCandidate: Equatable { public let node: Node; public let depth: Int; public let edgeConfidence: Double }
-  public struct PrerequisiteQueryResult: Equatable { public let candidate: PrerequisiteCandidate?; public let code: CoreError? }
-  public enum PrerequisiteQuery {
-      public static func deepestUnmasteredPrerequisite(
-          originId: String, biasErrorTypeId: String?, state: StudentState, bundle: ContentBundle,
-          levelBudget: Int
-      ) -> PrerequisiteQueryResult
+  public struct PrerequisiteQueryResult: Equatable { // :15-18
+      public let candidate: PrerequisiteCandidate?
+      public let code: CoreError?
   }
+  public static func deepestUnmasteredPrerequisite(  // :28-31
+      originId: String, biasErrorTypeId: String?, state: StudentState, bundle: ContentBundle,
+      levelBudget: Int
+  ) -> PrerequisiteQueryResult
   ```
-  Note: this function does not itself emit `CoreEvent.graphPrerequisiteReturned` — "task 02.11 (the diagnosis
-  machine, the only caller) emits it alongside its own event sequence" (02.10 spec, same lines).
+  The walk runs `while depth <= levelBudget` (`:38`) and returns the **deepest** unmastered depth (`:62`), with
+  `code: .graphNoPrerequisite` when there is no candidate (`:63`, `:76`). Only `.cleared` is excluded from the
+  candidates (`:86-89`). This function emits no `CoreEvent`; the diagnosis machine, its only caller, emits
+  `.graphPrerequisiteReturned` after each call.
 
-- `tasks/epic-02-task-10-prerequisite-query-classify.md:340-348` (`Classify`, produced by 02.10):
+- `Packages/Core/Sources/Core/Diagnosis/Classify.swift` (landed, 02.10):
   ```swift
-  public struct FailedProbeAttempt: Equatable {
+  public struct FailedProbeAttempt: Equatable {      // :7-15
       public let item: ProbeItem
       public let submittedValue: String
-      public init(item: ProbeItem, submittedValue: String) { self.item = item; self.submittedValue = submittedValue }
+      public init(item: ProbeItem, submittedValue: String)
   }
-  public enum Classify { public static func classify(_ attempts: [FailedProbeAttempt]) -> String }
+  public enum Classify {
+      public static func classify(_ attempts: [FailedProbeAttempt]) -> String   // :23; "none_of_these" if no match
+  }
   ```
+
+- Test-module access: every `Packages/Core/Tests/CoreTests/*.swift` file uses `@testable import Core`, so the
+  `internal` helpers of §4 step 5 are unit-testable without being public.
 
 ## §4 Implementation outline
 
@@ -445,7 +557,8 @@ Prior signatures this task calls (verbatim, byte-verified against the current tr
    composing layer ② concept-graph (`PrerequisiteQuery`) and layer ③ learning-objects data already carried on
    `Node` (`hintTree`, `probeItems`, `errorTypes`). It performs no I/O, no rendering, no system-clock read.
 
-2. **Types** (all public, `Equatable`, no `Codable` needed — these values never cross the wire):
+2. **Public types** (all `Equatable`, no `Codable` — these values never cross the wire; every stored property
+   `public let`; **no `public init` except on `DiagnosisLevelDecision`**, AC15):
    ```swift
    public enum DiagnosisTrigger: String, Equatable {
        case expeditionSecondMiss = "expedition_second_miss"
@@ -457,315 +570,471 @@ Prior signatures this task calls (verbatim, byte-verified against the current tr
        public let levelBudget: Int
    }
    public enum DiagnosisTerminal: Equatable { case refuted, confirmed, unconfirmed, capped, noPrerequisite }
+   // `refuted` = contract `pass`, `confirmed` = contract `fail`, `declined` = contract `declined` (the three
+   // `diagnosis.probe_completed` payload values); `unavailable` = DIAG_PROBE_UNAVAILABLE, not a probe outcome
+   // and never accompanied by `.diagnosisProbeCompleted` (§6).
+   public enum ProbeOutcome: Equatable { case refuted, confirmed, declined, unavailable }
+   public struct DiagnosisProbeResult: Equatable {
+       public let outcome: ProbeOutcome
+       public let results: [ItemResult]                    // 0 or 2 entries; `isRetry` always false
+       public let incorrectAttempts: [FailedProbeAttempt]  // biases the next level's hypothesis
+       public let code: CoreError?                         // .diagProbeUnavailable iff outcome == .unavailable
+   }
+   public struct DiagnosisOutcome: Equatable {
+       public let state: StudentState
+       public let terminal: DiagnosisTerminal
+       public let depthReached: Int              // cumulative depth of the deepest candidate probed to pass/fail; 0 if none
+       public let blockedNodeIds: [String]       // every node blocked along the path, in order; on `.capped` the last is the W6 node
+       public let hintNodeId: String?            // == event.originNodeId whenever a hint is shown; nil otherwise
+       public let hintErrorTypeId: String?       // resolved hint_tree key (with none-of-these fallback); nil otherwise
+       public let probeResults: [ItemResult]     // every probe ItemResult along the path, in order
+       public let events: [CoreEvent]            // the full sequence from `start` through this terminal
+       public let code: CoreError?               // .diagNoPrerequisite / .diagProbeUnavailable, else nil
+   }
+   /// The machine's accumulated, read-only context; embedded in every non-terminal phase value.
+   public struct DiagnosisContext: Equatable {
+       public let event: DiagnosisEvent
+       public let level: Int                     // cumulative graph depth of the current candidate from the origin
+       public let depthReached: Int              // as on DiagnosisOutcome, so far
+       public let originErrorTypeId: String      // Classify.classify(failedAttempts) at start; the origin hint key
+       public let shownItemIdsInRun: Set<String>
+       public let blockedNodeIds: [String]
+       public let probeResults: [ItemResult]
+       public let events: [CoreEvent]            // accumulated sequence so far, including the current advance's
+   }
+   /// Hypothesis card (W1 step 3 / W2 Post; W3 step 1): accept or decline the probe.
+   public struct ProbeOffer: Equatable {
+       public let context: DiagnosisContext
+       public let candidateId: String
+   }
+   /// A probe with 2 drawn items; exactly `levelResults.count` (0 or 1) of them answered.
+   public struct ProbeInProgress: Equatable {
+       public let context: DiagnosisContext
+       public let candidateId: String
+       public let items: [ProbeItem]             // exactly 2, in draw order
+       public let levelResults: [ItemResult]     // this level's answered items so far (0 or 1)
+       let incorrectAttempts: [FailedProbeAttempt]   // internal
+       public var currentItem: ProbeItem { items[levelResults.count] }
+   }
+   /// Remediation shown for `candidateId`; budget remains; accept or decline one more level (W4 step 3, Q3).
+   public struct FurtherLevelOffer: Equatable {
+       public let context: DiagnosisContext
+       public let candidateId: String
+       let incorrectAttempts: [FailedProbeAttempt]   // internal; biases the next hypothesis
+   }
+   public enum DiagnosisStep: Equatable {
+       case probeOffer(ProbeOffer)
+       case probeItem(ProbeInProgress)
+       case furtherLevelOffer(FurtherLevelOffer)
+       case returned(DiagnosisOutcome)
+   }
+   public struct DiagnosisAdvance: Equatable {
+       public let step: DiagnosisStep
+       public let state: StudentState            // the caller threads this into the next call
+       public let events: [CoreEvent]            // this call's events only
+       public let itemResult: ItemResult?        // non-nil iff this call checked a probe item (I3)
+       public let probeResult: DiagnosisProbeResult?  // non-nil iff this call concluded the probe
+   }
+   /// Input to the thin driver `run` only.
    public struct DiagnosisLevelDecision: Equatable {
        public let declineProbe: Bool
        public let submittedAnswers: [String]     // matched in order to the 2 drawn probe items
-       public let acceptFurtherLevel: Bool       // consulted only after a `confirmed` outcome AND budget remains
+       public let acceptFurtherLevel: Bool       // read only when a FurtherLevelOffer is actually returned
        public init(declineProbe: Bool, submittedAnswers: [String], acceptFurtherLevel: Bool) {
            self.declineProbe = declineProbe
            self.submittedAnswers = submittedAnswers
            self.acceptFurtherLevel = acceptFurtherLevel
        }
    }
-   // Probe outcome. `refuted` = contract `pass`, `confirmed` = contract `fail`, `declined` = contract
-   // `declined` (the three `diagnosis.probe_completed` payload values); `unavailable` = DIAG_PROBE_UNAVAILABLE,
-   // not a probe outcome and never paired with `.diagnosisProbeCompleted` (§6).
-   public enum ProbeOutcome: Equatable { case refuted, confirmed, declined, unavailable }
-   public struct DiagnosisProbeResult: Equatable {
-       public let outcome: ProbeOutcome
-       public let results: [ItemResult]               // 0 or 2 entries; `isRetry` always false (§6)
-       public let incorrectAttempts: [FailedProbeAttempt]  // for re-`classify` at the next level (§4 step 6)
-       public let code: CoreError?                     // .diagProbeUnavailable iff outcome == .unavailable
-   }
-   public struct DiagnosisHypothesisResult: Equatable { public let queryResult: PrerequisiteQueryResult }
-   public struct DiagnosisOutcome: Equatable {
-       public let state: StudentState
-       public let terminal: DiagnosisTerminal
-       public let depthReached: Int              // deepest level at which `probe` actually ran; 0 if never
-       public let blockedNodeIds: [String]       // every candidate that became blocked across all levels reached
-       public let hintNodeId: String?            // == the top-level originNodeId whenever a hint is shown; nil otherwise
-       public let hintErrorTypeId: String?       // resolved hint_tree key (with none-of-these fallback), nil otherwise
-       public let probeResults: [ItemResult]     // every probe ItemResult across every level reached, in order
-       public let events: [CoreEvent]
-       public let code: CoreError?               // .diagNoPrerequisite / .diagProbeUnavailable, else nil
-   }
    ```
 
-3. **`DiagnosisRun.open(originNodeId:trigger:levelBudget:) -> DiagnosisEvent`.** Pure struct construction; no
-   event returned here — `.diagnosisOpened` is emitted once by `run` (step 11) so the event ordering lives in
-   one place.
+3. **Public step functions** (`public enum DiagnosisRun`). Each copies every `StudentState` field through
+   unchanged except where stated; `advance.state` equals the input `state` on every call except the confirmed
+   branch of `answerProbeItem`.
 
-4. **`DiagnosisRun.classify(_ attempts: [FailedProbeAttempt]) -> String`.** A named, one-line forward to
-   `Classify.classify(attempts)`, kept as its own method because the plan names it as one of the machine's
-   public steps (W1 step 2).
+   a. `open(originNodeId: String, trigger: DiagnosisTrigger, levelBudget: Int) -> DiagnosisEvent` — pure
+      construction; emits nothing (`.diagnosisOpened` is emitted by `start`). This is the call EPIC 03's "Check me
+      here" makes (`docs/epics/epic-03-app-map-shell.md:58-59`).
 
-5. **`DiagnosisRun.hypothesise(originId:biasErrorTypeId:state:bundle:levelBudget:) -> DiagnosisHypothesisResult`.**
-   A named forward to `PrerequisiteQuery.deepestUnmasteredPrerequisite(originId:biasErrorTypeId:state:bundle:levelBudget:)`,
-   wrapped so `run` can attach its own event sequence per the 02.10 note above.
+   b. `start(event: DiagnosisEvent, failedAttempts: [FailedProbeAttempt], shownItemIdsInRun: Set<String>, state:
+      StudentState, bundle: ContentBundle) -> DiagnosisAdvance` — W1 + W2 at the first level.
+      `originErrorTypeId = classify(failedAttempts)`. The context starts at `level 0`, `depthReached 0`,
+      `events [.diagnosisOpened]`, empty accumulators. It then runs `formHypothesis(queryOriginId:
+      event.originNodeId, biasErrorTypeId: originErrorTypeId, context:, state:, bundle:)` (step 4). For
+      `map_check_here` the caller passes `failedAttempts: []` and `shownItemIdsInRun: []`.
 
-6. **`DiagnosisRun.probe(candidate:trigger:shownItemIdsInRun:declined:submittedAnswers:probeLog:) -> DiagnosisProbeResult`.**
-   - `declined == true` → return `DiagnosisProbeResult(outcome: .declined, results: [], incorrectAttempts: [], code: nil)` immediately — no availability check, no draw (Q2: the student declines at W3 step 1, before any item is drawn).
-   - Else compute `unavailableIds`: for `trigger == .expeditionSecondMiss`, `unavailableIds = Set(candidate.probeItems.map(\.id)).intersection(shownItemIdsInRun)`; for `trigger == .mapCheckHere`, `unavailableIds = []` (every item available, per Q-G).
-   - `item1 = Expedition.selectItem(from: candidate, excluding: unavailableIds, probeLog: probeLog)`. If `nil` → `DiagnosisProbeResult(outcome: .unavailable, results: [], incorrectAttempts: [], code: .diagProbeUnavailable)`.
-   - `item2 = Expedition.selectItem(from: candidate, excluding: unavailableIds.union([item1.id]), probeLog: probeLog)`. If `nil` → same `.unavailable` result (fewer than 2 available — Q-G/contract "Fewer than 2 items").
-   - Else, for each of `[item1, item2]` paired with `submittedAnswers[0]`/`submittedAnswers[1]` (a missing entry — array shorter than 2 — is treated as an empty submission, which `ItemChecker.check` rejects as incorrect; §6), call `ItemChecker.check(item:submitted:)` and `ItemChecker.correctAnswerDisplay(for:)` to build an `ItemResult(nodeId: candidate.id, itemId:, correct:, correctAnswerDisplay:, why: item.why, isRetry: false)`.
-   - `outcome = .refuted` iff both `ItemResult.correct == true`; else `.confirmed`. `incorrectAttempts` = `FailedProbeAttempt(item:, submittedValue:)` for every incorrect one (used to bias the next level's `hypothesise` call, step 11.g below); `code = nil` for both `.refuted` and `.confirmed`.
+   c. `decideProbe(_ offer: ProbeOffer, accept: Bool, state: StudentState, bundle: ContentBundle) ->
+      DiagnosisAdvance` — W3 steps 1–2.
+      - `accept == false` → `probeResult = DiagnosisProbeResult(outcome: .declined, results: [],
+        incorrectAttempts: [], code: nil)`. Events `[.diagnosisProbeCompleted, .diagnosisReturned]`.
+        `terminal(.unconfirmed, code: nil, hint: true)`. No availability check, no draw, no `probeLog` row, no
+        node change.
+      - `accept == true` → `items = drawProbeItems(candidate:, trigger: offer.context.event.trigger,
+        shownItemIdsInRun: offer.context.shownItemIdsInRun, probeLog: state.probeLog)` (candidate = the
+        `bundle.nodes.nodes` entry with id `offer.candidateId`).
+        - `nil` → `probeResult = DiagnosisProbeResult(outcome: .unavailable, results: [], incorrectAttempts: [],
+          code: .diagProbeUnavailable)`. Events `[.diagnosisReturned]` (**no** `.diagnosisProbeCompleted`).
+          `terminal(.unconfirmed, code: .diagProbeUnavailable, hint: true)`. No node change.
+        - non-nil → `.probeItem(ProbeInProgress(context: offer.context, candidateId:, items:, levelResults: [],
+          incorrectAttempts: []))`. Events `[]`, `probeResult nil`, `itemResult nil`.
 
-7. **`DiagnosisRun.offered(levelReached: Int, levelBudget: Int) -> Bool`.** Pure predicate: `levelReached <
-   levelBudget` — "does budget remain to make a further-level offer at all", independent of whatever the
-   student would decide. `run` consults this **before** ever reading `decision.acceptFurtherLevel`:
-   - `false` (budget already exhausted at this level) → the offer is never constructed and
-     `decision.acceptFurtherLevel` is never read; the flow goes straight to `capped`.
-   - `true` (budget remains) → the offer is made; `run` then reads `decision.acceptFurtherLevel` to choose
-     between `confirmed` (declined) and recursing to `levelReached + 1` (accepted).
+   d. `answerProbeItem(_ probe: ProbeInProgress, submitted: String, state: StudentState, bundle: ContentBundle,
+      today: CalendarDay) -> DiagnosisAdvance` — W3 step 3 (I1, I3), then W3 step 4 / W4 / W6.
+      - `item = probe.currentItem`; `correct = ItemChecker.check(item: item, submitted: submitted)`; `result =
+        ItemResult(nodeId: probe.candidateId, itemId: item.id, correct: correct, correctAnswerDisplay:
+        ItemChecker.correctAnswerDisplay(for: item), why: item.why, isRetry: false)`. If `!correct`, append
+        `FailedProbeAttempt(item: item, submittedValue: submitted)`. Append `result` to the level results and to
+        `context.probeResults`. The advance always carries `itemResult: result`.
+      - Fewer than 2 answered → `.probeItem(updated)`, events `[]`, state unchanged.
+      - Both answered, both correct → `probeResult = (.refuted, results: levelResults, incorrectAttempts: [],
+        code: nil)`. `depthReached = context.level`. Events `[.diagnosisProbeCompleted, .diagnosisReturned]`.
+        `terminal(.refuted, code: nil, hint: true)`. State unchanged: no node change and no `probeLog` row, the
+        same as the prior spec.
+      - Both answered, ≥ 1 incorrect (W4) → `probeResult = (.confirmed, results: levelResults,
+        incorrectAttempts:, code: nil)`. Events `[.diagnosisProbeCompleted, .diagnosisNodeBlocked]`. Set
+        `nodes[candidateId] = remediate(current: nodes[candidateId] ?? fogDefault)`, then append
+        `.diagnosisRemediationShown`. Append `candidateId` to `blockedNodeIds`. Append the level's 2 results to
+        `probeLog` as `ProbeLogEntry(day: today.iso, nodeId: candidateId, itemId:, correct:, retry: false)`. Set
+        `depthReached = context.level`. Then:
+        - `offered(levelReached: context.level, levelBudget: event.levelBudget) == true` →
+          `.furtherLevelOffer(FurtherLevelOffer(context:, candidateId:, incorrectAttempts:))` with the updated
+          `state`.
+        - `== false` (budget exhausted; W6) → no `FurtherLevelOffer` is constructed. `deeper =
+          hypothesise(originId: candidateId, biasErrorTypeId: classify(incorrectAttempts), state: <the updated
+          state>, bundle:, levelBudget: 1)`; append `.graphPrerequisiteReturned`.
+          - `deeper.candidate == nil` → append `.diagnosisReturned`; `terminal(.confirmed, code: nil, hint:
+            false)`.
+          - Else, with `d = deeper.candidate!.node.id`: set `nodes[d] = capped(current: nodes[d] ??
+            fogDefault)`, append `d` to `blockedNodeIds`, then append `[.diagnosisNodeBlocked, .diagnosisCapped,
+            .diagnosisReturned]` and call `terminal(.capped, code: nil, hint: false)`. For `d` there is no item
+            draw, no `ItemResult`, no `probeLog` row, no `.diagnosisRemediationShown` and no `remediated` write.
+            `depthReached` stays `context.level`.
 
-   `run` never calls `hypothesise`/`probe` for `levelReached + 1` unless **both** `offered(...) == true` and
-   `decision.acceptFurtherLevel == true` — this is the literal enforcement of "budget parameter checked before
-   any probe" (I4).
+   e. `decideFurtherLevel(_ offer: FurtherLevelOffer, accept: Bool, state: StudentState, bundle: ContentBundle) ->
+      DiagnosisAdvance` — W4 step 3 (Q3: "offered, never automatic").
+      - `accept == false` → events `[.diagnosisReturned]`; `terminal(.confirmed, code: nil, hint: false)`.
+      - `accept == true` → `formHypothesis(queryOriginId: offer.candidateId, biasErrorTypeId:
+        classify(offer.incorrectAttempts), context: offer.context, state:, bundle:)`.
 
-8. **`DiagnosisRun.remediate(current: NodeState) -> NodeState`.** `let blocked = MasteryTransitions.diagnosisBlocked(current: current).nodeState` (a no-op if `current.mastery` was already `.blocked`); return `NodeState(mastery: blocked.mastery, correctCount: blocked.correctCount, lastProbe: blocked.lastProbe, nextDue: blocked.nextDue, ladderRung: blocked.ladderRung, remediated: true)`. Always called exactly once, immediately after a `.confirmed` probe outcome at any level (W4 steps 1–2 are inseparable in this design — see §6).
+4. **`formHypothesis` (internal)** — W2 at any level:
+   `q = hypothesise(originId: queryOriginId, biasErrorTypeId:, state:, bundle:, levelBudget:
+   event.levelBudget - context.level)`; append `.graphPrerequisiteReturned`.
+   - `q.candidate == nil` → append `.diagnosisReturned`; `terminal(.noPrerequisite, code: .diagNoPrerequisite,
+     hint: true)` (the query's own `.graphNoPrerequisite` is mapped to the diagnosis code, §6).
+   - Else → append `.diagnosisHypothesisFormed`; `.probeOffer(ProbeOffer(context: context with level =
+     context.level + q.candidate!.depth, candidateId: q.candidate!.node.id))`.
 
-9. **`DiagnosisRun.capped(current: NodeState) -> NodeState`.** `MasteryTransitions.diagnosisBlocked(current: current).nodeState`, `remediated` field untouched (passed through as `current.remediated`, which — per step 8 — is already `true` by the time `capped` is reached, since every `capped` candidate was `remediate`d one step earlier in this design; see §6 for why W6's own "deeper candidate" language does not introduce a second, unprobed node here). This step is called from `run` (step 11.g's `false` branch below) — it is not dead code.
+   `formHypothesis` is only ever reached from `start` (`context.level == 0`) or from `decideFurtherLevel` on an
+   offer that exists only if `context.level < levelBudget`. The query budget is therefore always ≥ 1, and the new
+   level is ≤ `levelBudget`, because the query walks at most `levelBudget - context.level` levels
+   (`PrerequisiteQuery.swift:38`). The W6 deeper query of step 3d is **not** `formHypothesis`: it emits no
+   `.diagnosisHypothesisFormed`, offers no probe and does not advance `level`.
 
-10. **`DiagnosisRun.returned(originNode: Node, hintErrorTypeId: String) -> (hintNodeId: String, hintErrorTypeId: String)`.**
-    Resolves the hint-tree fallback key: if `originNode.hintTree[hintErrorTypeId]` is non-nil and non-empty, return
-    `(originNode.id, hintErrorTypeId)`; else return `(originNode.id, "none_of_these")` (the technical default
-    quoted in §3). This method returns *keys*, never the hint prose (I5, I14) — the caller resolves display text
-    from the bundle at render time.
+5. **Internal helpers** (`internal static`, unit-tested via `@testable import Core`; never public):
+   - `classify(_ attempts: [FailedProbeAttempt]) -> String` — one-line forward to `Classify.classify(attempts)`.
+   - `hypothesise(originId:biasErrorTypeId:state:bundle:levelBudget:) -> PrerequisiteQueryResult` — forward to
+     `PrerequisiteQuery.deepestUnmasteredPrerequisite(...)`.
+   - `drawProbeItems(candidate: Node, trigger: DiagnosisTrigger, shownItemIdsInRun: Set<String>, probeLog:
+     [ProbeLogEntry]) -> [ProbeItem]?`. `unavailableIds` is `Set(candidate.probeItems.map(\.id))
+     .intersection(shownItemIdsInRun)` for `.expeditionSecondMiss`, and `[]` for `.mapCheckHere` (Q-G). Then
+     `item1 = Expedition.selectItem(from: candidate, excluding: unavailableIds, probeLog:)` and `item2 =
+     Expedition.selectItem(from: candidate, excluding: unavailableIds.union([item1.id]), probeLog:)`. If either
+     is `nil`, return `nil`; else return `[item1, item2]`.
+   - `offered(levelReached: Int, levelBudget: Int) -> Bool` — `levelReached < levelBudget`, evaluated on the
+     cumulative depth.
+   - `remediate(current: NodeState) -> NodeState` — `let blocked =
+     MasteryTransitions.diagnosisBlocked(current: current).nodeState`; return it with `remediated: true` (a no-op
+     block if already `.blocked`). Called only on a probed candidate whose probe failed.
+   - `capped(current: NodeState) -> NodeState` — returns `MasteryTransitions.diagnosisBlocked(current:
+     current).nodeState` and nothing else. `remediated` passes through unchanged (`MasteryTransitions.swift:95`)
+     and is never written by this helper (`contracts/data-model.md` § StudentState: "A node blocked by `capped`
+     … does not carry it"). Called only on the W6 deeper candidate, never on a probed candidate.
+   - `hintKey(originNode: Node, errorTypeId: String) -> String` — `errorTypeId` if
+     `originNode.hintTree[errorTypeId]` is non-nil and non-empty, else `"none_of_these"`. Returns keys, never
+     hint prose (I5, I14).
+   - `terminal(_:code:hint:context:state:bundle:) -> DiagnosisOutcome` — builds the outcome. When `hint ==
+     true`, `hintNodeId = event.originNodeId` and `hintErrorTypeId = hintKey(originNode: <the origin's
+     bundle node>, errorTypeId: context.originErrorTypeId)`. The hint is always on the **top-level origin**, never
+     an intermediate candidate (W3 step 4 "hint on the origin", W2 step 3 "the origin's hint"). When `hint ==
+     false`, both are `nil`. `events` = the full accumulated sequence.
 
-11. **`DiagnosisRun.run(trigger:originNodeId:failedAttempts:levelBudget:decisions:shownItemIdsInRun:state:bundle:today:) -> DiagnosisOutcome`.**
-    The orchestrator every test in §5 calls. Signature:
-    ```swift
-    public static func run(
-        trigger: DiagnosisTrigger, originNodeId: String, failedAttempts: [FailedProbeAttempt],
-        levelBudget: Int, decisions: [DiagnosisLevelDecision], shownItemIdsInRun: Set<String>,
-        state: StudentState, bundle: ContentBundle, today: CalendarDay
-    ) -> DiagnosisOutcome
-    ```
-    Algorithm (a `level` loop from 1 through `levelBudget`, stopping at the first terminal):
-    - `events = [.diagnosisOpened]`; `nodes = state.nodes`; `probeLog = state.probeLog`; `blockedNodeIds = []`;
-      `hintErrorTypeIdForLevel1 = classify(failedAttempts)` (computed once, reused for the final hint lookup
-      regardless of how deep the chain goes — "hint on origin" always means the *original* origin, step 12).
-    - `queryOriginId = originNodeId`; `biasErrorTypeId = hintErrorTypeIdForLevel1`; `levelFailedAttempts = failedAttempts`.
-    - For `level` in `1...levelBudget`:
-      a. `hyp = hypothesise(originId: queryOriginId, biasErrorTypeId: biasErrorTypeId, state: StudentState(...nodes: nodes, probeLog: probeLog...), bundle: bundle, levelBudget: levelBudget - level + 1)`; `events.append(.graphPrerequisiteReturned)`.
-      b. No candidate → build the final `StudentState` (nodes, probeLog updated so far), resolve the origin hint via `returned(originNode:, hintErrorTypeId: hintErrorTypeIdForLevel1)`, `events.append(.diagnosisReturned)`, return `DiagnosisOutcome(terminal: .noPrerequisite, code: .diagNoPrerequisite, depthReached: level - 1, ...)`.
-      c. Candidate found → `events.append(.diagnosisHypothesisFormed)`. `decision = decisions.indices.contains(level - 1) ? decisions[level - 1] : DiagnosisLevelDecision(declineProbe: true, submittedAnswers: [], acceptFurtherLevel: false)` (§6 fallback).
-      d. `probeResult = probe(candidate: hyp.queryResult.candidate!.node, trigger:, shownItemIdsInRun:, declined: decision.declineProbe, submittedAnswers: decision.submittedAnswers, probeLog: probeLog)`.
-      e. Branch on the two non-checking outcomes (the `probe_completed` emission rule of §6 applies here):
-         - `.declined` → `events.append(.diagnosisProbeCompleted)` (a probe outcome — payload value `declined`);
-           resolve origin hint; `events.append(.diagnosisReturned)`; return `.unconfirmed` with `code: nil`
-           (`probeResult.code`), no `probeLog` row added at this level, `depthReached: level - 1`.
-         - `.unavailable` → **no** `.diagnosisProbeCompleted` (no probe was formed; `unavailable` is not a probe
-           outcome); resolve origin hint; `events.append(.diagnosisReturned)`; return `.unconfirmed` with
-           `code: .diagProbeUnavailable` (`probeResult.code`), `depthReached: level - 1`.
-         See §6 for the `depthReached` convention on both.
-      f. `.refuted` → `events.append(.diagnosisProbeCompleted)`, resolve origin hint, append `.diagnosisReturned`, return `.refuted` (`depthReached: level`, candidate's `nodes[candidateId]` left untouched).
-      g. `.confirmed` → `events.append(contentsOf: [.diagnosisProbeCompleted, .diagnosisNodeBlocked])`; `nodes[candidateId] = remediate(current: nodes[candidateId] ?? <fog default, per 02.07's `priorNodeState` precedent>)`; `events.append(.diagnosisRemediationShown)`; `blockedNodeIds.append(candidateId)`; append the level's 2 `ItemResult`s to the running `probeLog` as `ProbeLogEntry(day: today.iso, nodeId: candidateId, itemId:, correct:, retry: false)`. Then consult `offered(levelReached: level, levelBudget: levelBudget)` — **whether budget remains for a further-level offer at all**:
-         - `false` (`level >= levelBudget`, budget exhausted at this level) → the offer is never made and
-           `decision.acceptFurtherLevel` is **never read**; `nodes[candidateId] = capped(current: nodes[candidateId]!)`;
-           `events.append(contentsOf: [.diagnosisCapped, .diagnosisReturned])`; return `.capped` with
-           `hintNodeId: nil, hintErrorTypeId: nil` (W6: no hint, the fixed "further upstream" framing is
-           represented purely by `terminal == .capped`, §6), `depthReached: level`, `blockedNodeIds` as
-           accumulated.
-         - `true` (`level < levelBudget`, budget remains) → the offer is made; branch on
-           `decision.acceptFurtherLevel`:
-           - `false` (declines) → `events.append(.diagnosisReturned)`, return `.confirmed` (`depthReached:
-             level`).
-           - `true` (accepts) → set `queryOriginId = candidateId`, `biasErrorTypeId =
-             classify(probeResult.incorrectAttempts)`, continue the loop to `level + 1` (guaranteed `<=
-             levelBudget`, since `offered(...) == true` already established `level < levelBudget`).
-    - The loop never iterates past `levelBudget`: at `level == levelBudget`, `offered(levelReached: level,
-      levelBudget: levelBudget)` is `false` by construction, so a `.confirmed` outcome at the final budgeted
-      level always falls into the `capped` branch above — `decision.acceptFurtherLevel` is never consulted at
-      that level, and no separate post-loop step is needed.
+6. **`run` — thin driver (public).** The signature is unchanged from the prior spec:
+   ```swift
+   public static func run(
+       trigger: DiagnosisTrigger, originNodeId: String, failedAttempts: [FailedProbeAttempt],
+       levelBudget: Int, decisions: [DiagnosisLevelDecision], shownItemIdsInRun: Set<String>,
+       state: StudentState, bundle: ContentBundle, today: CalendarDay
+   ) -> DiagnosisOutcome
+   ```
+   It is implemented **only** as: `open` → `start`, then a loop over `advance.step` that threads `advance.state`.
+   - `.probeOffer`: `k` = number of `ProbeOffer`s seen so far − 1; `d = decisions[k]` or the §6 fallback;
+     call `decideProbe(accept: !d.declineProbe)`.
+   - `.probeItem(p)`: `answerProbeItem(p, submitted: d.submittedAnswers[p.levelResults.count]` or `""` if the
+     array is too short`)`.
+   - `.furtherLevelOffer(f)`: `decideFurtherLevel(f, accept: d.acceptFurtherLevel)`.
+   - `.returned(o)`: return `o`.
 
-12. **Hint node is always the top-level origin.** Every terminal that shows a hint (`noPrerequisite`, `refuted`,
-    `unconfirmed`) resolves it via `returned(originNode: bundle.nodes.nodes.first { $0.id == originNodeId }!, hintErrorTypeId: hintErrorTypeIdForLevel1)` — never the intermediate candidate's own node, matching W3 step 4 ("hint on the origin") and W2 step 3 ("the origin's hint") verbatim. `capped` and `confirmed` show no hint (`hintNodeId == nil`).
+   `d.acceptFurtherLevel` is read only when a `FurtherLevelOffer` is actually returned, so it is never read at an
+   exhausted budget. The driver contains no diagnosis logic of its own. The loop terminates because every level
+   takes at most 4 advances and `level` strictly increases by ≥ 1 per accepted further level, bounded by
+   `levelBudget ≤ 2`.
 
-13. **Final `StudentState`.** Exactly `state.nodes` (replaced with the accumulated `nodes` dict) and
-    `state.probeLog` (replaced with the accumulated `probeLog`) differ from the input; `schemaVersion`,
-    `formatVersionSeen`, `syllabi`, `marker`, `trail`, `expeditionLog`, `installDay`, `consentOn` are copied
-    through unchanged — `expeditionLog` is **never** appended to by this function, satisfying AC10 for both
-    triggers (the technical default names `map_check_here` explicitly; `expedition_second_miss` never touches
-    `expeditionLog` either, since that log is owned exclusively by `ExpeditionRun.end`, task 02.07, out of
-    scope here).
+7. **Final `StudentState`.** Only `nodes` and `probeLog` ever differ from the input, and only in the confirmed
+   branch of `answerProbeItem`. `schemaVersion`, `formatVersionSeen`, `syllabi`, `marker`, `trail`,
+   `expeditionLog`, `installDay` and `consentOn` are copied through unchanged. `expeditionLog` is **never**
+   appended (AC10); it is owned by `ExpeditionRun.end` (02.07).
 
-14. **Error codes thrown.** None — `DiagnosisRun` never `throws`; `DIAG_NO_PREREQUISITE` and
-    `DIAG_PROBE_UNAVAILABLE` are represented as data on `DiagnosisOutcome.code` (mirroring `PrerequisiteQueryResult`'s
-    own "code as data" shape, 02.10 §3 precedent note), consistent with I3 ("no terminal path gates an
-    already-given answer" — a thrown error would abort before the hint/remediation is attached).
-    `DIAG_STATE_WRITE_FAILED` is never thrown or returned by this task — it belongs to the caller's
-    persistence layer (App/platform, EPIC 03), per the bundle's stack-constraints note.
+8. **Error codes.** None thrown — no `DiagnosisRun` function `throws` or traps on student input.
+   `DIAG_NO_PREREQUISITE` and `DIAG_PROBE_UNAVAILABLE` are data on `DiagnosisOutcome.code` ("code as data",
+   mirroring `PrerequisiteQueryResult`). This is consistent with I3: a thrown error would abort before the
+   hint/remediation is attached. `DIAG_STATE_WRITE_FAILED` is never thrown or returned here; it belongs to the
+   caller's persistence layer (App/platform, EPIC 03).
 
-15. **No model call anywhere in `DiagnosisRun`** (I2): `hypothesise` and `classify` are both named forwards to
-    already-Tier-0 functions (02.10); `probe` calls only `ItemChecker.check`/`Expedition.selectItem`. No
-    parameter of any function in this file accepts a Tier-1/Tier-2 adapter — the Tier-1 "suggest, never
-    decide" path (`classify`'s contract note) is EPIC 13 scope and out of this file entirely.
+9. **No model call anywhere in `DiagnosisRun`** (I2). `hypothesise` and `classify` forward to Tier-0 functions
+   (02.10), and item checking calls only `ItemChecker.check` / `Expedition.selectItem`. No function in this file
+   accepts a Tier-1/Tier-2 adapter; the Tier-1 "suggest, never decide" classify path is EPIC 13 scope.
 
-16. Smoke check: `swift test --package-path Packages/Core --filter DiagnosisMachineTests` (then
-    `DiagnosisTier0CompletenessTests` and `ExpeditionDiagnosisSeamTests`) — must be green, followed by the
-    full `scripts/gate.sh`.
+10. Smoke check: `swift test --package-path Packages/Core --filter DiagnosisMachineTests` (then
+    `DiagnosisTier0CompletenessTests` and `ExpeditionDiagnosisSeamTests`) must be green, followed by the full
+    `scripts/gate.sh`.
 
 ## §5 Test plan
 
 Instrument for every case below: Swift Testing `@Test` functions run by `swift test --package-path Packages/Core`
-(simulator via `xcodebuild test -scheme Core-Package` in the gate). Event-sequence assertions compare the full
-`DiagnosisOutcome.events` array by `==`. An empty `events` array always FAILs, because AC1 requires
-`.diagnosisOpened` and `.diagnosisReturned`.
+(simulator via `xcodebuild test -scheme Core-Package` in the gate), with `@testable import Core`. The tests call the
+step API (`start` / `decideProbe` / `answerProbeItem` / `decideFurtherLevel`) directly unless a case says "driver".
+Event assertions compare full arrays by `==`: each advance's `events`, the concatenated sequence, and
+`DiagnosisOutcome.events`. An empty concatenated sequence always FAILs, because AC1 requires `.diagnosisOpened`
+and `.diagnosisReturned`.
 
-- T1 happy path: for each of the six terminals (`refuted`, `confirmed`-not-capped at budget 2, `capped`,
-  `unconfirmed`-declined, `unconfirmed`-unavailable, `noPrerequisite`) construct a small hand-built
-  `ContentBundle`/`StudentState` fixture (or reuse `data/demo` where convenient) and assert the exact
-  `terminal`, `code`, `hintNodeId`/`hintErrorTypeId`, `blockedNodeIds`, and `events` sequence per AC1–AC10.
-  For the `capped` case, run it once with `decisions[0].acceptFurtherLevel == false` and once with `== true`,
-  both at budget 1: both must yield `terminal == .capped` per AC6 (budget-exhausted at level 1, the offer is
-  never made, `acceptFurtherLevel` is never read regardless of its value). The `probe_completed` rule (§6) is
-  asserted by exact event arrays: the `.declined` terminal's `events == [.diagnosisOpened,
-  .graphPrerequisiteReturned, .diagnosisHypothesisFormed, .diagnosisProbeCompleted, .diagnosisReturned]` with
-  `code == nil` (AC3); the `.unavailable` terminal's `events == [.diagnosisOpened, .graphPrerequisiteReturned,
-  .diagnosisHypothesisFormed, .diagnosisReturned]` with `code == .diagProbeUnavailable` (AC4) — no
-  `.diagnosisProbeCompleted`; `refuted`, `confirmed` and `capped` each contain exactly one
-  `.diagnosisProbeCompleted` per level probed; `noPrerequisite` contains none (AC2).
-- T2 negative — invalid input rejected at the boundary: `DiagnosisRun.probe` called with `submittedAnswers`
-  shorter than the number of drawn items never traps — the missing entry is treated as an incorrect
-  submission (asserted directly, not just implied); `decisions` shorter than the levels actually reached never
-  traps (the §6 fallback `DiagnosisLevelDecision` applies and the chain still reaches a terminal).
-- T3 error-taxonomy: `DiagnosisOutcome.code == .diagNoPrerequisite` iff `terminal == .noPrerequisite`;
-  `.diagProbeUnavailable` iff `terminal == .unconfirmed` from an unavailable probe (not from a decline, where
-  `code == nil`); `CoreError ⊆` registry is already covered by the existing `ErrorRegistryTests` (no new case
-  is added by this task — both codes are already registered, verified in §3).
-- T4 conformance per `contracts/interaction-contract.md` § 4 and the applicable invariants: the full FSM
-  (`opened → hypothesis → (probe|hint) → (remediation|hint) → returned`, `capped` as a terminal branch) is
-  exercised end to end via `run`; I1 (probe checked by `ItemChecker`, never guessed); I2 (Tier-0 completeness,
-  AC11); I3 (every `ItemResult` on `probeResults` carries `correctAnswerDisplay` and `why`, non-empty); I4
-  (`depthReached ≤ levelBudget ≤ 2`, asserted as a property over generated `levelBudget ∈ {1, 2}`); I5
-  (`DiagnosisOutcome`'s own new fields — `hintNodeId`, `hintErrorTypeId`, `terminal`, `code`, `depthReached`,
-  `blockedNodeIds` — are ids/enums/booleans/ints only, asserted by a reflection-free type-level check: no
-  `String` field on `DiagnosisOutcome` other than `hintNodeId`/`hintErrorTypeId`, both of which are always
-  equal to a `Node.id` or a `hintTree` key, never free text).
-- T5 negative control for every regression guard:
-  - a mutated `DiagnosisRun.probe` that treats "any incorrect" as `.refuted` (inverted logic) must fail the
-    T1 confirmed-candidate case;
-  - a mutated `offered` that ignores `levelBudget` (always returns `true`) must fail the budget property test
-    (AC8-style) once `levelBudget` is exhausted — with the mutation, a `.confirmed` outcome at `level ==
-    levelBudget` would still make the further-level offer and consult `decision.acceptFurtherLevel`, instead
-    of going straight to `.capped`;
-  - a mutated `remediate` that skips setting `remediated` must fail AC6/AC9;
-  - a mutated Q-G "available" check that ignores `shownItemIdsInRun` must fail AC4 / the Tier-0
-    `DIAG_PROBE_UNAVAILABLE` reachability test (AC11);
-  - a mutated step 11.e that swaps the `probe_completed` rule (emits on `.unavailable`, omits on `.declined`)
-    must fail both T1 exact-array assertions (AC3 and AC4). A mutation that emits on both, or on neither, must
-    fail exactly one of them. The two assertions are independent `@Test`s, so each direction is caught on its
-    own.
-- T6 idempotency / no-leak: `DiagnosisRun.run`, called twice with the same arguments, returns `Equatable`-equal
-  `DiagnosisOutcome`s (pure function, no hidden mutable state); a `.refuted` or `.noPrerequisite` outcome's
-  `state.nodes` is byte-identical to the input `state.nodes` (no side effect on a path that found nothing
-  wrong with the candidate/no candidate at all).
-- T7 (AC13) properties over `PropertyGen`-generated graphs/states, `DiagnosisMachineTests.swift`: the 9
-  bullets of §3's Properties/§4-item-5 quote, each as an independent `@Test` with a seeded generator loop
-  (matching `PropertyGen`'s existing style — deterministic, no system-clock read). The generator varies
-  `levelBudget ∈ {1, 2}` and, independently, `decision.acceptFurtherLevel ∈ {true, false}` at the level where
-  `levelReached == levelBudget`, asserting in every case that a `.confirmed` outcome there yields `terminal ==
-  .capped` (never `.confirmed`) regardless of the generated `acceptFurtherLevel` value — the properties named
-  in §3 as "every `capped` or `confirmed` candidate is `blocked` in state" and "depth ≤ budget ≤ 2 from the
-  origin" both hold specifically across this branch. The generated-case count must be > 0 (empty = FAIL).
-- T8 (AC11) Tier-0 completeness, `DiagnosisTier0CompletenessTests.swift`: every terminal reached on the real
-  `data/demo` bundle (`BundleIO.read(from:)`, precedent shape in `MarkerTrailFringeSeamTests.swift`), Demo
-  `levelBudget = 1`, no adapter parameter present anywhere in the call graph (there is none to omit — `run`'s
-  signature has no adapter parameter at all, which is itself the I2 proof). `DIAG_PROBE_UNAVAILABLE` uses the
-  arbiter's exact constructed-state recipe (§3, `tasks/arbitration/arbiter-02-predispatch.md` § Q-G
-  "Reachability"), and its `events` array contains no `.diagnosisProbeCompleted` (§6).
-- T9 (AC12) C1 seam, `ExpeditionDiagnosisSeamTests.swift`: a real `ExpeditionRun.start` on real `data/demo`,
-  two real `.answer` calls on the same node driving it to a second miss (`events` containing
-  `.expeditionDiagnosisRequested`), a real `DiagnosisRun.run` call using `run.shownItemIds` for
-  `shownItemIdsInRun` and the second miss's own `FailedProbeAttempt`s for `failedAttempts`, a real
-  `ExpeditionRun.resume(run:)` call, then one more real `.answer` call using the diagnosis outcome's `.state`
-  as the threaded `StudentState` (per the bundle's hand-off note — `resume` itself takes no `StudentState`).
-  The `decisions` array passed to `DiagnosisRun.run` explicitly sets `declineProbe: false` with incorrect
-  `submittedAnswers` for the confirmed candidate at every level actually reached (never relying on the §6
-  fallback default, which declines) — AC12 requires a `blocked` candidate, which only a `.confirmed` outcome
-  produces. Because the probe ran to `fail`, the diagnosis outcome's `events` contain exactly one
-  `.diagnosisProbeCompleted` (§6 rule, `fail` case). This test does not exercise the `.declined`/`.unavailable`
-  branches. If it is later extended to do so, it must apply the same §6 rule T1 asserts: the event is present
-  on a decline and absent on an unavailable probe. It must never choose a second, independent convention.
-  Asserts: exactly one diagnosis was driven (a single `DiagnosisRun.run` call in the test, and
-  `run.diagnosisUsed == true` throughout); the diagnosis's `blockedNodeIds` candidate has `mastery ==
-  .blocked` in the `StudentState` used for the next `.answer` call; every `ItemResult` from the pre-diagnosis
-  answers is still present in `run.results` after `resume`; neither `ExpeditionRun` nor `DiagnosisRun` is
-  stubbed anywhere in this test.
+- T1 happy path — each terminal driven step by step. Terminals:
+  - `refuted`;
+  - `confirmed`-not-capped at budget 2 (AC7);
+  - `confirmed` at an exhausted budget 1 with no deeper gap (AC6b);
+  - `capped` at budget 1 (AC6);
+  - `capped` at level 2 of budget 2 (AC8);
+  - `capped` on a depth-2 level-1 candidate (AC8b);
+  - `unconfirmed`-declined;
+  - `unconfirmed`-unavailable;
+  - `noPrerequisite` (at `start`, and at level 2 after an accepted further level).
+
+  Fixtures are small hand-built `ContentBundle`/`StudentState` values, or `data/demo` where it reaches the case
+  (AC6/AC6b pin `data/demo`). After every call, assert the exact `step` case. Assert `terminal`, `code`,
+  `hintNodeId`/`hintErrorTypeId`, `blockedNodeIds`, `depthReached`, each advance's `events` and `probeResult`, and
+  the concatenated sequence per AC1–AC10.
+
+  The `probe_completed` rule (§6) is asserted by exact arrays:
+  - The declined advance has `events == [.diagnosisProbeCompleted, .diagnosisReturned]`, `probeResult?.outcome ==
+    .declined` and `code == nil` (AC3).
+  - The unavailable advance has `events == [.diagnosisReturned]`, `probeResult?.outcome == .unavailable` and `code
+    == .diagProbeUnavailable` (AC4).
+  - `refuted`, `confirmed` and `capped` each contain exactly one `.diagnosisProbeCompleted` per level probed.
+  - `noPrerequisite` at `start` contains none (AC2).
+
+  `remediated` is asserted on every `confirmed`/`capped` terminal:
+  - each failed probed candidate has `mastery == .blocked` and `remediated == true`;
+  - on `.capped`, the W6 node `blockedNodeIds.last` has `mastery == .blocked`, `remediated` equal to its input
+    value, and no `probeLog` row.
+
+  For the budget-1 `capped` case, additionally assert via the driver that `acceptFurtherLevel ∈ {false, true}`
+  both yield `.capped` (AC6).
+- T2 negative — invalid input at the boundary:
+  - `answerProbeItem` with `submitted: ""`, with a non-numeric string on a numeric item, and with an unknown choice
+    id on an MC item: each returns an incorrect `ItemResult` and never traps.
+  - The driver with `submittedAnswers` shorter than 2 treats the missing entry as `""` (asserted directly).
+  - The driver with `decisions` shorter than the probe offers actually reached never traps: the §6 fallback applies
+    and a terminal is reached.
+  - Wrong-phase calls, such as answering a `ProbeOffer`, are unrepresentable because each function takes its phase
+    value's type. AC15's instrument is the guard that the App cannot fabricate one.
+- T3 error-taxonomy:
+  - `DiagnosisOutcome.code == .diagNoPrerequisite` iff `terminal == .noPrerequisite`.
+  - `.diagProbeUnavailable` iff `terminal == .unconfirmed` from an unavailable draw (a decline has `code == nil`).
+  - No `DiagnosisOutcome` ever carries `.graphNoPrerequisite`, including the AC6b `confirmed` terminal whose W6
+    deeper query returned it.
+  - `CoreError ⊆` registry is already covered by the existing `ErrorRegistryTests`; no new case is added.
+- T4 conformance per `contracts/interaction-contract.md` § 4 and the applicable invariants. The full FSM is
+  exercised end to end via the step API.
+  - I1: every probe `ItemResult.correct` equals `ItemChecker.check` on the same item and submission.
+  - I2: AC11.
+  - I3: AC14.
+  - I4: asserted over generated `levelBudget ∈ {1, 2}`:
+    - `depthReached ≤ levelBudget ≤ 2`;
+    - no `FurtherLevelOffer` is ever returned with `context.level >= levelBudget`;
+    - the W6 node (if any) has no `ItemResult` in `probeResults` and no `probeLog` row.
+  - I5: a type-level check that `DiagnosisOutcome`'s own `String` fields are only `hintNodeId`/`hintErrorTypeId`,
+    always equal to a `Node.id` or a `hintTree` key, never free text.
+  - I14: `DiagnosisEvent.swift` imports Foundation only; the existing import-boundary test covers `Sources/Core`.
+- T5 negative control for every regression guard. Each mutation is applied temporarily in a scratch edit, observed
+  to fail the named test, and reverted:
+  - `answerProbeItem` treating "any incorrect" as `.refuted` (inverted) must fail the T1 confirmed case;
+  - `offered` always returning `true` must fail AC6: at budget 1 a `.furtherLevelOffer` would be returned instead
+    of `.returned(.capped)`;
+  - depth bookkeeping that adds `1` per level instead of `PrerequisiteCandidate.depth` (probe-ordinal level) must
+    fail AC8b;
+  - `remediate` skipping `remediated = true` must fail AC6b, AC7 and AC9;
+  - `capped` writing `remediated = true` (the pre-arbitration behaviour) must fail AC6 (`state.nodes[d]!.remediated
+    == nil`), AC9 and the AC13 Q-A property;
+  - `capped` applied to the probed candidate instead of the W6 deeper candidate must fail AC6 (`blockedNodeIds ==
+    [c, d]`, `state.nodes[d]!.mastery == .blocked`);
+  - the exhausted-budget branch returning `.capped` without a deeper candidate must fail AC6b;
+  - a Q-G draw that ignores `shownItemIdsInRun` must fail AC4 and the Tier-0 `DIAG_PROBE_UNAVAILABLE` test (AC11);
+  - swapping the `probe_completed` rule (emitting on unavailable, omitting on declined) must fail both T1 exact-array
+    assertions (AC3 and AC4); emitting on both, or on neither, must fail exactly one. The two are independent
+    `@Test`s;
+  - an `answerProbeItem` that returns `itemResult: nil` for the first item must fail AC14.
+- T6 idempotency / no-leak: every step function called twice with the same arguments returns `==` advances (pure,
+  no hidden mutable state). A `.refuted`, declined, unavailable or `.noPrerequisite` terminal's `state` `==` the
+  `start` input state (no side effect on a path that blocked nothing).
+- T7 (AC13) properties over `PropertyGen`-generated graphs/states, `DiagnosisMachineTests.swift`.
+  - The 9 bullets of §3 (epic §4 item 5) are each an independent `@Test` with a seeded generator loop. The loop
+    drives the step API with a generated accept/decline and answer script (deterministic, no system-clock read).
+  - The generator varies `levelBudget ∈ {1, 2}`, candidate depth ∈ {1, 2}, and whether the last probed candidate
+    has an unmastered depth-1 prerequisite.
+  - Exhausted budget: a confirmed probe at `context.level ≥ levelBudget` yields `.returned`, never
+    `.furtherLevelOffer`. The terminal is `.capped` iff `PrerequisiteQuery.deepestUnmasteredPrerequisite(originId:
+    <that candidate>, biasErrorTypeId: nil, state: <input state>, bundle:, levelBudget: 1).candidate != nil`, else
+    `.confirmed`. The bias only picks among deepest candidates and never changes existence (`PrerequisiteQuery.swift:62-71`).
+  - The Q-A bullet ("a `confirmed` candidate carries `remediated = true`…; a `capped` candidate does not") is
+    asserted as in T1.
+  - "A second level is entered only on an explicit accept" is asserted as: a `.probeOffer` with `context.level >
+    first level` appears only immediately after a `decideFurtherLevel(accept: true)`.
+  - Driver equivalence: for each generated `decisions` array, `run(...)` `==` the hand-stepped terminal outcome.
+  - The generated-case count for each property must be > 0 (empty = FAIL). The `.capped` and exhausted-budget
+    `.confirmed` counts must each be > 0 (empty = FAIL).
+- T8 (AC11) Tier-0 completeness, `DiagnosisTier0CompletenessTests.swift`.
+  - Every terminal of AC11 is reached by step calls on the real `data/demo` bundle (`BundleIO.read(from:)`,
+    precedent shape in `MarkerTrailFringeSeamTests.swift`), at Demo `levelBudget = 1`.
+  - `capped` and `confirmed` use the AC6 and AC6b recipes.
+  - No adapter parameter exists on any public function, which is itself the I2 proof.
+  - `DIAG_PROBE_UNAVAILABLE` uses the arbiter's exact constructed-state recipe (§3, Q-G "Reachability"): the real
+    `ExpeditionRun` produces `shownItemIds`, and the sequence contains no `.diagnosisProbeCompleted`.
+- T9 (AC12) C1 seam, `ExpeditionDiagnosisSeamTests.swift`. Steps:
+  1. A real `ExpeditionRun.start` on real `data/demo`, then real `.answer` calls on the same node that drive it to
+     a second miss (`events` containing `.expeditionDiagnosisRequested`). The test records each missed
+     `run.currentItem!.item` with the string it submitted, as `FailedProbeAttempt`s (§6).
+  2. `DiagnosisRun.open(originNodeId: run.suspendedForDiagnosisNodeId!, trigger: .expeditionSecondMiss,
+     levelBudget: 1)`.
+  3. `start(event:, failedAttempts:, shownItemIdsInRun: run.shownItemIds, state: answerOutcome.state, bundle:)` →
+     `.probeOffer`.
+  4. `decideProbe(accept: true)` → `.probeItem`.
+  5. Two `answerProbeItem` calls with incorrect submissions (a tagged distractor, or `""`), each advance's `state`
+     threaded, ending in `.returned(o)`. The test first computes the expected terminal: `.capped` if
+     `PrerequisiteQuery.deepestUnmasteredPrerequisite(originId: <the offered candidate>, biasErrorTypeId: nil,
+     state: answerOutcome.state, bundle:, levelBudget: 1).candidate != nil`, else `.confirmed`. It asserts
+     `o.terminal` equals exactly that value, and that the sequence has exactly one `.diagnosisProbeCompleted` (§6
+     `fail` case).
+  6. A real `ExpeditionRun.resume(run:)`, then one more real `.answer` with `o.state` as the `StudentState`.
+
+  Asserts, in the `StudentState` passed to the next `.answer`:
+  - exactly one diagnosis was driven (one `start` call, and `run.diagnosisUsed == true` throughout);
+  - `o.blockedNodeIds.first` (the probed candidate) has `mastery == .blocked` and `remediated == true`;
+  - when `o.terminal == .capped`, `o.blockedNodeIds.last` has `mastery == .blocked` and `remediated != true`. This
+    is the input the `Expedition.swift:183-194` fringe guard reads;
+  - every pre-diagnosis `ItemResult` is still in `run.results` after `resume`;
+  - neither `ExpeditionRun` nor `DiagnosisRun` is stubbed.
+
+  If the test is later extended to the declined/unavailable branches, it applies the same §6 rule T1 asserts,
+  never a second convention.
 
 ## §6 Decision defaults
 
-- IF `level >= levelBudget` after a `.confirmed` probe (budget exhausted at this level) THEN the flow enters
-  `.capped` immediately, without ever reading `decision.acceptFurtherLevel` — the offer described by W4 step 3
-  ("offer — not force") is a **conditional courtesy that itself requires budget to remain**; once budget is
-  exhausted there is nothing left to offer, so `run` never constructs or consults an offer at that level. The
-  "deeper candidate" of W6's text is the **same, already-`confirmed`-and-`remediate`d level-`level` candidate**,
-  not a newly discovered one; `capped` therefore never touches a node the flow has not already blocked one step
-  earlier (per `contracts/interaction-contract.md` § 4: "beyond the budget → `capped`: candidate `blocked`" —
-  the sentence's own subject, "candidate", is the one just named by the preceding "After confirmed" clause, not
-  a new noun). This keeps `remediate`'s "shown" and `capped`'s "blocked" acting on one node, never two, per
-  level, and makes `decision.acceptFurtherLevel` unreachable/unread whenever `level >= levelBudget` — a
-  property T5 and T7 both assert directly.
-- IF a `.confirmed` probe's node is offered a further level but the student declines (`acceptFurtherLevel ==
-  false`) while budget still remains THEN the terminal is plain `.confirmed`, not `.capped` — `capped` is
-  reserved for the budget-exhaustion path, never for a voluntary decline (`docs/domains/diagnosis.md` W4 step
-  3: "offer — not force"; declining is a normal `.confirmed` return, matching AC7/property "a second level is
-  entered only on an explicit accept").
-- IF `decisions.count < level` when level `level`'s decision is needed THEN default to
-  `DiagnosisLevelDecision(declineProbe: true, submittedAnswers: [], acceptFurtherLevel: false)` — the safest
-  Tier-0 reading (never guesses an answer, never forces a probe the caller did not explicitly authorize),
-  matching I2's "the system never guesses a diagnosis."
+- IF the student is to take each decision after seeing the previous screen THEN the machine is driven one call per
+  decision point (`start`, `decideProbe`, `answerProbeItem`, `decideFurtherLevel`), each returning a
+  `DiagnosisAdvance` whose `state` the caller threads into the next call. This mirrors `ExpeditionRun`
+  (`ExpeditionRun.swift:26-44`, `:51-56`, `:100-103`) (per `tasks/arbitration/arbiter-02-11-stepwise-api.md`;
+  `CLAUDE.md:37` I14; `docs/epic-plan.md:23`).
+- IF `level` (cumulative graph depth from the origin) `>= levelBudget` after a `.confirmed` probe THEN:
+  - no `FurtherLevelOffer` is constructed and the further-level decision is never read (the budget rule kept by
+    `tasks/arbitration/arbiter-02-11-stepwise-api.md`);
+  - the confirmed candidate keeps its W4 effects: `blocked`, one remediation piece, `remediated = true`
+    (`contracts/interaction-contract.md` § 4 `probe` bullet, `fail` arrow);
+  - W6 then runs in the same advance: the W6 deeper query (§4 step 3d) finds W6's "deeper candidate", the next
+    gap upstream that the budget forbids probing;
+  - found → it is marked `blocked` via `capped`, with no probe, no remediation and no `remediated`, and the
+    terminal is `.capped`;
+  - not found → the terminal is `.confirmed`, since nothing further upstream exists to put on the map. W4 step 3
+    conditions the next level on "the candidate itself has unmastered prerequisites".
+
+  A `capped` node is never a probed candidate (per `tasks/arbitration/arbiter-02-11-capped-remediated.md`;
+  `contracts/data-model.md` § StudentState; `docs/domains/diagnosis.md` W4 step 3, W6).
+- IF the W6 deeper query runs THEN it uses `levelBudget: 1` from the confirmed candidate, biased by
+  `classify(incorrectAttempts)`. W6 marks "the deeper candidate" (singular) one step beyond what the budget
+  allowed, the same step a `FurtherLevelOffer` would have explored. Only `.cleared` is excluded
+  (`PrerequisiteQuery.swift:86-89`), so an unknown or `fog` prerequisite counts (graph Q2).
+- IF the W6 deeper query returns `code == .graphNoPrerequisite` THEN it is not surfaced: the terminal is
+  `.confirmed` with `code == nil`. A gap was found and remediated. `DIAG_NO_PREREQUISITE` belongs only to a
+  hypothesis with no candidate (contract § 4 `hypothesise`).
+- IF the W6 deeper candidate is already `.blocked` THEN `capped` is a no-op on it (`MasteryTransitions.swift:86-87`)
+  and any `remediated` it already carries from an earlier diagnosis stands, because `capped` does not write it.
+  `.diagnosisNodeBlocked` is still appended for it, matching the unconditional emission for the probed candidate.
+  `d` is still appended to `blockedNodeIds`.
+- IF the W6 node lies at graph depth `levelBudget + 1` from the origin THEN it is marked only. `depthReached` stays
+  the probed depth, so `depthReached ≤ levelBudget ≤ 2` holds. The contract's "depth ≤ 2 from origin" and I4's
+  "backtrack ≤ 2 levels" measure probing and remediation; W6's own **Pre** ("W2 or W4 would exceed 2 levels from
+  the origin") places the deeper candidate beyond the cap by definition, and I4 says "deeper gaps are marked on the
+  map only".
+- IF a `.confirmed` candidate is offered a further level and the student declines (`decideFurtherLevel(accept:
+  false)`) THEN the terminal is plain `.confirmed`, not `.capped`, and no deeper node is marked. `capped` is
+  reserved for budget exhaustion (`docs/domains/diagnosis.md` W4 step 3: "offer — not force").
+- IF a level's candidate depth is > 1 (possible only when `levelBudget - priorLevel ≥ 2`) THEN `level` advances by
+  that depth, not by 1. The contract's "within remaining levels" and "depth ≤ 2 from origin" measure graph depth
+  from the origin, and `PrerequisiteQuery` returns the deepest candidate within its budget (`PrerequisiteQuery.swift:38`,
+  `:62`). `depthReached` on a declined/unavailable/noPrerequisite terminal is `context.depthReached`, the
+  cumulative depth of the last candidate probed to pass/fail (0 if none). For depth-1 candidates (every Demo case)
+  this equals the probe-completed ruling's "`level - 1`" (per `tasks/arbitration/arbiter-02-11-stepwise-api.md`
+  Ruling 4).
+- IF the driver `run` has `decisions.count ≤ k` when the k-th `ProbeOffer` (0-based) is reached THEN it uses
+  `DiagnosisLevelDecision(declineProbe: true, submittedAnswers: [], acceptFurtherLevel: false)`. This is the safest
+  Tier-0 reading: it never guesses an answer and never forces a probe the caller did not authorize (I2). The step
+  API has no such fallback, because every decision is an explicit argument.
+- IF the caller opens a diagnosis from `expedition_second_miss` THEN it builds `failedAttempts` from the two missed
+  `CurrentItem.item` values and the exact strings it submitted to `ExpeditionRun.answer`
+  (`FailedProbeAttempt(item:submittedValue:)`, `Classify.swift:11`). This passes inputs, not state: `ExpeditionRun`
+  exposes no submitted value, and `Classify.classify` is still what decides the error type. For `map_check_here`,
+  `failedAttempts == []`, so `originErrorTypeId == "none_of_these"`.
+- IF `PrerequisiteQuery` returns `code == .graphNoPrerequisite` in `formHypothesis` THEN the diagnosis outcome
+  carries `code == .diagNoPrerequisite` (`CoreError.swift:23, :26`; contract § 4 `hypothesise`: "none →
+  `DIAG_NO_PREREQUISITE`"). The graph code never appears on a `DiagnosisOutcome`.
 - **`probe_completed` emission rule** (per `tasks/arbitration/arbiter-02-11-probe-completed.md`):
-  - IF `probeResult.outcome ∈ {.refuted, .confirmed, .declined}` THEN `.diagnosisProbeCompleted` is emitted
-    exactly once for that level, after that level's `.diagnosisHypothesisFormed` and before any
-    `.diagnosisNodeBlocked`/`.diagnosisReturned`. The domain payload names these three values
-    (`docs/domains/diagnosis.md` notifications-produced: "`{ candidate_id, edge_id, pass|fail|declined }`"),
-    and `contracts/domain-glossary.md:42` defines the probe's outcomes as "**pass / fail / declined**".
-  - IF `probeResult.outcome == .unavailable` THEN `.diagnosisProbeCompleted` is **not** emitted.
-    `DIAG_PROBE_UNAVAILABLE` is not a probe outcome: W3's **Pre** is "two items available", the contract states
-    "Fewer than 2 items → `DIAG_PROBE_UNAVAILABLE` → `unconfirmed`" apart from the three probe-outcome arrows,
-    and the payload enum has no `unavailable` value. The terminal is carried by `.diagnosisReturned` plus
-    `DiagnosisOutcome.code == .diagProbeUnavailable`.
+  - IF a probe concludes with outcome `∈ {.refuted, .confirmed, .declined}` THEN `.diagnosisProbeCompleted` is
+    emitted exactly once for that level, as the first event of the concluding advance: after that level's
+    `.diagnosisHypothesisFormed` (an earlier advance) and before any `.diagnosisNodeBlocked`/`.diagnosisReturned`.
+    The domain payload names these three values (`docs/domains/diagnosis.md` notifications-produced: "`{
+    candidate_id, edge_id, pass|fail|declined }`"), and `contracts/domain-glossary.md:42` defines the probe's
+    outcomes as "**pass / fail / declined**". The W6 node is never probed and never produces a
+    `.diagnosisProbeCompleted`.
+  - IF the draw is `.unavailable` THEN `.diagnosisProbeCompleted` is **not** emitted. `DIAG_PROBE_UNAVAILABLE` is
+    not a probe outcome: W3's **Pre** is "two items available", the contract states "Fewer than 2 items →
+    `DIAG_PROBE_UNAVAILABLE` → `unconfirmed`" apart from the three probe-outcome arrows, and the payload enum has
+    no `unavailable` value. The terminal is carried by `.diagnosisReturned` plus `DiagnosisOutcome.code ==
+    .diagProbeUnavailable`.
   - This rule is applied identically at every level and in every test in this file (AC3, AC4, T1, T5, T8, T9).
     No test in this file may assert the opposite reading.
-- IF a consumer needs the `probe_completed` payload value THEN it reads the pairing value
-  `DiagnosisProbeResult.outcome`, mapped `.refuted → pass`, `.confirmed → fail`, `.declined → declined`.
-  `CoreEvent` is a bare name registry that "carries no payload" (`Packages/Core/Sources/Core/Events/CoreEvent.swift:3-8`),
-  so this file adds no associated value and no new type. A declined probe is represented as
-  `DiagnosisProbeResult(outcome: .declined, results: [], incorrectAttempts: [], code: nil)`. It produces no
-  `ItemResult` and no `probeLog` row, and therefore no telemetry `item_result` or `edge_observation`, whose
-  `downstream_result ∈ {pass, fail}` (`contracts/telemetry.md` § Event kinds). That derivation is EPIC 11 scope.
-- IF `probeResult.outcome ∈ {.declined, .unavailable}` THEN `depthReached` for that terminal equals `level - 1`
-  (the candidate was named by `hypothesise` but the probe itself never produced a check result) — this keeps
-  "depth" meaning "levels actually probed to a pass/fail decision," matching the properties bullet "no path
-  reaches remediation without a `fail` probe outcome" (declined/unavailable never remediate, so they should
-  not count toward depth either). This is a defensible reading, not a contract-verbatim rule; if a later
-  conformance test disagrees, it is a Q4 to the spec-arbiter, not a silent respec here.
-- IF the classified `errorTypeId` names a key absent from the candidate node's `hintTree` (or the classified
-  value is itself `"none_of_these"` and that key is also absent) THEN `returned` resolves to the literal key
-  `"none_of_these"` regardless — the caller/renderer is responsible for handling a still-missing entry at
-  render time (out of `Core`'s I14 renderer-free scope); this task does not raise a new error code for that
-  case, since none is registered for it and adding one is a contract bump, out of scope.
-- IF a `.confirmed` candidate's `NodeState` is absent from `state.nodes` (an unmastered `fog` node with no
-  prior entry) THEN `remediate` is called with `NodeState(mastery: .fog, correctCount: 0, lastProbe: nil,
-  nextDue: nil, ladderRung: 0, remediated: nil)` as `current` — the same "absent means fresh fog" convention
-  `ExpeditionRun.answer` already uses for its own `priorNodeState` (`tasks/epic-02-task-07-item-checker-
-  expedition-run.md:668-669`), applied independently here rather than copied, since `MasteryTransitions
-  .diagnosisBlocked`'s own `mastery == .fog` guard requires exactly this default to ever fire.
-- IF `submittedAnswers` has fewer entries than drawn probe items for a given level THEN the missing entry is
-  treated as the empty string `""`, which `ItemChecker.check` (02.07, its own grammar table) already defines
-  as never matching any answer — this is a T2 assertion, not new logic in `DiagnosisRun` itself.
+- IF a consumer needs the `probe_completed` payload value THEN it reads `DiagnosisAdvance.probeResult!.outcome` on
+  the advance whose `events` contain `.diagnosisProbeCompleted`, mapped `.refuted → pass`, `.confirmed → fail`,
+  `.declined → declined`. `CoreEvent` is a bare name registry that "carries no payload" (`CoreEvent.swift:3-8`), so
+  no associated value is added. A declined probe produces no `ItemResult` and no `probeLog` row, and therefore no
+  telemetry `item_result` or `edge_observation`, whose `downstream_result ∈ {pass, fail}` (`contracts/telemetry.md`
+  § Event kinds). That derivation is EPIC 11 scope.
+- IF the classified `errorTypeId` names a key absent from the origin node's `hintTree` (including
+  `"none_of_these"` itself being absent) THEN `hintKey` returns the literal key `"none_of_these"` regardless. The
+  renderer handles a still-missing entry at render time, outside `Core`'s I14 scope. No new error code is raised,
+  since none is registered and adding one is a contract bump.
+- IF a `.confirmed` candidate's or the W6 deeper candidate's `NodeState` is absent from `state.nodes` THEN
+  `remediate` / `capped` is called with `fogDefault = NodeState(mastery: .fog, correctCount: 0, lastProbe: nil,
+  nextDue: nil, ladderRung: 0, remediated: nil)`. This is the "absent means fresh fog" convention
+  `ExpeditionRun.answer` uses (`ExpeditionRun.swift:114-118`), applied independently, since
+  `MasteryTransitions.diagnosisBlocked`'s `mastery == .fog` guard (`MasteryTransitions.swift:86`) needs it to fire.
+- IF a phase value would be useful to construct outside `Core` (App, previews) THEN it is not constructible there:
+  no public initializer (AC15). The App obtains phase values only from `DiagnosisRun` calls. SwiftUI previews use a
+  real `start` over `data/demo`.
 - Standing default: identifiers and timestamps follow `contracts/data-model.md` § Identifiers/§ Time (kebab-case
   node/error-type ids; calendar-day granularity via the injected `CalendarDay today`, never `Date()`).
-- Standing default: no model call anywhere in this file (I2); the Tier-1 "suggest, never decide" classify path
-  is EPIC 13 scope, entirely outside `DiagnosisRun`.
-- Standing default: telemetry is out of scope here — `diagnosis.probe_completed`'s L3 telemetry payload
-  (edge, upstream state, downstream result) is derived by a telemetry consumer from the emitted `CoreEvent`
-  sequence and the paired `DiagnosisProbeResult` in a later EPIC (11), not constructed by this file.
-- Standing default: `StudentState.remediated` is set only by `remediate`, cleared only elsewhere (EPIC 03/04,
-  on `cleared`) — this file never clears it.
+- Standing default: telemetry is out of scope here. `diagnosis.probe_completed`'s L3 telemetry payload is derived
+  by a later telemetry consumer (EPIC 11) from the events and the paired `DiagnosisAdvance.probeResult`.
+- Standing default: `StudentState.remediated` is written only by `remediate`, only on a probed candidate whose probe
+  failed; `capped` never writes it. It is cleared only elsewhere (EPIC 03/04, on `cleared`); this file never
+  clears it (`contracts/data-model.md` § StudentState).
 
 ## §7 Done definition
 
@@ -776,7 +1045,9 @@ The task is done when ALL gates pass:
   Core-Package` on the simulator, or `swift test --package-path Packages/Core` locally)
 - tests green for every case in §5 (T1–T9), including `DiagnosisMachineTests.swift`,
   `DiagnosisTier0CompletenessTests.swift`, `ExpeditionDiagnosisSeamTests.swift`
+- `grep -c 'public init' Packages/Core/Sources/Core/Diagnosis/DiagnosisEvent.swift` prints `1` (AC15)
 - `scripts/gate.sh` green end to end
-- conforms to every contract section cited in §3 and §4 (`interaction-contract.md` § 4 and § 5,
-  `domain-glossary.md` Probe entry, `telemetry.md` Event kinds, `graph-constraints.md` Query rules,
-  `error-codes.json`'s three `DIAG_*` entries) and to every invariant listed in §1 (I1, I2, I3, I4, I5, I14, D27)
+- conforms to every contract section cited in §3 and §4 (`interaction-contract.md` § 4, § 2 `compose` and § 5,
+  `data-model.md` § StudentState, `domain-glossary.md` Probe entry, `telemetry.md` Event kinds,
+  `graph-constraints.md` Query rules, `error-codes.json`'s three `DIAG_*` entries) and to every invariant listed in
+  §1 (I1, I2, I3, I4, I5, I14, D27)
