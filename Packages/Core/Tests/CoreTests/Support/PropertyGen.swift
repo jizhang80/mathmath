@@ -81,4 +81,56 @@ enum PropertyGen {
     {
         (0..<count).map { _ in bool(&gen, trueWeight: correctWeight) }
     }
+
+    // MARK: - 02.10 additions (`PrerequisiteQueryTests`)
+
+    /// A syntactically minimal `Node`: no expectation codes, no source ref, no probe items — every
+    /// non-optional field carries the smallest value that satisfies its type. Never used as-is for L0
+    /// or content-policy checks (this task's tests never run those), only as graph-structure filler for
+    /// `PrerequisiteQuery`, which reads only `id` and `errorTypes`.
+    static func minimalNode(id: String) -> Node {
+        Node(
+            id: id, name: id, regionId: .algebra, strand: nil, expectationCodes: nil, sourceRef: nil,
+            courses: [], position: Point(x: 0, y: 0), layoutHint: nil,
+            paraphrase: "generated node \(id)", explanation: nil, workedExamples: nil, errorTypes: [],
+            hintTree: [:], probeItems: [])
+    }
+
+    /// A syntactically minimal `Edge` of the given `confidence` — `PrerequisiteQuery` reads only `from`,
+    /// `to` and `confidence`.
+    static func minimalEdge(from: String, to: String, confidence: Double) -> Edge {
+        Edge(
+            from: from, to: to, sources: [], generationAgreement: 1, confidence: confidence,
+            probeStats: ProbeStats(probes: 0, confirmed: 0, downstreamFailGivenUpstreamFail: nil))
+    }
+
+    /// A small synthetic acyclic graph rooted at node id `"origin"`: `1...maxLevels` layers, each layer
+    /// holding `1...maxBranching` nodes, each new node's single outgoing edge pointing (as the
+    /// prerequisite, `edge.from`) to one randomly-chosen node of the layer directly below it (closer to
+    /// `"origin"`) — matching concept-graph's "from = prerequisite (shallower), to = dependent (deeper)"
+    /// edge direction. Every edge points to a strictly lower layer index, so the graph is acyclic by
+    /// construction; every node beyond `"origin"` is reachable from `"origin"` by walking incoming edges
+    /// upward, at the layer's own BFS depth.
+    static func smallLayeredGraph(
+        _ gen: inout SeededGenerator, maxLevels: Int, maxBranching: Int
+    ) -> (nodes: [Node], edges: [Edge], originId: String) {
+        var nodesByLevel: [[String]] = [["origin"]]
+        var nodes: [Node] = [minimalNode(id: "origin")]
+        var edges: [Edge] = []
+        let levels = int(&gen, in: 1...maxLevels)
+        for level in 1...levels {
+            let count = int(&gen, in: 1...maxBranching)
+            var ids: [String] = []
+            for index in 0..<count {
+                let id = "l\(level)n\(index)"
+                ids.append(id)
+                nodes.append(minimalNode(id: id))
+                let parentId = element(&gen, from: nodesByLevel[level - 1])
+                let confidence = Double.random(in: 0.5...1, using: &gen)
+                edges.append(minimalEdge(from: id, to: parentId, confidence: confidence))
+            }
+            nodesByLevel.append(ids)
+        }
+        return (nodes, edges, "origin")
+    }
 }
