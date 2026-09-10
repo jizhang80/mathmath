@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "format_version_seen": "0.0.0",
   "syllabi": [
     "MCR3U"
@@ -20,6 +20,12 @@
       "mastery": "fog",
       "correct_count": 1,
       "ladder_rung": 0
+    },
+    "matrix-multiplication": {
+      "mastery": "blocked",
+      "correct_count": 0,
+      "ladder_rung": 0,
+      "remediated": true
     }
   },
   "trail": {

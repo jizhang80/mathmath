@@ -74,4 +74,45 @@ struct OptionalAbsentTests {
                 "re-encoded exponential-functions emitted a key for absent optional \(key)")
         }
     }
+
+    @Test("StudentState.Marker/NodeState round-trip the new optional fields (past_last_unit, remediated)")
+    func markerAndNodeStateRoundTripNewOptionalFields() throws {
+        let data = try Data(contentsOf: Self.examplesDir.appendingPathComponent("student-state.json"))
+        let sourceJSON = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let sourceMarker = try #require(sourceJSON["marker"] as? [String: Any])
+        #expect(
+            sourceMarker["past_last_unit"] == nil,
+            "fixture precondition failed: marker unexpectedly has past_last_unit")
+        let sourceNodes = try #require(sourceJSON["nodes"] as? [String: [String: Any]])
+        let sourceExponentLaws = try #require(sourceNodes["exponent-laws"])
+        #expect(
+            sourceExponentLaws["remediated"] == nil,
+            "fixture precondition failed: exponent-laws unexpectedly has remediated")
+        let sourceMatrixMultiplication = try #require(sourceNodes["matrix-multiplication"])
+        let declaredRemediated = try #require(sourceMatrixMultiplication["remediated"] as? Bool)
+        #expect(
+            declaredRemediated == true,
+            "fixture precondition failed: matrix-multiplication.remediated != true")
+
+        let decoded = try CoreCoding.decoder.decode(StudentState.self, from: data)
+        #expect(decoded.marker.pastLastUnit == nil)
+        #expect(decoded.nodes["exponent-laws"]?.remediated == nil)
+        #expect(decoded.nodes["matrix-multiplication"]?.remediated == true)
+
+        let reencoded = try CoreCoding.encoder.encode(decoded)
+        let reencodedJSON = try #require(JSONSerialization.jsonObject(with: reencoded) as? [String: Any])
+        let reencodedMarker = try #require(reencodedJSON["marker"] as? [String: Any])
+        #expect(
+            reencodedMarker["past_last_unit"] == nil,
+            "re-encoded marker emitted a key for absent optional past_last_unit")
+        let reencodedNodes = try #require(reencodedJSON["nodes"] as? [String: [String: Any]])
+        let reencodedExponentLaws = try #require(reencodedNodes["exponent-laws"])
+        #expect(
+            reencodedExponentLaws["remediated"] == nil,
+            "re-encoded exponent-laws emitted a key for absent optional remediated")
+        let reencodedMatrixMultiplication = try #require(reencodedNodes["matrix-multiplication"])
+        #expect(
+            (reencodedMatrixMultiplication["remediated"] as? Bool) == true,
+            "re-encoded matrix-multiplication lost its remediated:true value")
+    }
 }

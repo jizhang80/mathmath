@@ -1,0 +1,50 @@
+import Foundation
+
+/// The closed set of in-process notification names (`contracts/interaction-contract.md` § 5), one case
+/// per name, raw value the exact dotted string. `CoreEvent` is a bare name registry — it carries no
+/// payload; payloads are ids, enums, booleans and small integers only (I5), and a caller that needs to
+/// pair an event with data defines its own pairing type (e.g. `MasteryTransitionResult`) rather than
+/// this enum growing an associated value.
+public enum CoreEvent: String, CaseIterable, Equatable {
+    case mapOpened = "map.opened"
+    case mapNodeOpened = "map.node_opened"
+    case mapRegionOpened = "map.region_opened"
+    case mapLandmarkOpened = "map.landmark_opened"
+    case mapMarkerMoved = "map.marker_moved"
+    case mapCheckHereRequested = "map.check_here_requested"
+    case mapIncludeRequested = "map.include_requested"
+    case mapUnitExpeditionRequested = "map.unit_expedition_requested"
+    case expeditionStarted = "expedition.started"
+    case expeditionItemAnswered = "expedition.item_answered"
+    case expeditionDiagnosisRequested = "expedition.diagnosis_requested"
+    case expeditionNodeCleared = "expedition.node_cleared"
+    case expeditionNodeDue = "expedition.node_due"
+    case expeditionMarkerChanged = "expedition.marker_changed"
+    case expeditionTrailGenerated = "expedition.trail_generated"
+    case expeditionCompleted = "expedition.completed"
+    case diagnosisOpened = "diagnosis.opened"
+    case diagnosisHypothesisFormed = "diagnosis.hypothesis_formed"
+    case diagnosisProbeCompleted = "diagnosis.probe_completed"
+    case diagnosisNodeBlocked = "diagnosis.node_blocked"
+    case diagnosisCapped = "diagnosis.capped"
+    case diagnosisRemediationShown = "diagnosis.remediation_shown"
+    case diagnosisReturned = "diagnosis.returned"
+    case platformLaunched = "platform.launched"
+    case platformContentUpdated = "platform.content_updated"
+    case platformStateMigrated = "platform.state_migrated"
+    case platformStateWritten = "platform.state_written"
+    case platformSyncCompleted = "platform.sync_completed"
+    case platformSyncConflictMerged = "platform.sync_conflict_merged"
+    case platformCapabilityFacts = "platform.capability_facts"
+    case platformConnectivityChanged = "platform.connectivity_changed"
+    case tierCapabilityDetected = "tier.capability_detected"
+    case tierClassificationReturned = "tier.classification_returned"
+    case tierFallbackDecided = "tier.fallback_decided"
+    case tierWordingAdapted = "tier.wording_adapted"
+    case telemetryConsentChanged = "telemetry.consent_changed"
+    case telemetryBatchSent = "telemetry.batch_sent"
+    case telemetryBatchFailed = "telemetry.batch_failed"
+    case learningObjectsBundleLoaded = "learning_objects.bundle_loaded"
+    case learningObjectsHintTierServed = "learning_objects.hint_tier_served"
+    case graphPrerequisiteReturned = "graph.prerequisite_returned"
+}

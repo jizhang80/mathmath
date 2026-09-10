@@ -119,3 +119,28 @@ so the cost is the list, not content.
 **Configuration:** per-student generated trails (D47) over one graph (I7).
 **Revisit trigger:** the undergraduate content tier reaching the relevant nodes (D1 order), or a tester request.
 **Hypothesis (unverified):** none.
+
+### D-12 — `MAP_MARKER_OFF_TRAIL` user text vs. the load-time marker fallback
+
+**Observed:** EPIC 02 pre-dispatch arbitration Q-D (`tasks/arbitration/arbiter-02-predispatch.md`). On load,
+a saved marker naming a unit absent from the bundle makes `Core` return `MAP_MARKER_OFF_TRAIL` as data
+together with the default marker (`MarkerTrail.reconcileMarker`, EPIC 02 task 02.5). The registered
+`user_text` in `contracts/error-codes.json` says the marker stays where it was, but on this path the marker
+moves.
+**Configuration:** `contracts/error-codes.json` v1.0.0; `Core` returns the code as data and shows no UI text.
+**Revisit trigger:** EPIC 03, when the App first surfaces this code to the student.
+**Hypothesis (unverified):** either suppress the message on the load path or register a separate code; this is
+the UI-text owner's call.
+
+### D-13 — Untracked SwiftPM artefact under the Xcode project's embedded workspace
+
+**Observed:** after EPIC 02 simulator builds, `App/mathmath.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/`
+appears untracked. `.gitignore` covers `xcuserdata/` there, not `xcshareddata/swiftpm/`. It is neither
+committed nor deleted.
+**Configuration:** `xcodebuild` runs from `scripts/gate.sh` on the iOS simulator; the App builds through
+`App/mathmath.xcworkspace`.
+**Revisit trigger:** the next tooling or `.gitignore` change, or when the directory is first found staged by
+mistake.
+**Hypothesis (unverified):** it is SwiftPM resolution state that Xcode writes when the project is resolved
+directly. An ignore rule is likely correct, but whether `Package.resolved` there should be tracked has not been
+checked.

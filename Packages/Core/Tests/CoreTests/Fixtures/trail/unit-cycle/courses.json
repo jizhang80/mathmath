@@ -1,0 +1,47 @@
+{
+  "format_version": "0.0.0",
+  "courses": [
+    {
+      "course_code": "TST1X",
+      "name": "Test course (synthetic, unit-cycle fixture)",
+      "vintage": "2026",
+      "strands": [
+        {
+          "code": "T",
+          "name": "Test strand"
+        }
+      ],
+      "expectations": [
+        {
+          "code": "T1.1",
+          "kind": "specific",
+          "paraphrase": "Synthetic expectation for node a.",
+          "official_url": "https://dcp.edu.gov.on.ca/en/curriculum/secondary-mathematics/courses/tst1x",
+          "unit_id": "TST1X.u1"
+        },
+        {
+          "code": "T1.2",
+          "kind": "specific",
+          "paraphrase": "Synthetic expectation for node b.",
+          "official_url": "https://dcp.edu.gov.on.ca/en/curriculum/secondary-mathematics/courses/tst1x",
+          "unit_id": "TST1X.u1"
+        }
+      ],
+      "units": [
+        {
+          "unit_id": "TST1X.u1",
+          "name": "The only unit",
+          "expectation_codes": [
+            "T1.1",
+            "T1.2"
+          ]
+        }
+      ],
+      "unit_source": {
+        "title": "Synthetic unit-cycle fixture",
+        "edition": "0.0.0"
+      },
+      "next_courses": []
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "format_version": "0.0.0",
+  "nodes": [
+    {
+      "id": "a",
+      "name": "a",
+      "region_id": "algebra",
+      "expectation_codes": [
+        {
+          "course_code": "TST1X",
+          "code": "T1.1"
+        }
+      ],
+      "courses": [
+        {
+          "course_code": "TST1X",
+          "depth": 1
+        }
+      ],
+      "position": {
+        "x": 0.3,
+        "y": 0.4
+      },
+      "paraphrase": "Synthetic node for the AC6 negative-control (intra-unit cycle) fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    },
+    {
+      "id": "b",
+      "name": "b",
+      "region_id": "algebra",
+      "expectation_codes": [
+        {
+          "course_code": "TST1X",
+          "code": "T1.2"
+        }
+      ],
+      "courses": [
+        {
+          "course_code": "TST1X",
+          "depth": 1
+        }
+      ],
+      "position": {
+        "x": 0.3,
+        "y": 0.4
+      },
+      "paraphrase": "Synthetic node for the AC6 negative-control (intra-unit cycle) fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    }
+  ]
+}

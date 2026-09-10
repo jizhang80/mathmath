@@ -29,6 +29,9 @@
         "unit_id": {
           "type": "string",
           "pattern": "^[A-Z]{3}[1-4][A-Z]\\.u[1-9][0-9]*$"
+        },
+        "past_last_unit": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -69,6 +72,9 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 4
+          },
+          "remediated": {
+            "type": "boolean"
           }
         },
         "required": [
