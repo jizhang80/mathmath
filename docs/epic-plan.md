@@ -22,6 +22,12 @@ verification is the owner's at the wrap-gate (D29). Q5 is the only owner stop.
 | 03 | Feature | **App: Map (Door C) + shell** — snapshot bundle load and L0 at launch, JSON persistence of `StudentState` (Application Support, atomic), `MapViewModel` → `Canvas` render (regions, rivers, fog, due ring, blocked marker, trail solid/dashed, horizon, landmark), trail-first camera (D44), pan/zoom, node / region / landmark panels, unit-list marker picker (D45), "Check me here" / "Include" / "Unit expedition" actions | map, platform (launch, persistence) | 02 | `Core`↔render layer (I14 boundary; view computes nothing); bundle loader↔`Core` validation at load | App build; launch on simulator with the demo bundle; persistence survives relaunch |
 | 04 | Feature | **App: Expedition (Door B) + Diagnosis (Door A) + acceptance instrument** — item view (numeric keypad / choices), answer card with `why`, retry, hypothesis card, probe, remediation, return, summary; unit expedition entry; the owner's acceptance record template for DEMO-BRIEF §7 items 1–7 and the §8 verification checklist (simulator half by agents, device half by owner) | expedition, diagnosis (UI) | 03 | App↔`Core` state transitions (every screen action is a `Core` call) | App build; one full expedition + one diagnosis completable by touch on the simulator (§8); `docs/epics/demo-acceptance-record.md` template |
 
+**EPIC 02 split (planner, 2026-09-10; scope unchanged):** over the 8-task cap, split at the brief's §8 seam into
+**02a — Door B core** (tasks 02.1–02.8: contract bumps, `CoreError`/calendar/mastery transitions,
+marker/trail, fringe/compose, item checker + expedition run) and **02b — Door A core + merge** (02.9–02.13:
+merge rule, prerequisite query + classify, diagnosis machine, state merge). Each is wrapped and merged on its
+own. Plan: `docs/plans/epic-02-plan.md`.
+
 Demo wrap = owner installs on the two testers' devices (D35) and records the seven observations; that
 record decides whether the map form proceeds to M3 or is revised (DEMO-BRIEF §7) — a Q5 checkpoint by
 design, not a stop.
