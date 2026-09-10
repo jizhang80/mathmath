@@ -98,6 +98,18 @@ In-scope (the implementer touches EXACTLY these; nothing else):
   `ProbeCheckSelect`; `check` on `ProbeItem`.
 - `Packages/Core/Sources/Core/Model/Landmarks.swift` — MODIFY. `sourceTitle` on `Landmark`.
 - `Packages/Core/Tests/CoreTests/DecodeRoundTripTests.swift` — MODIFY. Add the three tests of §5: T1, T2 and T5b. T2 (mutate `check.kind` to `"guess"`, assert `DecodingError`) is new — the pre-existing `unrecognizedEnumValueFailsDecode` mutates `region_id`, not `ProbeCheckKind`, so it does not cover it.
+- `Packages/Core/Tests/CoreTests/Fixtures/l0/*/landmarks.json` (19 files) — MODIFY. Add `source_title` to
+  each. **Amendment 01.06.1.1 (orchestrating session, 2026-09-09), correcting a spec defect found by the
+  implementer:** the original out-of-scope note claimed these "decode unchanged" because `check` is
+  optional. That is true of `check` but NOT of `sourceTitle`, which §4 step 7 mandates **non-optional** —
+  so every one of these fixtures fails `BundleIO.read`, reding 20 pre-existing `L0CheckerTests` /
+  `L0CheckerContractTests` cases, and there was no in-scope way to keep gate 3 green.
+  This is not scope creep: task 02b's AC4 requires `Fixtures/l0/valid/` to be **byte-identical** to
+  `contracts/examples/`, and it currently is for all seven files (verified). Once
+  `contracts/examples/landmarks.json` gains `source_title`, the fixtures must gain it too or 02b's AC4
+  breaks. Keep `valid/landmarks.json` byte-identical to `contracts/examples/landmarks.json`; give every
+  other fixture the same `source_title` unless that fixture's whole point is a mutated landmark, in which
+  case mutate only what that fixture exists to mutate.
 - `data/demo/nodes.json` — MODIFY. **Add the `check` key to the 20 `numeric` probe items and nothing
   else.** Every other key in the file is byte-unchanged.
 - `data/demo/landmarks.json` — MODIFY. **Add `"source_title": "Interest Act"` and nothing else.** The
@@ -129,9 +141,10 @@ Out-of-scope (do not touch even if tempted):
   `LO_LANDMARK_UNSOURCED` already carry both failure modes and are already registered.
 - `Packages/Core/Sources/Core/Validation/**`, `Layout/**` — no L0 rule is added. `check` is content the
   pipeline verifies, not graph structure (`docs/tech-stack.md:67`; planner note [4]).
-- `Packages/Core/Tests/CoreTests/Fixtures/**` — these fixtures are not schema-validated
-  (`test_data_bundles_validate` scans `data/**` only) and `check` is optional in the Swift type, so they
-  decode unchanged. Do not churn them.
+- `Packages/Core/Tests/CoreTests/Fixtures/**` — EXCEPT the 19 `Fixtures/l0/*/landmarks.json` files, which
+  are IN SCOPE (see below). Everything else under `Fixtures/**` stays untouched: those files are not
+  schema-validated (`test_data_bundles_validate` scans `data/**` only) and `check` is optional in the Swift
+  type, so they decode unchanged.
 - Any `data/demo/*.json` other than `nodes.json` and `landmarks.json`.
 - `App/**`, `Packages/Rendering/**` — `RenderCheckReport`'s field enumeration selects schema properties
   whose name contains `latex` (`Packages/Rendering/Tests/RenderingTests/SchemaEnumerationCoverageTests.swift:68-71`);
