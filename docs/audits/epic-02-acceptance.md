@@ -84,6 +84,21 @@ report covers **02b** (02.9–02.12, plus the fix task 02.5b) and traces brief �
 - `data/demo/manifest.json` has placeholder sha256 values of 66 hex characters, not the 64 of a SHA-256 digest (found by the 04.1b reviewer). Routed to the embedded-snapshot hash-verification DEFERRED entry that EPIC 03 task 03.8 writes (trigger EPIC 10). No 02b entry.
 - Context bundles again carried fabricated or misattributed citations. The downstream writer or reviewer caught every one, with arbitration where needed (§7), and none reached code.
 
+### Test-suite determinism: the live-landmark flake recurred in CI
+
+The first CI run on PR #8 (run 34528761105) failed the `Python pipeline` job on one test:
+`tests/test_verify_landmarks_contract.py::test_resolve_source_ref_raises_spine_source_ref_unresolved_when_registered_url_404s`,
+with `ConnectionResetError: [Errno 54] Connection reset by peer`. The other 161 passed, and the Swift job passed.
+This is the only non-hermetic test in the repo (a live HTTPS fetch, deliberately so per I15). It is the second
+recurrence of the flake: EPIC 01 acceptance §7 recorded the first, and 02.12's local gate hit it and passed on
+retry.
+
+Brief §7.10 says this item "enters only if CI flakes, as a separate `fix(pipeline)` task". It has now flaked in
+CI, so the task is due. It is scheduled as the first task on the next branch (EPIC 03a). Its purpose is to tell a
+transport blip (retry, then mark inconclusive) apart from a genuinely dead source (fail), without weakening
+I15. Nothing in 02b's code touches `pipeline/`. The merge relies on a green re-run of the unchanged job, recorded
+on the PR.
+
 ## 7. Escalations during 02b
 
 - **02.9:** the reviewer blocked it because the quote had been re-wrapped. The writer retried and it passed.
