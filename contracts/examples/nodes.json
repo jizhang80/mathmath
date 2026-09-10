@@ -49,6 +49,11 @@
           "answer": {
             "value": "6"
           },
+          "check": {
+            "kind": "solve",
+            "equations": ["Eq((2**3)**2, 2**k)"],
+            "unknown": "k"
+          },
           "wrong_answers": [
             {
               "value": "5",
@@ -124,6 +129,11 @@
           "why": "3 multiplied by itself twice is 9.",
           "answer": {
             "value": "9"
+          },
+          "check": {
+            "kind": "evaluate",
+            "expr": "3**x",
+            "at": { "x": "2" }
           },
           "wrong_answers": [
             {

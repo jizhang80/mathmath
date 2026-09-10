@@ -166,3 +166,66 @@ def test_no_verbatim_key_in_examples_or_data() -> None:
     for path in files:
         for obj in _walk_objects(json.loads(path.read_text())):
             assert "verbatim" not in obj, path
+
+
+def test_numeric_probe_item_requires_check() -> None:
+    """v1.1.0: schema requires `check` on every `numeric` ProbeItem (owner Q5 ruling)."""
+    example = json.loads((EXAMPLES / "nodes.json").read_text())
+    target: dict[str, Any] | None = None
+    for node in example["nodes"]:
+        for item in node.get("probe_items", []):
+            if item.get("type") == "numeric":
+                target = item
+                break
+        if target is not None:
+            break
+    assert target is not None, "no numeric probe item found in contracts/examples/nodes.json"
+    del target["check"]
+    errors = _errors("nodes", example)
+    assert errors, "deleting check from a numeric item did not fail validation"
+    assert any("check" in message for message in errors), errors
+
+
+def test_mc_probe_item_rejects_check() -> None:
+    """v1.1.0: schema forbids `check` on every `mc` ProbeItem."""
+    example = json.loads((EXAMPLES / "nodes.json").read_text())
+    target: dict[str, Any] | None = None
+    for node in example["nodes"]:
+        for item in node.get("probe_items", []):
+            if item.get("id") == "exp-2":
+                target = item
+                break
+        if target is not None:
+            break
+    assert target is not None, "exp-2 not found in contracts/examples/nodes.json"
+    assert target["type"] == "mc"
+    target["check"] = {"kind": "evaluate", "expr": "x + 1"}
+    errors = _errors("nodes", example)
+    assert errors, "adding check to an mc item did not fail validation"
+
+
+def test_check_expr_rejects_a_bare_numeric_literal() -> None:
+    """v1.1.0: `check.expr` may not be a bare numeric literal (anti-vacuity guard)."""
+    example = json.loads((EXAMPLES / "nodes.json").read_text())
+    target: dict[str, Any] | None = None
+    for node in example["nodes"]:
+        for item in node.get("probe_items", []):
+            check = item.get("check")
+            if check is not None and check.get("kind") == "evaluate":
+                target = check
+                break
+        if target is not None:
+            break
+    assert target is not None, "no evaluate-kind check found in contracts/examples/nodes.json"
+    target["expr"] = "6"
+    errors = _errors("nodes", example)
+    assert errors, "a bare numeric literal expr did not fail validation"
+
+
+def test_landmark_requires_source_title() -> None:
+    """v1.1.0: schema requires `source_title` on every landmark (owner Q5 ruling)."""
+    example = json.loads((EXAMPLES / "landmarks.json").read_text())
+    del example["landmarks"][0]["source_title"]
+    errors = _errors("landmarks", example)
+    assert errors, "deleting source_title did not fail validation"
+    assert any("source_title" in message for message in errors), errors

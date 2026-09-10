@@ -1,6 +1,6 @@
 # Contract: Data model (LOCK-FIRST)
 
-**Contract version:** v1.0.0 · Source: brief v2 §5 as amended (D20–D22, D32, D33, D43–D48), `docs/domains/*.md`
+**Contract version:** v1.1.0 · Source: brief v2 §5 as amended (D20–D22, D32, D33, D43–D48), `docs/domains/*.md`; v1.1.0 adds `ProbeItem.check` and `Landmark.source_title` (owner Q5 ruling 2026-09-09, `tasks/blocked/Q5-RULING-01-07.md`)
 
 > The shapes every bundle file, the student state and `Core`'s `Codable` types share. The **JSON Schemas in
 > `contracts/schemas/` are normative**; this file states the rules the schemas cannot. `Core` decodes exactly
@@ -50,7 +50,7 @@
 | `nodes.json` | `nodes.schema.json` | `id`, `name`, `region_id`, `strand?`, `expectation_codes[]?`, `source_ref?` (**at least one**), `courses[] {course_code, depth}`, `position {x,y}` (from `core-cli layout`), `layout_hint?`, `paraphrase`, `explanation?`, `worked_examples[]?`, `error_types[]` (closed, one `none-of-these`, each `implies_prerequisite?`), `hint_tree {error_type_id → [tier1, tier2, tier3]}`, `probe_items[]` |
 | `edges.json` | `edges.schema.json` | `from`, `to`, `sources[] {tag, origin}`, `generation_agreement`, `confidence` [0,1], `probe_stats {probes, confirmed, downstream_fail_given_upstream_fail}` |
 | `courses.json` | `courses.schema.json` | `course_code`, `name`, `vintage`, `strands[]`, `expectations[] {code, kind, paraphrase, official_url, unit_id}`, `units[] {unit_id, name, expectation_codes[]}`, `unit_source? {title, edition}`, `next_courses[]` |
-| `landmarks.json` | `landmarks.schema.json` | `id`, `name`, `what_it_is`, `source_url` (**required**, https), `node_ids[]` (≥ 1), `region_ids[]`, `position` |
+| `landmarks.json` | `landmarks.schema.json` | `id`, `name`, `source_title`, `what_it_is`, `source_url` (**required**, https), `node_ids[]` (≥ 1), `region_ids[]`, `position` |
 | `sources.json` | `sources.schema.json` | undergraduate sources: `source`, `title`, `edition`, `licence`, `attribution`, `url` |
 | (state) | `student-state.schema.json` | see below |
 | (telemetry) | `telemetry-batch.schema.json` | see `telemetry.md` |
@@ -60,6 +60,46 @@
 rational), tolerance (≥ 0, default 0)}` with `wrong_answers[] {value, error_type_id}` (numeric) or
 `choices[] {id, latex, error_type_id?}` + `correct_choice_id` (mc; every non-correct choice carries an
 `error_type_id`). No free-text answer field exists (I1, I10).
+
+Every `numeric` item additionally carries **`check`** — the machine-readable declaration the CAS re-derives
+the answer from (I1). An `mc` item never carries `check`: its correctness is `correct_choice_id` plus the
+on-enum distractor rule (`content-policy.md` § Generated content). Extending `check` to `mc` items is a
+further versioned change.
+
+`check` is `{ kind ∈ {evaluate, solve} }` plus, by kind:
+- **`evaluate`** — `expr` (required): one SymPy-source expression; `at` (optional): a map from symbol name
+  to a numeric string, substituted before evaluation. `equations`, `unknown`, `select` are absent.
+- **`solve`** — `equations[]` (required): one or more `Eq(lhs, rhs)` in SymPy source; `unknown` (required):
+  the symbol whose value is the answer; `select ∈ {only, max, min}` (optional, default `only`): which
+  solution is the answer when a well-posed problem has more than one. `expr` and `at` are absent.
+
+`expr` and `equations[]` hold **SymPy source, never LaTeX** (§ Text is unaffected); they are never rendered
+and never shown to a student. `expr` may not be a bare numeric literal — a check that restates
+`answer.value` proves nothing, and the schema rejects it. `answer.value` is the claim, `check` is the
+derivation, and the two are compared, never merged: a disagreement is a build failure, never a correction of
+one from the other.
+
+### Probe answer derivation (normative)
+The pipeline derives every `numeric` answer from `check` alone. **`prompt_latex` is never parsed** — it is a
+presentation string that may embed an English question, and a parser that mis-reads it does not fail, it
+silently confirms whatever answer was authored. No model participates at any point (I1).
+
+Parsing is `sympy.parse_expr` with `standard_transformations + (rationalize,)` — so decimal literals become
+exact `Rational`s — and a **closed name allow-list**: `Eq`, `Rational`, `sqrt`, `log`, `exp`, `Abs`, `diff`,
+`pi`, `E`. Any other name parses to a free symbol; calling one raises, and the item fails. Extending the
+allow-list is a versioned change.
+
+- `evaluate`: parse `expr`; every key of `at` must be a free symbol of `expr`; substitute; the result must
+  have no free symbols left.
+- `solve`: parse each equation; `unknown` must be a free symbol of the set; call
+  `sympy.solve(equations, sorted(free_symbols), dict=True)`; keep the solutions that bind `unknown`;
+  `select: only` requires exactly one distinct bound value, `max`/`min` take the extreme of them.
+
+The derived value must be an exact rational after `sympy.simplify` (`.is_Rational` true). A parse failure,
+an unknown name, a leftover free symbol, an unbound `unknown`, zero solutions, more than one solution under
+`select: only`, or a non-rational result is `LO_PROBE_UNCHECKABLE` and **fails the build**. Nothing is
+rounded, nothing is approximated, nothing is inferred. The derived value is then compared to
+`answer.value` within `answer.tolerance` (default `0`); a mismatch fails the build.
 
 ### StudentState (`student-state.schema.json`)
 `schema_version`, `format_version_seen`, `syllabi[]` (course codes), `marker {course_code, unit_id}`,

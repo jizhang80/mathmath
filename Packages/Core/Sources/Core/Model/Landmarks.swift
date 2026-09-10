@@ -11,6 +11,7 @@ public struct LandmarksFile: Codable, Equatable {
 public struct Landmark: Codable, Equatable {
     public let id: String
     public let name: String
+    public let sourceTitle: String
     public let whatItIs: String
     public let sourceUrl: String
     public let nodeIds: [String]

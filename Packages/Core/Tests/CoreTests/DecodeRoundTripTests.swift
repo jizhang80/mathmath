@@ -80,6 +80,80 @@ struct DecodeRoundTripTests {
         }
     }
 
+    // T2 (task 01.6.1): `ProbeCheck.kind` is a closed enum — an unrecognized raw value fails decode.
+    @Test("unrecognized ProbeCheck.kind fails decode")
+    func unrecognizedProbeCheckKindFailsDecode() throws {
+        let data = try Data(contentsOf: Self.examplesDir.appendingPathComponent("nodes.json"))
+        var json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        var nodes = try #require(json?["nodes"] as? [[String: Any]])
+        var probeItems = try #require(nodes[0]["probe_items"] as? [[String: Any]])
+        var firstNumericIndex: Int?
+        for (index, item) in probeItems.enumerated() where item["type"] as? String == "numeric" {
+            firstNumericIndex = index
+            break
+        }
+        let index = try #require(firstNumericIndex, "no numeric probe item in the first node")
+        var check = try #require(probeItems[index]["check"] as? [String: Any])
+        check["kind"] = "guess"
+        probeItems[index]["check"] = check
+        nodes[0]["probe_items"] = probeItems
+        json?["nodes"] = nodes
+        let mutated = try JSONSerialization.data(withJSONObject: json as Any)
+        #expect(throws: DecodingError.self) {
+            try CoreCoding.decoder.decode(NodesFile.self, from: mutated)
+        }
+    }
+
+    /// `data/demo/`, located the same way as `examplesDir` but two path components shorter
+    /// (`appendingPathComponent("data/demo")` instead of `contracts/examples`).
+    private static var demoDataDir: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()  // CoreTests
+            .deletingLastPathComponent()  // Tests
+            .deletingLastPathComponent()  // package root (Packages/Core)
+            .deletingLastPathComponent()  // Packages
+            .deletingLastPathComponent()  // repo root
+            .appendingPathComponent("data/demo")
+    }
+
+    // T1 / AC8: `data/demo/nodes.json` and `data/demo/landmarks.json` round-trip through the `Core`
+    // types with `check` and `sourceTitle` intact — the real seam `core-cli layout` exercises
+    // (`BundleIO.write` re-encodes from these types, so a type missing either field would silently
+    // erase it on the next layout run).
+    @Test("data/demo nodes and landmarks round-trip with check and source_title intact (T1, AC8)")
+    func demoBundleRoundTripPreservesCheckAndSourceTitle() throws {
+        let nodesData = try Data(contentsOf: Self.demoDataDir.appendingPathComponent("nodes.json"))
+        let landmarksData = try Data(
+            contentsOf: Self.demoDataDir.appendingPathComponent("landmarks.json"))
+
+        try Self.assertRoundTrip(NodesFile.self, data: nodesData, file: "data/demo/nodes.json")
+        try Self.assertRoundTrip(
+            LandmarksFile.self, data: landmarksData, file: "data/demo/landmarks.json")
+
+        let nodesFile = try CoreCoding.decoder.decode(NodesFile.self, from: nodesData)
+        let landmarksFile = try CoreCoding.decoder.decode(LandmarksFile.self, from: landmarksData)
+
+        var numericCount = 0
+        var checkCount = 0
+        for node in nodesFile.nodes {
+            for item in node.probeItems {
+                if item.type == .numeric {
+                    numericCount += 1
+                }
+                if item.check != nil {
+                    checkCount += 1
+                }
+            }
+        }
+
+        // Anti-vacuity: exactly 20 numeric items and exactly 20 non-nil check objects.
+        #expect(numericCount == 20, "expected 20 numeric probe items in data/demo/nodes.json")
+        #expect(checkCount == 20, "expected 20 ProbeItem.check objects surviving decode")
+
+        let landmark = try #require(landmarksFile.landmarks.first)
+        #expect(landmark.sourceTitle == "Interest Act")
+    }
+
     // T5: negative control for the recursive import-boundary walk — proves the walk actually
     // descends into `Model/` rather than staying flat.
     @Test("import boundary walk includes Model/ files")
@@ -234,5 +308,20 @@ struct DecodeRoundTripTests {
         #expect(
             collected.intersection(Self.identifierBlocklist) == ["device_id"],
             "collector failed to catch device_id injected into the nested marker object")
+    }
+
+    // T5b: `Landmark.sourceTitle` is declared non-optional — a document missing `source_title` must
+    // fail decode, proving the field was not quietly typed `String?`.
+    @Test("Landmark without source_title fails decode")
+    func landmarkWithoutSourceTitleFailsDecode() throws {
+        let data = try Data(contentsOf: Self.examplesDir.appendingPathComponent("landmarks.json"))
+        var json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        var landmarks = try #require(json?["landmarks"] as? [[String: Any]])
+        landmarks[0].removeValue(forKey: "source_title")
+        json?["landmarks"] = landmarks
+        let mutated = try JSONSerialization.data(withJSONObject: json as Any)
+        #expect(throws: DecodingError.self) {
+            try CoreCoding.decoder.decode(LandmarksFile.self, from: mutated)
+        }
     }
 }

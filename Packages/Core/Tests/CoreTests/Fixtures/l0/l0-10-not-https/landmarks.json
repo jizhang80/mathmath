@@ -4,6 +4,7 @@
     {
       "id": "canadian-mortgage-compounding",
       "name": "Canadian fixed-rate mortgages compound semi-annually",
+      "source_title": "Interest Act",
       "what_it_is": "Canada's Interest Act requires that a fixed-rate mortgage state its interest as calculated yearly or half-yearly, not in advance; lenders then convert that semi-annual rate to a monthly one.",
       "source_url": "http://laws-lois.justice.gc.ca/eng/acts/I-15/",
       "node_ids": [

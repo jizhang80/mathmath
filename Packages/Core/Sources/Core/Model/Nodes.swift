@@ -61,6 +61,31 @@ public struct ProbeItem: Codable, Equatable {
     public let wrongAnswers: [WrongAnswer]?
     public let choices: [ProbeChoice]?
     public let correctChoiceId: String?
+    public let check: ProbeCheck?
+}
+
+/// The machine-readable declaration the pipeline's CAS re-derives `answer.value` from
+/// (`contracts/data-model.md` § Probe answer derivation). `Core` carries it so a bundle re-encode
+/// (`BundleIO.write`) preserves it; `Core` never parses or evaluates it — that is the pipeline's job
+/// (I1, I14).
+public struct ProbeCheck: Codable, Equatable {
+    public let kind: ProbeCheckKind
+    public let expr: String?
+    public let at: [String: String]?
+    public let equations: [String]?
+    public let unknown: String?
+    public let select: ProbeCheckSelect?
+}
+
+public enum ProbeCheckKind: String, Codable {
+    case evaluate
+    case solve
+}
+
+public enum ProbeCheckSelect: String, Codable {
+    case only
+    case max
+    case min
 }
 
 public enum ProbeItemType: String, Codable {
