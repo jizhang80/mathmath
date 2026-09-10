@@ -23,6 +23,7 @@ public struct StudentState: Codable, Equatable {
 public struct Marker: Codable, Equatable {
     public let courseCode: String
     public let unitId: String
+    public let pastLastUnit: Bool?
 }
 
 public struct NodeState: Codable, Equatable {
@@ -31,6 +32,7 @@ public struct NodeState: Codable, Equatable {
     public let lastProbe: String?
     public let nextDue: String?
     public let ladderRung: Int
+    public let remediated: Bool?
 }
 
 public enum Mastery: String, Codable {

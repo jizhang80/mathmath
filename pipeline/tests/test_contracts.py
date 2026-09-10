@@ -229,3 +229,19 @@ def test_landmark_requires_source_title() -> None:
     errors = _errors("landmarks", example)
     assert errors, "deleting source_title did not fail validation"
     assert any("source_title" in message for message in errors), errors
+
+
+def test_node_state_remediated_must_be_boolean() -> None:
+    """v1.3.0: schema types StudentState.nodes[].remediated as boolean (arbiter Q-A)."""
+    example = json.loads((EXAMPLES / "student-state.json").read_text())
+    example["nodes"]["matrix-multiplication"]["remediated"] = "true"
+    errors = _errors("student-state", example)
+    assert errors, "a string remediated value did not fail validation"
+
+
+def test_marker_past_last_unit_must_be_boolean() -> None:
+    """v1.3.0: schema types StudentState.marker.past_last_unit as boolean (arbiter Q-F)."""
+    example = json.loads((EXAMPLES / "student-state.json").read_text())
+    example["marker"]["past_last_unit"] = 1
+    errors = _errors("student-state", example)
+    assert errors, "an integer past_last_unit value did not fail validation"

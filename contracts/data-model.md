@@ -1,6 +1,6 @@
 # Contract: Data model (LOCK-FIRST)
 
-**Contract version:** v1.2.0 · Source: brief v2 §5 as amended (D20–D22, D32, D33, D43–D48), `docs/domains/*.md`; v1.1.0 adds `ProbeItem.check` and `Landmark.source_title` (owner Q5 ruling 2026-09-09, `tasks/blocked/Q5-RULING-01-07.md`); v1.2.0 corrects § Probe answer derivation — the name allow-list alone does not close the parse environment, so an AST-shape allow-list is added and the true name list is stated (orchestrating session's authorization 2026-09-09, `tasks/blocked/AUTHORIZATION-01-07a-contract-write.md`, on the defect reported in `tasks/blocked/tester-blocked-01-07.md`; not an owner ruling)
+**Contract version:** v1.3.0 · Source: brief v2 §5 as amended (D20–D22, D32, D33, D43–D48), `docs/domains/*.md`; v1.1.0 adds `ProbeItem.check` and `Landmark.source_title` (owner Q5 ruling 2026-09-09, `tasks/blocked/Q5-RULING-01-07.md`); v1.2.0 corrects § Probe answer derivation — the name allow-list alone does not close the parse environment, so an AST-shape allow-list is added and the true name list is stated (orchestrating session's authorization 2026-09-09, `tasks/blocked/AUTHORIZATION-01-07a-contract-write.md`, on the defect reported in `tasks/blocked/tester-blocked-01-07.md`; not an owner ruling); v1.3.0 adds `StudentState.nodes[].remediated` and `StudentState.marker.past_last_unit`, `schema_version` 2 (arbiter rulings Q-A, Q-F, `tasks/arbitration/arbiter-02-predispatch.md`)
 
 > The shapes every bundle file, the student state and `Core`'s `Codable` types share. The **JSON Schemas in
 > `contracts/schemas/` are normative**; this file states the rules the schemas cannot. `Core` decodes exactly
@@ -128,12 +128,26 @@ rounded, nothing is approximated, nothing is inferred. The derived value is then
 `answer.value` within `answer.tolerance` (default `0`); a mismatch fails the build.
 
 ### StudentState (`student-state.schema.json`)
-`schema_version`, `format_version_seen`, `syllabi[]` (course codes), `marker {course_code, unit_id}`,
-`nodes {node_id → {mastery ∈ {fog, cleared, blocked}, correct_count, last_probe?, next_due?, ladder_rung}}`,
-`trail {segments[] {kind ∈ {course, extension}, course_code?, node_ids[]}}` (derived, cached),
-`expedition_log[] {day, item_count, cleared, blocked, abandoned, diagnosis_events}`,
-`probe_log[] {day, node_id, item_id, correct, retry}`, `install_day`, `consent_on`. **No field may name a
-person, device, account, install or session** (I5); the schema's closed key set is the guard.
+`schema_version`, `format_version_seen`, `syllabi[]` (course codes), `marker {course_code, unit_id,
+past_last_unit?}`, `nodes {node_id → {mastery ∈ {fog, cleared, blocked}, correct_count, last_probe?,
+next_due?, ladder_rung, remediated?}}`, `trail {segments[] {kind ∈ {course, extension}, course_code?,
+node_ids[]}}` (derived, cached), `expedition_log[] {day, item_count, cleared, blocked, abandoned,
+diagnosis_events}`, `probe_log[] {day, node_id, item_id, correct, retry}`, `install_day`, `consent_on`.
+**No field may name a person, device, account, install or session** (I5); the schema's closed key set is the
+guard.
+
+`past_last_unit` (boolean, optional; absent = false): `true` means the marker has been moved past the
+course's last unit (v2.7 §4). `unit_id` then names the course's last unit at the time it was set and must
+still name a unit of the course.
+
+`remediated` (boolean, optional; absent = false) records that a diagnosis event confirmed this node (probe
+outcome `fail`) and showed its one remediation piece (diagnosis W4). It is written `true` only by that step
+and only on a node whose `mastery` is `blocked`; it is removed whenever the node becomes `cleared`. A node
+blocked by `capped` or by a second miss after the run's Door A event was spent does not carry it. It is a
+fact about a node, never about a person, device, install or session (I5).
+
+`schema_version` is **2**. Migration 1 → 2 is the identity: a version-1 document is a valid version-2
+document with every `remediated` absent.
 
 ## Enforcement
 - `pipeline/tests/test_contracts.py`: every schema is valid Draft 2020-12; every example in

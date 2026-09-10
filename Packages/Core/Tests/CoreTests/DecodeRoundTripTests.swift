@@ -310,6 +310,21 @@ struct DecodeRoundTripTests {
             "collector failed to catch device_id injected into the nested marker object")
     }
 
+    // T2 / AC6: `remediated` is Bool? — a non-boolean value fails decode (closed shape, contracts/data-model.md
+    // § Nulls: "Optional means the key is absent, never null").
+    @Test("non-boolean remediated value fails decode")
+    func remediatedNonBooleanValueFailsDecode() throws {
+        let data = try Data(contentsOf: Self.examplesDir.appendingPathComponent("student-state.json"))
+        var json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        var nodes = try #require(json?["nodes"] as? [String: [String: Any]])
+        nodes["matrix-multiplication"]?["remediated"] = "true"
+        json?["nodes"] = nodes
+        let mutated = try JSONSerialization.data(withJSONObject: json as Any)
+        #expect(throws: DecodingError.self) {
+            try CoreCoding.decoder.decode(StudentState.self, from: mutated)
+        }
+    }
+
     // T5b: `Landmark.sourceTitle` is declared non-optional — a document missing `source_title` must
     // fail decode, proving the field was not quietly typed `String?`.
     @Test("Landmark without source_title fails decode")
