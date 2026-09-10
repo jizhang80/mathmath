@@ -1,9 +1,14 @@
 """SymPy re-derivation of `numeric` ProbeItem answers from the item's `check` field alone (I1).
 
-`contracts/data-model.md` § Probe answer derivation (v1.1.0): the pipeline derives every `numeric` answer
+`contracts/data-model.md` § Probe answer derivation (v1.2.0): the pipeline derives every `numeric` answer
 from `check`; `prompt_latex` is never parsed and no model participates. Parsing uses `sympy.parse_expr`
-with `standard_transformations + (rationalize,)` and a closed nine-name allow-list (`Eq`, `Rational`,
-`sqrt`, `log`, `exp`, `Abs`, `diff`, `pi`, `E`). Any other name parses to a free symbol; calling one raises.
+with `standard_transformations + (rationalize, restrict_ast_shape)` under **two** closed allow-lists: a
+name allow-list (nine semantic names — `Eq`, `Rational`, `sqrt`, `log`, `exp`, `Abs`, `diff`, `pi`, `E` —
+plus two structural constructors, `Symbol` and `Integer`, that `standard_transformations` mechanically
+injects) and an AST-shape allow-list (`restrict_ast_shape`, below) validated against the exact string that
+is evaluated. A name allow-list alone does not close the parse environment: `parse_expr` evaluates its
+transformed source with `eval`, and attribute access, subscripting and literal construction are not name
+resolution, so an expression using no allow-listed name at all can walk out of the intended sandbox.
 
 `sympy` ships no type stubs (`reportMissingTypeStubs`) and its dynamically-built classes resolve to
 `Unknown` under pyright strict; every value pyright cannot type from a `sympy` call is cast to `sympy.Basic`
@@ -12,8 +17,10 @@ immediately at the call site so nothing `Unknown` propagates into this module's 
 
 from __future__ import annotations
 
+import ast
 from dataclasses import dataclass
 from fractions import Fraction
+from tokenize import untokenize
 from typing import Any, cast
 
 import sympy  # pyright: ignore[reportMissingTypeStubs] -- sympy ships no type stubs (docs/tech-stack.md pin)
@@ -24,17 +31,17 @@ from sympy.parsing.sympy_parser import (  # pyright: ignore[reportMissingTypeStu
 
 LO_PROBE_UNCHECKABLE = "LO_PROBE_UNCHECKABLE"
 
-# The closed nine-name allow-list an authored `check.expr`/`check.equations` string may reference
-# (`contracts/data-model.md` § Probe answer derivation). `Symbol` and `Integer` are added below only
-# because `sympy.parse_expr`'s own `standard_transformations` inject literal `Symbol(...)`/`Integer(...)`
-# calls into the parsed code for bare variable names and integer literals respectively (this is a
-# mechanical requirement of `parse_expr` itself, not an expansion of what an authored expression may
-# invoke): with a custom `global_dict`, sympy's own default `from sympy import *` namespace is not
-# available, so these two constructor names must be supplied for any legitimate `check` to parse at all.
-# A name outside this set still parses to an inert free symbol or raises on call, exactly as the contract
-# specifies.
-# sympy's own members resolve to partially-`Unknown` signatures under pyright strict (no stubs shipped);
-# each is a plain reference to a documented sympy public name, not a computed/dynamic lookup.
+# The nine *semantic* names plus two *structural constructors* (`contracts/data-model.md` § Probe answer
+# derivation, v1.2.0). `Symbol` and `Integer` are added below only because `sympy.parse_expr`'s own
+# `standard_transformations` inject literal `Symbol(...)`/`Integer(...)` calls into the parsed code for
+# bare variable names and integer literals respectively (this is a mechanical requirement of `parse_expr`
+# itself, not an expansion of what an authored expression may invoke): with a custom `global_dict`, sympy's
+# own default `from sympy import *` namespace is not available, so these two constructor names must be
+# supplied for any legitimate `check` to parse at all. Neither adds reachable capability beyond constructing
+# an inert value. A name outside this set still parses to an inert free symbol or raises on call.
+# The name allow-list alone does NOT close the parse environment (`restrict_ast_shape`, below, is required
+# too) — sympy's own members resolve to partially-`Unknown` signatures under pyright strict (no stubs
+# shipped); each is a plain reference to a documented sympy public name, not a computed/dynamic lookup.
 _ALLOWED_FUNCTIONS: dict[str, Any] = {
     "Eq": sympy.Eq,
     "Rational": sympy.Rational,
@@ -48,7 +55,67 @@ _ALLOWED_FUNCTIONS: dict[str, Any] = {
 }
 ALLOWED_NAMES: dict[str, Any] = {**_ALLOWED_FUNCTIONS, "Symbol": sympy.Symbol, "Integer": sympy.Integer}
 
-TRANSFORMATIONS = standard_transformations + (rationalize,)
+
+class UnsafeCheckSource(Exception):
+    """Raised when a `check` source's transformed AST leaves the permitted node set (data-model v1.2.0)."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+# The closed AST-shape allow-list (`contracts/data-model.md` § Probe answer derivation, v1.2.0). Written as
+# a literal set of permitted types, never computed by subtraction from a forbidden set — an allow-list
+# derived by subtraction is a blocklist wearing a hat.
+AST_ALLOWED_NODES: frozenset[type[ast.AST]] = frozenset(
+    {
+        ast.Expression,
+        ast.BinOp,
+        ast.UnaryOp,
+        ast.Call,
+        ast.Name,
+        ast.Load,
+        ast.Constant,
+        ast.Add,
+        ast.Sub,
+        ast.Mult,
+        ast.Div,
+        ast.Pow,
+        ast.UAdd,
+        ast.USub,
+    }
+)
+AST_ALLOWED_NODE_NAMES: frozenset[str] = frozenset(node.__name__ for node in AST_ALLOWED_NODES)
+_ALLOWED_CONSTANT_TYPES: tuple[type, ...] = (int, float, str)
+
+
+def restrict_ast_shape(
+    tokens: list[tuple[int, str]], local_dict: dict[str, Any], global_dict: dict[str, Any]
+) -> list[tuple[int, str]]:
+    """A `sympy` transformation: validate the transformed token stream's AST shape before evaluation.
+
+    Runs last in `TRANSFORMATIONS` so it sees the fully transformed stream — the exact string `eval` is
+    about to run — and returns `tokens` unchanged: it is a validator, not a rewriter, so the string sympy
+    goes on to evaluate is byte-identical to the string validated.
+    """
+    code = untokenize(list(tokens))
+    tree = ast.parse(code, mode="eval")
+    for node in ast.walk(tree):
+        if type(node) not in AST_ALLOWED_NODES:
+            raise UnsafeCheckSource(f"disallowed AST node {type(node).__name__}")
+        if isinstance(node, ast.Name) and node.id not in ALLOWED_NAMES:
+            raise UnsafeCheckSource(f"disallowed name {node.id!r}")
+        if isinstance(node, ast.Constant) and type(node.value) not in _ALLOWED_CONSTANT_TYPES:
+            raise UnsafeCheckSource(f"disallowed constant type {type(node.value).__name__}")
+        if isinstance(node, ast.Call) and node.keywords:
+            raise UnsafeCheckSource("disallowed keyword argument")
+    return tokens
+
+
+# The guard is last: it must see the fully transformed stream, because that is what is evaluated. Welding
+# it into the shared tuple protects any caller that uses `TRANSFORMATIONS`/`ALLOWED_NAMES` directly with
+# `sympy.parse_expr`, not only calls that go through `_parse` below.
+TRANSFORMATIONS = standard_transformations + (rationalize, restrict_ast_shape)
 
 
 class UncheckableCheck(Exception):
@@ -79,6 +146,8 @@ def _parse(source: str) -> sympy.Basic:
         parsed = sympy.parse_expr(
             source, transformations=TRANSFORMATIONS, global_dict=ALLOWED_NAMES, local_dict={}
         )
+    except UnsafeCheckSource as exc:
+        raise UncheckableCheck(f"unsafe check source: {exc.reason}") from exc
     except Exception as exc:
         raise UncheckableCheck(f"parse failure: {exc}") from exc
     if not isinstance(parsed, sympy.Basic):

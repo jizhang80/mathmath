@@ -1,6 +1,6 @@
 # Contract: Data model (LOCK-FIRST)
 
-**Contract version:** v1.1.0 · Source: brief v2 §5 as amended (D20–D22, D32, D33, D43–D48), `docs/domains/*.md`; v1.1.0 adds `ProbeItem.check` and `Landmark.source_title` (owner Q5 ruling 2026-09-09, `tasks/blocked/Q5-RULING-01-07.md`)
+**Contract version:** v1.2.0 · Source: brief v2 §5 as amended (D20–D22, D32, D33, D43–D48), `docs/domains/*.md`; v1.1.0 adds `ProbeItem.check` and `Landmark.source_title` (owner Q5 ruling 2026-09-09, `tasks/blocked/Q5-RULING-01-07.md`); v1.2.0 corrects § Probe answer derivation — the name allow-list alone does not close the parse environment, so an AST-shape allow-list is added and the true name list is stated (owner ruling 2026-09-09 on `tasks/blocked/tester-blocked-01-07.md`)
 
 > The shapes every bundle file, the student state and `Core`'s `Codable` types share. The **JSON Schemas in
 > `contracts/schemas/` are normative**; this file states the rules the schemas cannot. `Core` decodes exactly
@@ -84,10 +84,35 @@ The pipeline derives every `numeric` answer from `check` alone. **`prompt_latex`
 presentation string that may embed an English question, and a parser that mis-reads it does not fail, it
 silently confirms whatever answer was authored. No model participates at any point (I1).
 
-Parsing is `sympy.parse_expr` with `standard_transformations + (rationalize,)` — so decimal literals become
-exact `Rational`s — and a **closed name allow-list**: `Eq`, `Rational`, `sqrt`, `log`, `exp`, `Abs`, `diff`,
-`pi`, `E`. Any other name parses to a free symbol; calling one raises, and the item fails. Extending the
-allow-list is a versioned change.
+Parsing is `sympy.parse_expr` with `standard_transformations + (rationalize, restrict_ast_shape)` — so
+decimal literals become exact `Rational`s — under **two** closed allow-lists, a name allow-list and an
+AST-shape allow-list. Both are required. A name allow-list alone does **not** close the parse environment:
+`parse_expr` evaluates its transformed source with `eval`, and Python attribute access, subscripting and
+literal construction are not name resolution, so an expression using no allow-listed name at all can walk
+out of the intended sandbox. Enumerating forbidden spellings does not close it either; only enumerating the
+permitted shape does.
+
+**Names (eleven).** The nine *semantic* names an author may write are `Eq`, `Rational`, `sqrt`, `log`,
+`exp`, `Abs`, `diff`, `pi`, `E`. Two *structural constructors*, `Symbol` and `Integer`, must additionally be
+bound: `standard_transformations` mechanically rewrites every bare name into `Symbol('<name>')` and every
+integer literal into `Integer(<n>)` before evaluation, and supplying a custom `global_dict` removes SymPy's
+default namespace, so without these two no legitimate check parses at all. They construct inert values and
+add no reachable capability. Any name outside the eleven parses to a free symbol; calling one is rejected.
+Extending the eleven is a versioned change.
+
+**Shape.** The transformed source — the exact string that would be evaluated — is parsed with
+`ast.parse(source, mode="eval")` and validated **before** evaluation against a closed allow-list of AST node
+types. Permitted, exhaustively: `Expression`, `BinOp`, `UnaryOp`, `Call`, `Name`, `Load`, `Constant`, and
+the operator nodes `Add`, `Sub`, `Mult`, `Div`, `Pow`, `UAdd`, `USub`. In addition every `Name.id` must be
+one of the eleven allowed names; every `Constant.value` must be of exact type `int`, `float` or `str`; and
+every `Call` must carry no keyword arguments. Every other node Python's grammar admits is rejected —
+`ast.Attribute`, `ast.Subscript`, `ast.Slice`, `ast.Lambda`, every comprehension and `ast.GeneratorExp`,
+`ast.Tuple`, `ast.List`, `ast.Dict`, `ast.Set`, `ast.Starred`, `ast.keyword`, `ast.Compare`, `ast.BoolOp`,
+`ast.IfExp`, `ast.JoinedStr`, `ast.NamedExpr`, and the remaining operators including `Mod`, `FloorDiv`,
+`MatMult` and every bitwise operator. Extending the permitted node set is a versioned change. The string
+validated must be byte-identical to the string evaluated: validating one string and evaluating another is
+not a guard, so the check runs as the final transformation, inside the parse pipeline, where no caller can
+step around it.
 
 - `evaluate`: parse `expr`; every key of `at` must be a free symbol of `expr`; substitute; the result must
   have no free symbols left.
@@ -96,7 +121,8 @@ allow-list is a versioned change.
   `select: only` requires exactly one distinct bound value, `max`/`min` take the extreme of them.
 
 The derived value must be an exact rational after `sympy.simplify` (`.is_Rational` true). A parse failure,
-an unknown name, a leftover free symbol, an unbound `unknown`, zero solutions, more than one solution under
+an unknown name, a source whose transformed AST leaves the permitted node set or carries a keyword argument,
+a leftover free symbol, an unbound `unknown`, zero solutions, more than one solution under
 `select: only`, or a non-rational result is `LO_PROBE_UNCHECKABLE` and **fails the build**. Nothing is
 rounded, nothing is approximated, nothing is inferred. The derived value is then compared to
 `answer.value` within `answer.tolerance` (default `0`); a mismatch fails the build.
