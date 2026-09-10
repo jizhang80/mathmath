@@ -32,24 +32,24 @@ public enum PrerequisiteQuery {
         let edgesByTo = Dictionary(grouping: bundle.edges.edges, by: \.to)
         var visited: [String: Int] = [originId: 0]
         var confidenceByNode: [String: Double] = [:]
-        var frontier = [originId]
+        var currentLayer = [originId]
 
         var depth = 1
-        while depth <= levelBudget && !frontier.isEmpty {
-            var newFrontier: [String] = []
-            for node in frontier {
+        while depth <= levelBudget && !currentLayer.isEmpty {
+            var nextLayer: [String] = []
+            for node in currentLayer {
                 for edge in edgesByTo[node] ?? [] {
                     if visited[edge.from] == nil {
                         visited[edge.from] = depth
                         confidenceByNode[edge.from] = edge.confidence
-                        newFrontier.append(edge.from)
+                        nextLayer.append(edge.from)
                     } else if visited[edge.from] == depth {
                         confidenceByNode[edge.from] = max(
                             confidenceByNode[edge.from] ?? edge.confidence, edge.confidence)
                     }
                 }
             }
-            frontier = newFrontier
+            currentLayer = nextLayer
             depth += 1
         }
 
