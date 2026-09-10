@@ -1,6 +1,6 @@
 # Contract: Data model (LOCK-FIRST)
 
-**Contract version:** v1.3.0 · Source: brief v2 §5 as amended (D20–D22, D32, D33, D43–D48), `docs/domains/*.md`; v1.1.0 adds `ProbeItem.check` and `Landmark.source_title` (owner Q5 ruling 2026-09-09, `tasks/blocked/Q5-RULING-01-07.md`); v1.2.0 corrects § Probe answer derivation — the name allow-list alone does not close the parse environment, so an AST-shape allow-list is added and the true name list is stated (orchestrating session's authorization 2026-09-09, `tasks/blocked/AUTHORIZATION-01-07a-contract-write.md`, on the defect reported in `tasks/blocked/tester-blocked-01-07.md`; not an owner ruling); v1.3.0 adds `StudentState.nodes[].remediated` and `StudentState.marker.past_last_unit`, `schema_version` 2 (arbiter rulings Q-A, Q-F, `tasks/arbitration/arbiter-02-predispatch.md`)
+**Contract version:** v1.4.0 · Source: brief v2 §5 as amended (D20–D22, D32, D33, D43–D48), `docs/domains/*.md`; v1.1.0 adds `ProbeItem.check` and `Landmark.source_title` (owner Q5 ruling 2026-09-09, `tasks/blocked/Q5-RULING-01-07.md`); v1.2.0 corrects § Probe answer derivation — the name allow-list alone does not close the parse environment, so an AST-shape allow-list is added and the true name list is stated (orchestrating session's authorization 2026-09-09, `tasks/blocked/AUTHORIZATION-01-07a-contract-write.md`, on the defect reported in `tasks/blocked/tester-blocked-01-07.md`; not an owner ruling); v1.3.0 adds `StudentState.nodes[].remediated` and `StudentState.marker.past_last_unit`, `schema_version` 2 (arbiter rulings Q-A, Q-F, `tasks/arbitration/arbiter-02-predispatch.md`); v1.4.0 adds a normative `StudentState` merge rule, `### StudentState merge (platform Q3)` (arbiter ruling Q-B, `tasks/arbitration/arbiter-02-predispatch.md`)
 
 > The shapes every bundle file, the student state and `Core`'s `Codable` types share. The **JSON Schemas in
 > `contracts/schemas/` are normative**; this file states the rules the schemas cannot. `Core` decodes exactly
@@ -148,6 +148,35 @@ fact about a node, never about a person, device, install or session (I5).
 
 `schema_version` is **2**. Migration 1 → 2 is the identity: a version-1 document is a valid version-2
 document with every `remediated` absent.
+
+### StudentState merge (platform Q3)
+`merge(a, b)` is a pure `Core` function over two `StudentState`s, both already migrated to the current
+`schema_version` (platform W3 precedes W4 step 2); it takes no bundle and introduces no field.
+- **nodes** — key union. A key on one side keeps that entry. A key on both: `mastery` = the higher under
+  `cleared` > `blocked` > `fog`; `correct_count` = max; `ladder_rung` = max; `last_probe` = the later day,
+  `next_due` = the later day (absent is earlier than any day); `remediated` = logical OR, then removed unless
+  the merged `mastery` is `blocked`.
+- **expedition_log, probe_log** — multiset union by full-value equality: every distinct entry value appears
+  `max(count in a, count in b)` times. Output order is canonical: ascending `day`, then the remaining fields in
+  schema property order (`expedition_log`: `item_count`, `cleared`, `blocked`, `abandoned`, `diagnosis_events`;
+  `probe_log`: `node_id`, `item_id`, `correct`, `retry`), strings by byte order, `false` before `true`, integers
+  ascending. Two distinct runs with identical values on the same day, one on each side, merge into one entry;
+  this loss is accepted rather than add an identifier (I5).
+- **Winning side W** (for `marker`, `syllabi`, `trail`) — the side whose latest `day` across its
+  `expedition_log` and `probe_log` is later (a side with both logs empty loses to a side with any entry). On a
+  tie: the marker further along — `past_last_unit: true` ranks above any unit, else the greater unit ordinal
+  `n` of `unit_id` = `<course_code>.u<n>` (§ Identifiers: "1-based, in unit order"); then the lexicographically
+  greater `course_code`. Any remaining tie between fields that still differ is broken by comparing the two
+  values' canonical JSON encodings (sorted keys) byte-wise, greater wins.
+- **marker, syllabi, trail** — all three from W (the marker stays inside its own `syllabi`; `trail` is a
+  derived cache the caller regenerates after merge).
+- **install_day** = the earlier day. **format_version_seen** = the higher semver.
+- **consent_on** = `a.consent_on ∧ b.consent_on` — an off on either side stays off (`telemetry.md` § Consent,
+  I5 "one-tap off").
+
+Laws (CoreTests): commutative and idempotent under equality where logs compare in canonical order —
+`merge(a, a) == canonicalise(a)`, `merge(a, b) == merge(b, a)`; no merged node's `mastery` is lower than
+either input's.
 
 ## Enforcement
 - `pipeline/tests/test_contracts.py`: every schema is valid Draft 2020-12; every example in
