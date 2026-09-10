@@ -1,0 +1,364 @@
+# EPIC 02: Core behaviour
+
+> Status: brief authored 2026-09-10 by epic-scoper. Owner decides dispatch; planner decomposes.
+
+## 1. EPIC id, title, category
+EPIC 02 — Core behaviour. Category: Feature.
+
+## 2. Goal & scope
+Give `Core` the product's behaviour. Today it can only decode, validate and lay out a bundle. After this
+EPIC it can also run all three doors' state machines as pure functions over `StudentState` and a loaded
+bundle, so EPICs 03/04 only render and call. **Dominant domain: expedition.** Diagnosis (Door A machine)
+and platform (Q3 merge only) are the secondary domains. In scope, sliced at the domain docs' own seams:
+
+- **Mastery transitions** — `contracts/interaction-contract.md` §1. This covers the clear rule on distinct
+  items (expedition Q1) and the ladder `[1, 3, 7, 14, 30]` days, where the last rung repeats
+  [ESTIMATE: expedition Q2]. It is expedition W4.
+- **Marker and trail** — §3, expedition W6 + W8. `set_marker(course, unit)`, the default marker, and
+  `generate_trail` with the D47 extension segment. The extension prefers `next_courses[]`, then
+  undergraduate nodes when they exist. The runtime **L0-T** segment check comes from
+  `contracts/graph-constraints.md`.
+- **Fringe and compose** — §2 `compose`, expedition W1. This is the D48 fringe within `marker.unit ∪
+  next(marker.unit)`. A unit expedition (D46) narrows it to one unit. The map-queued node goes first (map
+  Q5). Next come fringe nodes in trail order, then **≤ 2 review slots** from due cleared nodes, up to 5
+  slots (expedition Q3). The per-slot `ProbeItem` draw prefers unused items. `EXP_NO_FRINGE` and
+  `EXP_ITEM_POOL_EMPTY` are raised here.
+- **Expedition run machine** — §2 `answer`, tolerance, `end`; expedition W2, W3, W5. Checking is
+  deterministic: numeric by normalised exact match within a per-item tolerance (expedition Q4), `mc` by
+  choice id. The answer and `why` are always part of the result (I3). The D27 tolerance rule applies (one
+  retry, at most one diagnosis per run; later second misses → `blocked`, expedition Q5). The machine also
+  covers the summary, the `expedition_log` / `probe_log` entries, and `abandoned` (expedition Q6).
+- **Diagnosis machine** — §4, diagnosis W1–W6. The distractor-tag `classify` lookup (diagnosis Q1, Tier 0
+  only) comes first. Next is the **deepest-unmastered-prerequisite query** (concept-graph W3 under
+  `graph-constraints.md` § Query rules: breadth-first, ≤ 2 levels, `fog` is a candidate, ties broken per
+  concept-graph Q3), biased by `implies_prerequisite`. The probe is declinable (diagnosis Q2), and
+  `refuted` / `confirmed` / `unconfirmed` / `capped` each have a remediation or hint outcome. A second
+  level is offered, never automatic (diagnosis Q3). The budget is a parameter (2; Demo 1). `returned`
+  hands back to the suspended expedition or the map node panel. The two triggers are
+  `expedition_second_miss` and `map_check_here` (diagnosis Q4).
+- **State merge** — platform Q3 / W4 step 2 only. A pure `Core` function over two `StudentState`s. The
+  iCloud mechanism is EPIC 10.
+- **Load-time state reconciliation** — expedition W7 (the `Core` half only). State ids absent from the
+  bundle are kept but ignored (`EXP_NODE_NOT_IN_GRAPH`).
+- **`CoreError`** — extend the EPIC 01 enum so it mirrors every `EXP_*`, `DIAG_*`, `GRAPH_*` code and the
+  `MAP_*` codes `Core` raises (`contracts/error-codes.md` § Rules). The enum stays ⊆ the registry.
+
+This EPIC **builds on EPIC 01 and does not re-create anything**. The following already exist in
+`Packages/Core/Sources/Core/`: the `StudentState` family of `Codable` types (`Model/StudentState.swift`:
+`Marker`, `NodeState`, `Mastery`, `Trail`, `TrailSegment`, `SegmentKind`, `ExpeditionLogEntry`,
+`ProbeLogEntry`), the bundle types (`Model/*.swift`: `ProbeItem`, `ErrorType`, `WrongAnswer`,
+`ProbeChoice`, courses/units/`next_courses`, edges with `confidence`), `CoreError` (`CoreError.swift`), the
+single wire coder (`CoreCoding.swift`), `GraphIndex` / `L0Checker`, and `ErrorRegistryTests`. This EPIC
+adds behaviour over those types and extends them only where §3 records a `BUMP`.
+
+**MANDATORY placement line:** milestone **Demo**, run under D26 on the hand-written `data/demo` bundle,
+with the M3 behaviour identical and only the data replaced. Layer **④ interaction** (all three doors'
+state machines). It reads layers ① (units, `next_courses`), ② (edges, confidence, regions) and ③ (probe
+items, distractor tags, hints, explanations) as read-only inputs.
+
+## 3. Contracts it must conform to
+- `contracts/interaction-contract.md` (v0.9.0, discovery zone). §1 Mastery, §2 Expedition (Door B, including
+  **Properties (CoreTests)**), §3 Marker and trail, §4 Diagnosis (Door A, including **Properties
+  (CoreTests)**), and §5 Notifications (exact in-process names for every event these transitions emit).
+  - **READ-ONLY** for §1–§5 behaviour.
+  - **BUMP** for § *Finalization owed by the Demo EPIC*, first item, "exact item-normalisation rules for
+    numeric answers". This EPIC implements the checker, so it must fix those rules. The planner emits a
+    contract-bump task that writes them into §2 (v0.9.x). The remaining finalization items (marker
+    unit-boundary snap, answer-card timing, summary tint deltas) are UI and belong to EPICs 03/04. The
+    v1.0.0 bump happens at Demo wrap (EPIC 04), not here.
+- `contracts/graph-constraints.md` (v1.0.0), § L0-T (trail segments) and § *Query rules (also `Core`)*.
+  `READ-ONLY`. L0-T is "the same `Core` function; runs at generation". The query walks ≤ 2 levels
+  breadth-first, treats `fog` as a candidate and uses the confidence → depth → id tie-break.
+- `contracts/data-model.md` (v1.2.0).
+  - § StudentState, § Time (calendar days only, device-local), § Nulls, enums, unknowns (optional =
+    absent), § ProbeItem (`answer.value` / `tolerance`, `wrong_answers[].error_type_id`,
+    `choices[].error_type_id`, `correct_choice_id`), and `contracts/schemas/student-state.schema.json`:
+    **READ-ONLY** by default.
+  - **BUMP candidates (Q4, route to spec-arbiter — see §9 Q-A and Q-B).** (a) The §2 fringe guard uses
+    `remediated(p)`, but `NodeState` has no field that records it. (b) Platform Q3 says "logs are unioned
+    by entry id; the marker takes the latest write", but `expedition_log[]` / `probe_log[]` entries have
+    no id and the state has no write time. A contract change to a LOCK-FIRST schema is versioned
+    (`contracts/README.md` § Lock-first rule) and gets its own contract-bump task. It is never silently
+    reconciled in code.
+- `contracts/error-codes.md` + `error-codes.json` (v1.0.0), § Rules: "`Core` defines `enum CoreError:
+  String` mirroring the `GRAPH`, `EXP`, `MAP` (validation) and `DIAG` codes". `READ-ONLY`. Additive
+  registration needs no bump, but none is needed (see the R-6 line).
+- `contracts/domain-glossary.md`: Fringe (never "frontier"), Slot / new-learning slot / review slot, Unit
+  expedition, Course-progress marker (`marker`; never "start marker"), Trail / course segment / extension,
+  Diagnosis event (never "session"/"attempt"), Blocked, Due. `READ-ONLY`. The wrap-epic (f) banned-synonym
+  grep applies to new type and function names.
+- `contracts/runtime-tiers.md` / `contracts/ai-usage.md`: no model and no adapter in `Core`. The Tier 1
+  "suggest" input of §4 `classify` is **not** built here (EPIC 13). `READ-ONLY`.
+- `contracts/telemetry.md`: no telemetry code here. `probe_log` / `expedition_log` stay within
+  the schema's closed key set. `READ-ONLY`.
+
+**MANDATORY (R-6) brief-checklist line — startup-failure guard set.** These are the config- and
+registry-bearing inputs in scope, each checked against `contracts/error-codes.json`:
+- **Error registry.** `CoreError` ⊆ registry, via the existing `ErrorRegistryTests` + negative control.
+  After this EPIC the enum must carry `EXP_NO_FRINGE`, `EXP_TRAIL_INVALID`, `EXP_ITEM_POOL_EMPTY`,
+  `EXP_STATE_WRITE_FAILED`, `EXP_NODE_NOT_IN_GRAPH`, `DIAG_NO_PREREQUISITE`, `DIAG_PROBE_UNAVAILABLE`,
+  `DIAG_STATE_WRITE_FAILED`, `GRAPH_NO_PREREQUISITE` and `MAP_MARKER_OFF_TRAIL`. **All are registered** →
+  `READ-ONLY`. The EPIC 01 cases `GRAPH_L0_FAILED`, `MAP_LAYOUT_MISSING`, `MAP_REGION_UNKNOWN`,
+  `MAP_LANDMARK_UNSOURCED`, `SPINE_UNIT_EMPTY`, `SPINE_SOURCE_REF_UNRESOLVED` and
+  `PLATFORM_BUNDLE_INTEGRITY_FAILED` stay (registered, `READ-ONLY`).
+- **Bundle input** to every transition. `GRAPH_L0_FAILED` / `PLATFORM_BUNDLE_INTEGRITY_FAILED`, both
+  registered, `READ-ONLY`. The behaviour functions accept only a bundle that has passed L0 (EPIC 01's
+  `validate`). They do not re-validate it.
+- **Persisted `StudentState` vs the installed bundle** (expedition W7). Unknown node ids →
+  `EXP_NODE_NOT_IN_GRAPH`, registered, `READ-ONLY`. A marker naming a course or unit absent from the
+  bundle or from `syllabi[]` → `MAP_MARKER_OFF_TRAIL` with the marker falling back to its default. That
+  code is registered, so this is `READ-ONLY` (see §9 Q-D).
+- **Generated trail.** `EXP_TRAIL_INVALID`, registered, `READ-ONLY`.
+- **Scheduler / ladder / backtrack-budget constants.** These are contract constants
+  (interaction-contract §1, §2, §4), not runtime-loaded configuration. This EPIC has no config file and
+  therefore no config-invalid code to register.
+
+**No BUMP to `error-codes.json` is needed.**
+
+**MANDATORY invariant line:**
+- **I1 / I10.** Item checking is code over `answer` / `correct_choice_id` only. The checker's inputs are a
+  `ProbeItem` and a numeric string or a choice id, and no free-text path exists. A property test covers
+  every `data/demo` item: its own `answer.value` (or `correct_choice_id`) checks correct, and each tagged
+  wrong answer / distractor checks incorrect. `Core` imports no model framework (the import-boundary test
+  guards this).
+- **I2.** Every expedition and diagnosis path completes with no adapter and no suggestion input.
+  `classify` is a pure distractor-tag lookup that returns `none_of_these` when nothing matches, and the
+  hypothesis comes only from the graph query. A test drives every diagnosis terminal (`refuted`,
+  `confirmed`, `unconfirmed` both by decline and by `DIAG_PROBE_UNAVAILABLE`, `capped`,
+  `DIAG_NO_PREREQUISITE`) Tier 0 only.
+- **I3.** Every `answer` transition's result carries the correct answer and `why` before any next-item
+  state is reachable. A property test asserts this for every item shown, including retry, probe and review
+  items.
+- **I4.** The query's level cap is a parameter of the query, not of the caller (concept-graph I4). The
+  budget is checked before any probe or remediation exists. A property test asserts depth ≤ 2 from the
+  origin (≤ 1 in the Demo configuration) and that every capped or failed candidate is `blocked` in the
+  resulting state. There is no other record: the map is the record (v2.5 §3).
+- **I5.** No field is added to `StudentState` except by a §3 `BUMP`. Any added field is a boolean or a
+  day, never an id of a person, device, install or session. The merge introduces no identifier. The
+  existing `IdentifierBlocklistParityTests` and the schema's closed key set stay green.
+- **I7 / I8.** The trail is generated from `syllabi[]` + marker + mastery, never authored. Every segment
+  passes L0-T or `EXP_TRAIL_INVALID` is raised and the previous trail stands (a test covers this).
+- **I14.** All functions are pure `Core` functions over values. "Today" is an injected calendar-day input;
+  there is no clock read in `Core`, and a grep for `Date()` over `Sources/Core` stays at zero hits. No
+  `import` beyond Foundation (the recursive boundary test).
+- **D27** is a property: at most one diagnosis event per run and at most one retry per node per run.
+
+**MANDATORY artifact line (P4/C4):**
+- The **`Core` library**, exercised by `xcodebuild test -scheme Core-Package` (gate (d)). This covers the
+  new property tests for every §1–§4 property, the `CoreError` ⊆ registry test extended to the new cases,
+  the two C1 seam tests (§4 items 7–8), the state-merge laws, and the demo-bundle scenario tests run
+  against the real `data/demo`.
+- The **App build** (`xcodebuild build -scheme mathmath`) stays green but gains no code.
+- **`core-cli`** gains no subcommand. It must still build, because the pipeline seam test from EPIC 01
+  exercises it.
+- **Contract artefacts:** the interaction-contract §2 numeric-normalisation text, plus any data-model
+  bump the arbiter rules on (§9 Q-A/Q-B), each landed by its contract-bump task under a
+  `contract(<name>)` commit scope.
+
+## 4. Acceptance criteria
+1. **§1 transitions.** Two correct answers on **distinct** items clear a `fog` or `blocked` node, set
+   `ladder_rung = 0` and `next_due = today + 1`, and emit `expedition.node_cleared`. The same item answered
+   correctly twice does not clear the node. For a cleared node, a correct review advances the rung, and
+   the rung caps at 4 with the last interval repeating. A missed review resets to rung 0 / `today + 1` and
+   the node stays `cleared`, so fog never returns. `diagnosis_blocked` moves `fog → blocked`.
+2. **§3 marker → trail.** With `syllabi = [MTH1W]` and the default marker, `generate_trail` over
+   `data/demo` produces course segments in unit order that pass L0-T. After `set_marker` moves the marker,
+   the trail is regenerated and the fringe recomputed, and nodes now upstream keep their mastery. With the
+   marker past the course's last unit, the result carries a `kind: extension` segment. With no
+   downstream-course node present, it carries none. A segment that fails L0-T raises `EXP_TRAIL_INVALID`
+   and the previous trail is returned unchanged.
+3. **§2 compose.** Across generated states and markers (property tests):
+   - no new-learning slot is ever drawn from a node off the fringe or upstream of the marker unless that
+     node is `blocked`;
+   - there are never more than 5 slots and never more than 2 review slots;
+   - review slots are due cleared nodes, oldest `last_probe` first;
+   - a map-queued node on the fringe takes slot 1, and a queued node upstream of the marker is ignored;
+   - a unit expedition draws only from its unit (plus `blocked` nodes);
+   - an empty fringe with an empty due set raises `EXP_NO_FRINGE`;
+   - a fringe node with no available item is skipped with `EXP_ITEM_POOL_EMPTY`.
+4. **§2 run and D27.**
+   - Every `data/demo` item checks correct on its own answer and incorrect on each tagged wrong answer or
+     distractor, under the normalisation rules landed in interaction-contract §2 (for example `3/4` =
+     `0.75`, whitespace, leading zeros, per-item tolerance).
+   - A first miss on a node yields a retry on a different item of that node. A second miss with the Door
+     A event unused yields `expedition.diagnosis_requested`. A second miss after the event was used marks
+     the node `blocked` and continues.
+   - Property: at most one diagnosis event per run.
+   - A run ended mid-way appends an `expedition_log` entry with `abandoned: true`.
+   - Every answered item appends a `probe_log` entry with day granularity.
+5. **§4 diagnosis.** Property tests over generated graphs and states cover the following:
+   - depth ≤ budget ≤ 2 from the origin;
+   - no path reaches remediation without a `fail` probe outcome;
+   - every `capped` or `confirmed` candidate is `blocked` in the output state;
+   - a second level is entered only on an explicit accept;
+   - fewer than 2 items on the candidate → `DIAG_PROBE_UNAVAILABLE` → `unconfirmed`;
+   - no candidate → `DIAG_NO_PREREQUISITE` → hint → `returned`;
+   - declining → `unconfirmed` → hint → `returned`;
+   - the query tie-break (highest confidence, then lowest depth, then node id) holds on constructed ties;
+   - every path terminates in `returned`.
+6. **Tier 0 completeness (I2).** Each diagnosis terminal is reached with no adapter and no suggestion
+   input, over `data/demo` with the Demo budget of 1.
+7. **C1 seam: expedition ↔ diagnosis.** A test drives a real expedition run on `data/demo` to a second
+   miss. It opens a **real** diagnosis event from the emitted `diagnosis_requested`, drives it to
+   `returned`, and resumes the **same** run at its next item. It asserts: the run's diagnosis count = 1; the
+   blocked candidate is visible to the resumed run's state; the answered items' answers remain present;
+   neither side is stubbed.
+8. **C1 seam: marker → trail → fringe.** A test sets the marker on real `data/demo` state, generates the
+   trail and composes an expedition from that trail. It asserts that the composed new-learning slots ⊆
+   the fringe computed from that trail and marker, with no stubbed trail and no hand-built fringe.
+9. **Merge (platform Q3).** `merge` is commutative, idempotent, and never lowers mastery (`cleared` >
+   `blocked` > `fog`). `correct_count` is the max, and `last_probe` / `next_due` are the latest. Logs and
+   the marker merge per the rule landed under §9 Q-B. Property tests cover all of these over generated
+   pairs.
+10. **`CoreError` ⊆ registry** is green with every code named in the §3 R-6 line, and the existing
+    negative control still fails an off-registry case. `scripts/gate.sh` is green.
+
+## 5. Conformance tests it must ship (B.1)
+- **expedition** (§ Invariants enforced here):
+  - I1/I2: checking is code over `answer` / `choice` fields; no free-text answer path.
+  - I3: every item result carries the answer and `why`.
+  - I4 co-owner: no new-learning item off the fringe or upstream of the marker unless `blocked`.
+  - I5: `StudentState` closed field set; the existing parity test is extended if a BUMP adds a field.
+  - I10: `numeric | mc` only.
+  - I14: pure functions; import boundary.
+  - I7/I8: generated trail; L0-T on every segment.
+  - D27: one retry, one Door A event per run, as properties of W3.
+- **diagnosis** (§ Invariants enforced here):
+  - I2: every workflow runs with the adapter absent.
+  - I4 primary: budget checked before any probe or remediation; none beyond depth 2; every capped
+    candidate reaches `StudentState` as `blocked`.
+  - I3: no terminal path gates an already-given answer.
+  - I1/I10: probe items checked in code.
+  - I5: outcome data is ids, enums and booleans only.
+- **concept-graph** (§ Invariants enforced here, W3 half): I4, the 2-level cap is a parameter of the query;
+  I2, no model in the query path; deterministic tie-break (Q3).
+- **platform** (§ Invariants enforced here, merge half): I14, the merge is a `Core` function over opaque
+  `StudentState` values; I5, the merge adds no identifier.
+- **Contract rungs marked EPIC-time** (`contracts/README.md`):
+  - interaction-contract: "state-machine property tests in `CoreTests`" — every **Properties
+    (CoreTests)** bullet of §2 and §4, plus the §1 clear and ladder rules and §3 L0-T.
+  - error-codes: "`Core` error enum mirrors the registry" — `CoreError` ⊆ registry, extended.
+
+## 6. Dependencies on prior EPICs
+- **EPIC 01** (merged, `docs/audits/epic-01-acceptance.md`). It supplies the `Core` `Codable` types
+  including `StudentState`, `CoreError` + `ErrorRegistryTests`, `GraphIndex` / L0 (the input-validity
+  precondition), and the `data/demo` bundle with 20 nodes, 40 items, 19 edges, MTH1W + MCR3U with units and
+  `next_courses` [SOURCED: docs/audits/epic-01-acceptance.md §2].
+- The domain order holds: node/edge schema and L0 before the graph query; the graph query before
+  backtracking; the Tier-0 flow before any Tier-1 adapter (EPIC 13). The map is the record (v2.5 §3), so
+  this EPIC ships the state it reads and EPIC 03 renders it.
+- No dependency on EPICs 05–09 (pipeline) or 10–11 (hosting, sync, telemetry).
+
+## 7. Out of scope
+1. **Any App / SwiftUI / `Canvas` code, JSON persistence to Application Support, launch-time load** —
+   EPIC 03 (map, platform launch/persistence). The `*_STATE_WRITE_FAILED` codes are mirrored in
+   `CoreError` but raised by the App's persistence layer there.
+2. **Expedition, answer-card, hypothesis-card, probe and remediation screens** — EPIC 04. So are the
+   remaining interaction-contract finalization items (marker snap, answer-card timing, summary tint
+   deltas) and the v1.0.0 bump.
+3. **iCloud sync mechanism** (platform W4 steps 1 and 3, platform Q1) — EPIC 10. Only the pure merge
+   function is here.
+4. **Tier 1 `classify` suggestion and the optional "what did you do?" line** (diagnosis Q1, Tier 1 half;
+   runtime-tiers) — EPIC 13, M4, gated on M4′. DEFERRED D-2 (Tier 2) is untouched.
+5. **Local `ProbeStats` / edge-confidence update from probe runs** (concept-graph W4) and all telemetry
+   event derivation — EPIC 11 (D17, D40). Edges stay immutable bundle data here.
+6. **Homework-mode diagnosis variant** (`homework_first_failure` trigger, CAS step verdicts) — DEFERRED
+   D-4, revisit trigger "M5 scope", which has not fired. No CAS on the device (D34).
+7. **Hand-specified `upstream_hint` diagnosis for the Demo** (DEMO-BRIEF §3.6, diagnosis W2 step 2) — no
+   such field exists in the locked `nodes.schema.json`. The Demo candidate comes from the contract's graph
+   query with budget 1 (§9 Q-C).
+8. **Additional syllabi as trails** (DEFERRED D-11, trigger: undergraduate nodes exist), the **shore
+   region** (D-10, trigger M5) and the **ideas layer** (D-9, trigger: Demo observations). None has fired.
+   The extension's "then undergraduate nodes" branch is implemented but has no demo data to walk.
+9. **Game Center, streak UI, leaderboards** — DEFERRED D-7. Streaks emerge from the state, and no feature
+   is built for them.
+10. **Live-landmark-test transport-retry fix** recommended in `docs/audits/epic-01-acceptance.md` §7 —
+    pipeline-side and not `Core` behaviour. It enters only if CI flakes during this EPIC, as a separate
+    `fix(pipeline)` task outside the 8-task count.
+
+## 8. Size estimate
+The feature scope is **8 tasks** [ESTIMATE: planner may re-cut], at the cap:
+1. `CoreError` extension + registry test, and the injected calendar-day type with ladder arithmetic.
+2. §1 mastery transitions + properties.
+3. §3 marker, default marker, `generate_trail` with extension, L0-T + properties.
+4. Fringe + `compose` (slots, review quota, unit expedition, map-queued node, item draw) + properties +
+   **C1 marker→trail→fringe seam**.
+5. Expedition run machine: numeric/mc checking, D27 tolerance, end/summary/log/abandoned, W7 load
+   reconciliation + properties.
+6. The deepest-unmastered-prerequisite query (graph-constraints § Query rules) + distractor-tag
+   `classify`.
+7. Diagnosis machine §4 (open → hypothesis → probe/hint → remediation/hint → returned, capped, budget,
+   offered second level) + properties + the Tier-0 completeness suite + **C1 expedition↔diagnosis seam**.
+8. `merge` + algebraic-law properties.
+
+There are **up to three contract-bump tasks** on top: interaction-contract numeric normalisation (certain),
+and the data-model Q-A and Q-B bumps if the arbiter rules for them. **If they push the plan over the cap,
+split at the brief's seam.**
+- **02a — "Door B core"**: tasks 1–5 + the normalisation bump. This is expedition W1–W8 and seam 8.
+- **02b — "Door A core + merge"**: tasks 6–8 + the Q-A/Q-B bumps. This is diagnosis W1–W6, platform Q3
+  and seam 7. It depends on 02a for the suspended-run hand-off. Q-A's `remediated` guard touches task 4,
+  so if Q-A lands in 02b, task 4's fringe guard is re-verified there.
+
+Seams (C1) added: expedition↔diagnosis and marker→trail→fringe. No other cross-module seam is crossed.
+
+## 9. Open questions
+- **Q-A (Q4 → spec-arbiter; BUMP candidate on `contracts/data-model.md` + `student-state.schema.json`).**
+  - **The conflict.** Interaction-contract §2's fringe guard admits a prerequisite that is `blocked ∧
+    remediated(p)`, but `NodeState` records no remediation. Blocked arises three ways: confirmed and
+    remediated (diagnosis W4); capped with no remediation (W6); spent-Door-A second miss with no
+    remediation (expedition Q5). These are indistinguishable in the current schema.
+  - **Default:** add one optional boolean on the node entry (absent = false). It is set only by diagnosis
+    W4's remediation step, cleared on `cleared`, and merged by logical OR. This is a versioned
+    data-model / schema change with `schema_version` migration handled forward (platform W3). It adds no
+    identifier (I5).
+  - **Alternative the arbiter may choose instead:** read §2 so that no blocked prerequisite satisfies the
+    guard. This changes contract semantics and is itself a contract edit.
+  - **Revisit trigger:** the arbiter's ruling, before task 4 is specified.
+- **Q-B (Q4 → spec-arbiter; BUMP candidate or merge-rule clarification).**
+  - **The conflict.** Platform Q3 (ratified) says "logs are unioned by entry id; the marker takes the
+    latest write". The schema gives log entries no id and the state no write time. Adding a per-run id
+    risks reading as a session id (I5).
+  - **Default, with no schema change:** logs merge as a **multiset union by full-value equality** (for
+    each distinct entry, keep the max multiplicity seen on either side). The marker is taken from the side
+    whose latest `expedition_log.day` / `probe_log.day` is later. Ties go to the marker further along the
+    course's unit order, then course code. The rule is recorded in the merge's contract home by a
+    contract-bump task.
+  - **Revisit trigger:** EPIC 10 (sync), if real conflicts show lost runs.
+- **Q-C (Q1, answered from the ground-truth order: contracts > domain docs).**
+  - **The conflict.** Diagnosis W2 step 2 and DEMO-BRIEF §3.6 name a hand-specified `upstream_hint` for
+    the Demo. The locked `nodes.schema.json` has no such field (EPIC 01 shipped without it), and
+    interaction-contract §4 + graph-constraints § Query rules define the candidate as the graph query.
+  - **Default:** the Demo uses the contract query with budget 1. `data/demo`'s hand-written edges make it
+    deterministic, which serves the same purpose. No field is added.
+  - **Revisit trigger:** EPIC 04 acceptance, if a Demo scenario needs a candidate the edges do not yield
+    (then it is a data fix in `data/demo`, D26).
+- **Q-D (Q1).**
+  - **The situation.** A persisted marker names a unit absent from the bundle or from `syllabi[]`.
+  - **Default:** raise `MAP_MARKER_OFF_TRAIL` (registered) and fall back to the default marker (first unit
+    of the first selected course, D45). Mastery is untouched.
+  - **Revisit trigger:** EPIC 10 content refresh changing unit ids. If the arbiter prefers a dedicated
+    `EXP_*` code, that is additive registration with no version bump.
+- **Q-E (Q4 risk to verify in task 3, not a known conflict).**
+  - **The risk.** L0-T requires "every segment's `node_ids[]` is a directed path in the graph", and
+    `data/demo`'s MTH1W / MCR3U node sets in unit order may not be Hamiltonian paths over the 19 demo
+    edges.
+  - **Default:** the contract reading stands. If a demo course fails, the task records the failing course
+    and escalates to the spec-arbiter. The candidate remedies are a `data/demo` edge fix (hand-written Demo
+    data, D26, re-validated by L0) or an L0-T clarification (contract bump). Code does not silently accept
+    a non-path.
+  - **Revisit trigger:** the first `generate_trail` run over `data/demo` in task 3.
+- **Technical defaults (not Q5; decided per owner calibration that technical detail is never a Q5):**
+  - No unused item for a D27 retry → skip the retry, log `EXP_ITEM_POOL_EMPTY`, continue the run.
+  - Item draw prefers items with no `probe_log` entry, then the least recently used, deterministic by
+    item id.
+  - A hint whose error type has no `hint_tree` entry falls back to the node's `none-of-these` hint.
+  - A `map_check_here` diagnosis outside a run logs no `expedition_log` entry (its effects are the
+    `blocked` marks and `probe_log` rows). `diagnosis_events` stays ≤ 1 per entry per the schema.
+- **Q5 candidates:** none. Every decision above is taken from D1–D49, the ratified domain defaults and the
+  contracts. Q-A and Q-B are contract realisations of ratified defaults, routed to the spec-arbiter; they
+  are not owner decisions unless the arbiter finds that a ratified default itself must change.
+
+## 10. Change log
+| Date | Author | Change |
+|------|--------|--------|
+| 2026-09-10 | epic-scoper | Initial brief synthesized. |
