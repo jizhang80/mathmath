@@ -1,0 +1,165 @@
+{
+  "format_version": "0.0.0",
+  "nodes": [
+    {
+      "id": "node-a1",
+      "name": "node-a1",
+      "region_id": "number-operations",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    },
+    {
+      "id": "node-a2",
+      "name": "node-a2",
+      "region_id": "algebra",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": [],
+      "layout_hint": {
+        "x": 0.3,
+        "y": 0.25
+      }
+    },
+    {
+      "id": "node-a3",
+      "name": "node-a3",
+      "region_id": "functions",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    },
+    {
+      "id": "node-a4",
+      "name": "node-a4",
+      "region_id": "geometry-measurement",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": [],
+      "layout_hint": {
+        "x": 0.7,
+        "y": 0.25
+      }
+    },
+    {
+      "id": "node-a5",
+      "name": "node-a5",
+      "region_id": "trigonometry",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    },
+    {
+      "id": "node-a6",
+      "name": "node-a6",
+      "region_id": "calculus",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": [],
+      "layout_hint": {
+        "x": 0.1,
+        "y": 0.75
+      }
+    },
+    {
+      "id": "node-a7",
+      "name": "node-a7",
+      "region_id": "linear-algebra",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    },
+    {
+      "id": "node-a8",
+      "name": "node-a8",
+      "region_id": "differential-equations",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": [],
+      "layout_hint": {
+        "x": 0.5,
+        "y": 0.75
+      }
+    },
+    {
+      "id": "node-a9",
+      "name": "node-a9",
+      "region_id": "probability-statistics",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    },
+    {
+      "id": "node-a10",
+      "name": "node-a10",
+      "region_id": "discrete",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node for the layout fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": [],
+      "layout_hint": {
+        "x": 0.9,
+        "y": 0.75
+      }
+    }
+  ]
+}

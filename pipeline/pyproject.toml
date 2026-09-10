@@ -39,3 +39,6 @@ include = ["src", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "network: exercises a live HTTPS request (I15 landmark source_url resolution). Runs unfiltered in gate 4 (`uv run pytest -q`, no -m flag); registered only to silence PytestUnknownMarkWarning, never to enable skipping a network test.",
+]

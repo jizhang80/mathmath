@@ -21,6 +21,10 @@
             "type": "string",
             "minLength": 1
           },
+          "source_title": {
+            "type": "string",
+            "minLength": 1
+          },
           "what_it_is": {
             "type": "string",
             "minLength": 1
@@ -81,6 +85,7 @@
           "id",
           "name",
           "what_it_is",
+          "source_title",
           "source_url",
           "node_ids",
           "region_ids",

@@ -1,6 +1,6 @@
 # Contract: Content policy (LOCK-FIRST)
 
-**Contract version:** v1.0.0 · Source: I6, I9, I11, I15; D2 (revised), D12, D13, D18, D22, D43; brief §10
+**Contract version:** v1.1.0 · Source: I6, I9, I11, I15; D2 (revised), D12, D13, D18, D22, D43; brief §10; v1.1.0 amends answer re-derivation and the landmark page assertion (owner Q5 ruling 2026-09-09, `tasks/blocked/Q5-RULING-01-07.md`)
 
 > What may be stored, shipped or shown, by content tier, and how claims are tagged. A violation is a
 > compliance problem, not a bug — locked first.
@@ -26,14 +26,23 @@
 ## Generated content (all tiers)
 - Everything student-facing is **batch-generated and machine-verified**, never human-reviewed (I9, D12,
   D13): failure paths end in regenerate or discard. A spec adding "owner reviews content" is BLOCKed.
-- Probe answers are re-derived by SymPy before persistence (I1); prompts and hints must render in SwiftMath
-  or carry `render_fallback: "katex"` (learning-objects W1 5b).
+- Probe answers are re-derived by SymPy before persistence (I1): every `numeric` ProbeItem carries `check`
+  and the CAS derives the answer from `check` alone — never by parsing `prompt_latex`, never by a model
+  (`data-model.md` § ProbeItem, § Probe answer derivation). An item the CAS cannot derive exactly, or whose
+  derived value differs from `answer.value` beyond `tolerance`, is `LO_PROBE_UNCHECKABLE` and fails the
+  build; nothing ships unchecked. `mc` correctness is `correct_choice_id` plus the distractor rule below;
+  extending `check` to `mc` is a further versioned change. Prompts and hints must render in SwiftMath or
+  carry `render_fallback: "katex"` (learning-objects W1 5b).
 - Distractor tags: every `mc` distractor and every anticipated numeric wrong answer names an `ErrorType` of
   its node (diagnosis Q1); `none-of-these` is never a tag.
 
 ## Landmarks (I15, D22)
-- Real, named, verifiable; `source_url` required and resolving at build (HTTP 2xx) with the page text
-  containing the landmark's name; ≥ 1 node id. Unsourced → dropped, never invented, never "hypothetical".
+- Real, named, verifiable; `source_url` required and resolving at build (HTTP 2xx); `source_title` required
+  — the title of the real, named thing the landmark cites, as that title appears on the source page — and
+  the fetched page text must contain it (case-insensitive substring). The landmark's `name` is the
+  project's own descriptive claim about the mathematics and is by design not a term from the source, so it
+  is never asserted against the page; a landmark's `name` is never edited to make a check pass. ≥ 1 node
+  id. Unsourced → dropped, never invented, never "hypothetical".
 
 ## Documentation claims (I11)
 - Every quantitative claim in `docs/`, `contracts/`, briefs and amendments carries `[SOURCED: …]` or

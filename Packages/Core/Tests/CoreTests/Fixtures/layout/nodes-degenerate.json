@@ -1,0 +1,19 @@
+{
+  "format_version": "0.0.0",
+  "nodes": [
+    {
+      "id": "node-d1",
+      "name": "node-d1",
+      "region_id": "algebra",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Placeholder node paired with a region whose decoded polygon has fewer than 3 vertices.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    }
+  ]
+}

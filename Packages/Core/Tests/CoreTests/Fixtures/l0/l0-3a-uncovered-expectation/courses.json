@@ -1,0 +1,81 @@
+{
+  "format_version": "0.0.0",
+  "courses": [
+    {
+      "course_code": "MTH1W",
+      "name": "Mathematics, Grade 9",
+      "vintage": "2021",
+      "strands": [
+        {
+          "code": "B",
+          "name": "Number"
+        }
+      ],
+      "expectations": [
+        {
+          "code": "B3.4",
+          "kind": "specific",
+          "paraphrase": "Apply the exponent laws to simplify numeric and algebraic expressions.",
+          "official_url": "https://dcp.edu.gov.on.ca/en/curriculum/secondary-mathematics/courses/mth1w",
+          "unit_id": "MTH1W.u1"
+        },
+        {
+          "code": "B3.5",
+          "kind": "specific",
+          "paraphrase": "placeholder",
+          "official_url": "https://dcp.edu.gov.on.ca/en/curriculum/secondary-mathematics/courses/mth1w",
+          "unit_id": "MTH1W.u1"
+        }
+      ],
+      "units": [
+        {
+          "unit_id": "MTH1W.u1",
+          "name": "Number sense and exponents",
+          "expectation_codes": [
+            "B3.4",
+            "B3.5"
+          ]
+        }
+      ],
+      "unit_source": {
+        "title": "Demo hand-written unit list",
+        "edition": "2026"
+      },
+      "next_courses": [
+        "MPM2D"
+      ]
+    },
+    {
+      "course_code": "MCR3U",
+      "name": "Functions, Grade 11",
+      "vintage": "2007",
+      "strands": [
+        {
+          "code": "C",
+          "name": "Exponential Functions"
+        }
+      ],
+      "expectations": [
+        {
+          "code": "C1.1",
+          "kind": "specific",
+          "paraphrase": "Graph and describe exponential functions and their key properties.",
+          "official_url": "https://www.edu.gov.on.ca/eng/curriculum/secondary/math1112currb.pdf",
+          "unit_id": "MCR3U.u1"
+        }
+      ],
+      "units": [
+        {
+          "unit_id": "MCR3U.u1",
+          "name": "Exponential functions",
+          "expectation_codes": [
+            "C1.1"
+          ]
+        }
+      ],
+      "next_courses": [
+        "MHF4U"
+      ]
+    }
+  ]
+}

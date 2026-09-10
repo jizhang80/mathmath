@@ -1,0 +1,59 @@
+{
+  "format_version": "0.0.0",
+  "nodes": [
+    {
+      "id": "node-x1",
+      "name": "node-x1",
+      "region_id": "number-operations",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Order-independence fixture node with a valid layout_hint (no rng draw).",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": [],
+      "layout_hint": {
+        "x": 0.1,
+        "y": 0.1
+      }
+    },
+    {
+      "id": "node-x2",
+      "name": "node-x2",
+      "region_id": "algebra",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Order-independence fixture node with a valid layout_hint (no rng draw).",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": [],
+      "layout_hint": {
+        "x": 0.3,
+        "y": 0.1
+      }
+    },
+    {
+      "id": "node-x3",
+      "name": "node-x3",
+      "region_id": "functions",
+      "courses": [],
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "paraphrase": "Order-independence fixture node with a valid layout_hint (no rng draw).",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": [],
+      "layout_hint": {
+        "x": 0.5,
+        "y": 0.1
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "format_version": "0.0.0",
+  "sources": [
+    {
+      "source": "openstax",
+      "title": "College Algebra 2e",
+      "edition": "2e (2021)",
+      "licence": "CC BY 4.0",
+      "attribution": "Access for free at https://openstax.org/books/college-algebra-2e/pages/1-introduction-to-prerequisites",
+      "url": "https://openstax.org/details/books/college-algebra-2e"
+    }
+  ]
+}

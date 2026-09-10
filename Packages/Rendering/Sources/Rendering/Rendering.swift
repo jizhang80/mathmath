@@ -11,4 +11,9 @@ public enum RenderCheck {
         _ = MTMathListBuilder.build(fromString: latex, error: &error)
         return error?.localizedDescription
     }
+
+    /// True when `latex` parses without error under SwiftMath's builder.
+    public static func canRender(latex: String) -> Bool {
+        parseError(latex: latex) == nil
+    }
 }

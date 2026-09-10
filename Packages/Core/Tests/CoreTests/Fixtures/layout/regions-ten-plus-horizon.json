@@ -1,0 +1,280 @@
+{
+  "format_version": "0.0.0",
+  "regions": [
+    {
+      "id": "number-operations",
+      "name": "Number & Operations",
+      "about": "Numbers, operations and the laws that govern them.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "x": 0.2,
+          "y": 0.0
+        },
+        {
+          "x": 0.2,
+          "y": 0.5
+        },
+        {
+          "x": 0.0,
+          "y": 0.5
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "algebra",
+      "name": "Algebra",
+      "about": "Expressions, equations and the moves that keep them equal.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.2,
+          "y": 0.0
+        },
+        {
+          "x": 0.4,
+          "y": 0.0
+        },
+        {
+          "x": 0.4,
+          "y": 0.5
+        },
+        {
+          "x": 0.2,
+          "y": 0.5
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "functions",
+      "name": "Functions",
+      "about": "Relations between quantities and how they vary together.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.4,
+          "y": 0.0
+        },
+        {
+          "x": 0.6,
+          "y": 0.0
+        },
+        {
+          "x": 0.6,
+          "y": 0.5
+        },
+        {
+          "x": 0.4,
+          "y": 0.5
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "geometry-measurement",
+      "name": "Geometry & Measurement",
+      "about": "Shapes, space and the quantities that describe them.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.6,
+          "y": 0.0
+        },
+        {
+          "x": 0.8,
+          "y": 0.0
+        },
+        {
+          "x": 0.8,
+          "y": 0.5
+        },
+        {
+          "x": 0.6,
+          "y": 0.5
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "trigonometry",
+      "name": "Trigonometry",
+      "about": "Angles, triangles and the ratios that relate them.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.8,
+          "y": 0.0
+        },
+        {
+          "x": 1.0,
+          "y": 0.0
+        },
+        {
+          "x": 1.0,
+          "y": 0.5
+        },
+        {
+          "x": 0.8,
+          "y": 0.5
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "calculus",
+      "name": "Calculus",
+      "about": "Rates of change and accumulation.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.0,
+          "y": 0.5
+        },
+        {
+          "x": 0.2,
+          "y": 0.5
+        },
+        {
+          "x": 0.2,
+          "y": 1.0
+        },
+        {
+          "x": 0.0,
+          "y": 1.0
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "linear-algebra",
+      "name": "Linear Algebra",
+      "about": "Vectors, matrices and the transformations they describe.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.2,
+          "y": 0.5
+        },
+        {
+          "x": 0.4,
+          "y": 0.5
+        },
+        {
+          "x": 0.4,
+          "y": 1.0
+        },
+        {
+          "x": 0.2,
+          "y": 1.0
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "differential-equations",
+      "name": "Differential Equations",
+      "about": "Equations that relate a quantity to its own rate of change.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.4,
+          "y": 0.5
+        },
+        {
+          "x": 0.6,
+          "y": 0.5
+        },
+        {
+          "x": 0.6,
+          "y": 1.0
+        },
+        {
+          "x": 0.4,
+          "y": 1.0
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "probability-statistics",
+      "name": "Probability & Statistics",
+      "about": "Uncertainty, data and the patterns within it.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.6,
+          "y": 0.5
+        },
+        {
+          "x": 0.8,
+          "y": 0.5
+        },
+        {
+          "x": 0.8,
+          "y": 1.0
+        },
+        {
+          "x": 0.6,
+          "y": 1.0
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "discrete",
+      "name": "Discrete Mathematics",
+      "about": "Structures built from distinct, countable objects.",
+      "horizon": false,
+      "polygon": [
+        {
+          "x": 0.8,
+          "y": 0.5
+        },
+        {
+          "x": 1.0,
+          "y": 0.5
+        },
+        {
+          "x": 1.0,
+          "y": 1.0
+        },
+        {
+          "x": 0.8,
+          "y": 1.0
+        }
+      ],
+      "neighbours": []
+    },
+    {
+      "id": "analysis",
+      "name": "Analysis",
+      "about": "The horizon beyond the ten territories — not yet mapped.",
+      "horizon": true,
+      "polygon": [
+        {
+          "x": 0.8,
+          "y": 0.5
+        },
+        {
+          "x": 1.0,
+          "y": 0.5
+        },
+        {
+          "x": 1.0,
+          "y": 0.6
+        },
+        {
+          "x": 0.8,
+          "y": 0.6
+        }
+      ],
+      "neighbours": []
+    }
+  ]
+}

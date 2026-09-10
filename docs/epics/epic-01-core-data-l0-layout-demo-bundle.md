@@ -49,15 +49,24 @@ writes from the codes, not from the document). I15 — the landmark's `source_ur
 test (HTTP 2xx, page text contains "Interest Act"); on failure the landmark is dropped, never edited into
 truth. I9 — no review step: the bundle is hand-written *data* (D26 allows it for the Demo), validated by
 machine; a failing item is rewritten, not approved. I1 / I10 — every item is `numeric` or `mc` with a
-checked `answer`/`correct_choice_id`; the pipeline re-derives every numeric answer with SymPy where the
-prompt is expressible (a test lists the items it could not express, empty = FAIL for this bundle since all
-are simple). I11 — the rendering-spike outcome and the L0 report carry no untagged numbers.
+checked `answer`/`correct_choice_id`; every `numeric` item carries a `check` (`contracts/data-model.md`
+v1.1.0 § ProbeItem — SymPy source, never LaTeX) and the pipeline re-derives that item's answer from `check`
+alone with SymPy, never by parsing `prompt_latex` and never with a model (§ Probe answer derivation). The
+rule is unqualified — **every** `numeric` item in the bundle is re-derived; no item is exempt and no "could
+not express" list exists. The build FAILS if a run covers fewer than all `numeric` items, if the CAS cannot
+derive an item exactly (`LO_PROBE_UNCHECKABLE`), or if a derived value differs from `answer.value` beyond
+`answer.tolerance`. I11 — the rendering-spike outcome and the L0 report carry no untagged numbers.
 
 **MANDATORY artifact line (P4/C4):** `core-cli` (`validate`, `layout`, `version`) — exercised by
-`pipeline/tests` over `data/demo` and `contracts/examples`; `data/demo/*.json` + `data/demo/l0-report.json`
-— exercised by `test_contracts.py` (schemas) and `core-cli validate`; `Rendering.RenderCheck` — exercised by
-the spike test over the bundle and by `RenderingTests`; the `Core` `Codable` types — exercised by the
-decode round-trip test.
+`pipeline/tests` over `data/demo` and `contracts/examples`; `data/demo/*.json` — the bundle files only, each
+named by its schema (`manifest`, `regions`, `nodes`, `edges`, `courses`, `landmarks`, `sources`), exercised
+by `test_contracts.py` (schemas) and `core-cli validate`. The **L0 report is not a bundle file and is not
+committed**: it is `core-cli validate` **stdout**, JSON, in the shape fixed by `contracts/graph-constraints.md`
+§ Report shape; the pipeline wrapper parses it in-process and fails the build on `passed: false`. Nothing
+other than a schema-named bundle file may be written under `data/**` (`contracts/data-model.md` §
+Enforcement: every `*.json` under `data/**` validates against the schema its filename names).
+`Rendering.RenderCheck` — exercised by the spike test over the bundle and by `RenderingTests`; the `Core`
+`Codable` types — exercised by the decode round-trip test.
 
 ## 4. Acceptance criteria
 1. `core-cli validate data/demo` prints a report with `passed: true` and every check listed, empty
@@ -73,7 +82,11 @@ decode round-trip test.
    runs them over `data/demo` (C1 seam: pipeline↔`core-cli`).
 6. The rendering spike reports zero unresolved items: every LaTeX string in `data/demo` parses in SwiftMath
    or carries `render_fallback`; the outcome file lists what was rewritten.
-7. The landmark's `source_url` resolves (2xx) and the fetched text contains the landmark's name (I15).
+7. The landmark's `source_url` resolves (2xx) and the fetched page text contains the landmark's
+   `source_title` as a case-insensitive substring — `"Interest Act"` for this bundle (I15,
+   `contracts/content-policy.md` v1.1.0 § Landmarks). The landmark's `name` is the project's own
+   descriptive claim, is never asserted against the page and is never edited to make the check pass; on
+   failure the landmark is dropped.
 8. The bundle contains ≥ 18 and ≤ 24 nodes, all on or adjacent to the D14 chain, with `starting_chain` in
    the manifest connected (L0-5), two courses with ≥ 3 units each, `next_courses` MTH1W → MPM2D and MCR3U
    → MHF4U, and every `mc` distractor tagged.
@@ -123,3 +136,79 @@ needed: after task 4 (Core/CLI) vs tasks 5–7 (bundle + spike).
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-09-09 | owner planning session (Fable) | Initial brief. |
+| 2026-09-09 | brief-amender (Q4 from EPIC 01 planning) | §3 artifact line: the L0 report is `core-cli validate` stdout, not a committed `data/demo/l0-report.json`; `data/**` holds schema-named bundle files only. Source: `contracts/graph-constraints.md` § Report shape, `contracts/data-model.md` § Enforcement. |
+| 2026-09-09 | brief-amender (owner Q5 ruling, tasks/blocked/Q5-RULING-01-07.md) | §3 invariant line I1/I10 clause: numeric answers are re-derived from the new required `ProbeItem.check`, never from `prompt_latex`; the "where the prompt is expressible" hedge and its false "all are simple" premise are removed and a single failure reading is stated. §4 criterion 7: the fetched page is asserted to contain the landmark's `source_title`, not its `name`. Source: `contracts/data-model.md` v1.1.0 § ProbeItem + § Probe answer derivation, `contracts/content-policy.md` v1.1.0 § Generated content + § Landmarks. |
+
+## Amendment log
+
+### Amendment 01.05.1 — 2026-09-09
+
+**Trigger**: tier-6 brief-amender, invoked after a Q4 escalation raised in EPIC 01 planning, ahead of task 01.5 dispatch.
+**Architect escalation**: none on disk — the conflict was raised and verified by the orchestrating planning session (no `tasks/blocked/architect-escalation-01-05.md` was written).
+**Original brief text**:
+> **MANDATORY artifact line (P4/C4):** `core-cli` (`validate`, `layout`, `version`) — exercised by
+> `pipeline/tests` over `data/demo` and `contracts/examples`; `data/demo/*.json` + `data/demo/l0-report.json`
+> — exercised by `test_contracts.py` (schemas) and `core-cli validate`; `Rendering.RenderCheck` — exercised by
+> the spike test over the bundle and by `RenderingTests`; the `Core` `Codable` types — exercised by the
+> decode round-trip test.
+
+**Amended brief text**:
+> **MANDATORY artifact line (P4/C4):** `core-cli` (`validate`, `layout`, `version`) — exercised by
+> `pipeline/tests` over `data/demo` and `contracts/examples`; `data/demo/*.json` — the bundle files only, each
+> named by its schema (`manifest`, `regions`, `nodes`, `edges`, `courses`, `landmarks`, `sources`), exercised
+> by `test_contracts.py` (schemas) and `core-cli validate`. The **L0 report is not a bundle file and is not
+> committed**: it is `core-cli validate` **stdout**, JSON, in the shape fixed by `contracts/graph-constraints.md`
+> § Report shape; the pipeline wrapper parses it in-process and fails the build on `passed: false`. Nothing
+> other than a schema-named bundle file may be written under `data/**` (`contracts/data-model.md` §
+> Enforcement: every `*.json` under `data/**` validates against the schema its filename names).
+> `Rendering.RenderCheck` — exercised by the spike test over the bundle and by `RenderingTests`; the `Core`
+> `Codable` types — exercised by the decode round-trip test.
+
+**Source**: `contracts/graph-constraints.md` § *Report shape* — "**Report shape** (`core-cli validate` stdout, JSON): `{ bundle_id, passed: bool, checks: [...], indegree: {...} }`"; `contracts/data-model.md` § *Enforcement* — "every `*.json` under `data/**` validates against the schema its filename names"; `contracts/README.md` § *The set* (data-model row) — schemas are "per bundle file". `contracts/schemas/` defines no `l0-report` schema, so a committed `data/demo/l0-report.json` would fail `pipeline/tests/test_contracts.py::test_data_bundles_validate`.
+**Effect on deliverables**: NONE (specificity added). The L0 report is still produced, still shaped by the contract, still the acceptance path for the bundle and still parsed by the pipeline wrapper (I8); only its location is pinned — stdout rather than a committed file. No new directory convention is introduced.
+**Effect on owner-facing acceptance**: NONE. Acceptance criteria 1 and 2 already read "prints a report" / "in the report" and are unchanged in wording and substance; §5 is unchanged.
+
+### Amendment 01.07.1 — 2026-09-09
+
+**Trigger**: tier-6 brief-amender, invoked after spec-architect escalation on task 01.7, carrying the owner's Q5 ruling and the landed v1.1.0 contract change.
+**Architect escalation**: `tasks/blocked/brief-amendment-01-07-probe-check-and-landmark.md` (raised by the spec-architect executing `tasks/blocked/Q5-RULING-01-07.md`; no `tasks/blocked/architect-escalation-01-07.md` was written under that name).
+
+**Passage 1 — §3 MANDATORY invariant line, I1 / I10 clause.**
+
+**Original brief text**:
+> I1 / I10 — every item is `numeric` or `mc` with a
+> checked `answer`/`correct_choice_id`; the pipeline re-derives every numeric answer with SymPy where the
+> prompt is expressible (a test lists the items it could not express, empty = FAIL for this bundle since all
+> are simple).
+
+**Amended brief text**:
+> I1 / I10 — every item is `numeric` or `mc` with a
+> checked `answer`/`correct_choice_id`; every `numeric` item carries a `check` (`contracts/data-model.md`
+> v1.1.0 § ProbeItem — SymPy source, never LaTeX) and the pipeline re-derives that item's answer from `check`
+> alone with SymPy, never by parsing `prompt_latex` and never with a model (§ Probe answer derivation). The
+> rule is unqualified — **every** `numeric` item in the bundle is re-derived; no item is exempt and no "could
+> not express" list exists. The build FAILS if a run covers fewer than all `numeric` items, if the CAS cannot
+> derive an item exactly (`LO_PROBE_UNCHECKABLE`), or if a derived value differs from `answer.value` beyond
+> `answer.tolerance`.
+
+**Passage 2 — §4 acceptance criterion 7.**
+
+**Original brief text**:
+> 7. The landmark's `source_url` resolves (2xx) and the fetched text contains the landmark's name (I15).
+
+**Amended brief text**:
+> 7. The landmark's `source_url` resolves (2xx) and the fetched page text contains the landmark's
+>    `source_title` as a case-insensitive substring — `"Interest Act"` for this bundle (I15,
+>    `contracts/content-policy.md` v1.1.0 § Landmarks). The landmark's `name` is the project's own
+>    descriptive claim, is never asserted against the page and is never edited to make the check pass; on
+>    failure the landmark is dropped.
+
+**Source**:
+- `contracts/data-model.md` v1.1.0 § *ProbeItem* — "Every `numeric` item additionally carries **`check`** — the machine-readable declaration the CAS re-derives the answer from (I1). An `mc` item never carries `check`"; "`expr` and `equations[]` hold **SymPy source, never LaTeX**".
+- `contracts/data-model.md` v1.1.0 § *Probe answer derivation (normative)* — "The pipeline derives every `numeric` answer from `check` alone. **`prompt_latex` is never parsed**… No model participates at any point (I1)"; "A parse failure, an unknown name, a leftover free symbol, an unbound `unknown`, zero solutions, more than one solution under `select: only`, or a non-rational result is `LO_PROBE_UNCHECKABLE` and **fails the build**… The derived value is then compared to `answer.value` within `answer.tolerance` (default `0`); a mismatch fails the build."
+- `contracts/content-policy.md` v1.1.0 § *Generated content* — "Probe answers are re-derived by SymPy before persistence (I1): every `numeric` ProbeItem carries `check` and the CAS derives the answer from `check` alone" (unqualified: "every").
+- `contracts/content-policy.md` v1.1.0 § *Landmarks* — "`source_title` required — the title of the real, named thing the landmark cites, as that title appears on the source page — and the fetched page text must contain it (case-insensitive substring). The landmark's `name` … is never asserted against the page; a landmark's `name` is never edited to make a check pass."
+- `tasks/blocked/Q5-RULING-01-07.md` § Q5-1 (extend the schema), § Q5-2 (assert `"Interest Act"`), § Consequences 2–3.
+
+**Effect on deliverables**: NONE (specificity added). Both passages are transcriptions of a ruling the owner already made and of a contract change already landed. I1 is not loosened — it is strengthened from "where the prompt is expressible" to every `numeric` item, with a build-failing error code. I15 is unchanged in strength: the landmark is still fetched live, the assertion still targets a term the source itself carries, and an unresolvable landmark is still dropped, never edited into truth (I15).
+**Effect on owner-facing acceptance**: NONE. Criterion 7 becomes satisfiable rather than self-contradictory (it now agrees with §3's own "page text contains \"Interest Act\""); no criterion is weakened, added or removed, and criteria 1–6, 8 and 9 plus §5 are unchanged.

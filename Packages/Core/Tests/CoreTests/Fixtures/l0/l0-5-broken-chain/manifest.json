@@ -1,0 +1,44 @@
+{
+  "format_version": "0.0.0",
+  "bundle_id": "contracts-example",
+  "spine_version": "0.0.0",
+  "graph_version": "0.0.0",
+  "built_at": "2026-09-09T00:00:00Z",
+  "starting_chain": [
+    "exponent-laws",
+    "exponential-functions",
+    "matrix-multiplication"
+  ],
+  "files": [
+    {
+      "name": "regions.json",
+      "asset_version": "regions-v0",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "nodes.json",
+      "asset_version": "nodes-v0",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "edges.json",
+      "asset_version": "edges-v0",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "courses.json",
+      "asset_version": "courses-v0",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "landmarks.json",
+      "asset_version": "landmarks-v0",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "name": "sources.json",
+      "asset_version": "sources-v0",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

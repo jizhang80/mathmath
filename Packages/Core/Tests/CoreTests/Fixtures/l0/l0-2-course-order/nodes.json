@@ -1,0 +1,162 @@
+{
+  "format_version": "0.0.0",
+  "nodes": [
+    {
+      "id": "exponent-laws",
+      "name": "Exponent laws",
+      "region_id": "number-operations",
+      "strand": "B",
+      "expectation_codes": [
+        {
+          "course_code": "MTH1W",
+          "code": "B3.4"
+        }
+      ],
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 1
+        }
+      ],
+      "position": {
+        "x": 0.08,
+        "y": 0.12
+      },
+      "paraphrase": "Simplify products, quotients and powers of powers using the exponent laws.",
+      "error_types": [
+        {
+          "id": "added-exponents-on-power",
+          "label": "Added the exponents instead of multiplying when raising a power to a power"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "hint_tree": {
+        "added-exponents-on-power": [
+          "Look at what happens to the exponent when a power is raised to a power.",
+          "When you raise a power to a power, multiply the exponents.",
+          "(2^3)^2 = 2^(3\u00d72) = 2^6, not 2^5."
+        ]
+      },
+      "probe_items": [
+        {
+          "id": "exp-1",
+          "type": "numeric",
+          "prompt_latex": "(2^3)^2 = 2^{\\,?}",
+          "why": "Raising a power to a power multiplies the exponents: 3 \u00d7 2 = 6.",
+          "answer": {
+            "value": "6"
+          },
+          "wrong_answers": [
+            {
+              "value": "5",
+              "error_type_id": "added-exponents-on-power"
+            }
+          ]
+        },
+        {
+          "id": "exp-2",
+          "type": "mc",
+          "prompt_latex": "\\text{Which equals } x^4 \\cdot x^3 ?",
+          "why": "Multiplying powers with the same base adds the exponents: 4 + 3 = 7.",
+          "choices": [
+            {
+              "id": "a",
+              "latex": "x^{7}"
+            },
+            {
+              "id": "b",
+              "latex": "x^{12}",
+              "error_type_id": "added-exponents-on-power"
+            }
+          ],
+          "correct_choice_id": "a"
+        }
+      ]
+    },
+    {
+      "id": "exponential-functions",
+      "name": "Exponential functions",
+      "region_id": "functions",
+      "strand": "C",
+      "expectation_codes": [
+        {
+          "course_code": "MCR3U",
+          "code": "C1.1"
+        }
+      ],
+      "courses": [
+        {
+          "course_code": "MCR3U",
+          "depth": 0
+        }
+      ],
+      "position": {
+        "x": 0.45,
+        "y": 0.2
+      },
+      "paraphrase": "Recognise, graph and interpret functions of the form y = a\u00b7b^x.",
+      "error_types": [
+        {
+          "id": "base-exponent-swapped",
+          "label": "Treated the base as the exponent",
+          "implies_prerequisite": "exponent-laws"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "hint_tree": {
+        "base-exponent-swapped": [
+          "Which number is being multiplied repeatedly?",
+          "In y = 3^x the base 3 is repeated x times.",
+          "3^2 = 9 while 2^3 = 8: order matters."
+        ]
+      },
+      "probe_items": [
+        {
+          "id": "expf-1",
+          "type": "numeric",
+          "prompt_latex": "y = 3^x,\\ x = 2 \\Rightarrow y = ?",
+          "why": "3 multiplied by itself twice is 9.",
+          "answer": {
+            "value": "9"
+          },
+          "wrong_answers": [
+            {
+              "value": "8",
+              "error_type_id": "base-exponent-swapped"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "matrix-multiplication",
+      "name": "Matrix multiplication",
+      "region_id": "linear-algebra",
+      "source_ref": {
+        "source": "openstax",
+        "edition": "College Algebra 2e",
+        "locator": "9.5"
+      },
+      "courses": [],
+      "position": {
+        "x": 0.28,
+        "y": 0.55
+      },
+      "paraphrase": "Multiply two matrices by combining rows of the first with columns of the second.",
+      "error_types": [
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "hint_tree": {},
+      "probe_items": []
+    }
+  ]
+}
