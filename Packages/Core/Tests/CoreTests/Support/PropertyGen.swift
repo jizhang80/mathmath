@@ -133,4 +133,72 @@ enum PropertyGen {
         }
         return (nodes, edges, "origin")
     }
+
+    // MARK: - 02.12 additions (`StateMergeTests`)
+
+    /// Small closed pools for this task's fixtures — no bundle is loaded (`merge` never reads one, per the
+    /// rule's own first sentence); the pools exist so generated pairs exercise real string comparison in
+    /// the marker tie-break (`mergeCourseCodePool`) and real overlap/disjointness in the log multiset
+    /// (`mergeItemIdPool`).
+    static let mergeCourseCodePool = ["MTH1W", "MCR3U"]
+    static let mergeItemIdPool = ["item-a", "item-b"]
+
+    static func marker(_ gen: inout SeededGenerator) -> Marker {
+        let courseCode = element(&gen, from: mergeCourseCodePool)
+        let unitOrdinal = int(&gen, in: 1...5)
+        let pastLastUnit = element(&gen, from: [true, false, nil] as [Bool?])
+        return Marker(
+            courseCode: courseCode, unitId: "\(courseCode).u\(unitOrdinal)", pastLastUnit: pastLastUnit)
+    }
+
+    static func trail(_ gen: inout SeededGenerator, courseCode: String, nodeIds: [String]) -> Trail {
+        Trail(segments: [TrailSegment(kind: .course, courseCode: courseCode, nodeIds: nodeIds)])
+    }
+
+    static func expeditionLogEntry(_ gen: inout SeededGenerator, today: CalendarDay) -> ExpeditionLogEntry {
+        ExpeditionLogEntry(
+            day: today.adding(days: -int(&gen, in: 0...10)).iso,
+            itemCount: int(&gen, in: 1...5),
+            cleared: int(&gen, in: 0...5),
+            blocked: int(&gen, in: 0...5),
+            abandoned: bool(&gen, trueWeight: 0.2),
+            diagnosisEvents: int(&gen, in: 0...1)
+        )
+    }
+
+    static func probeLogEntry(
+        _ gen: inout SeededGenerator, today: CalendarDay, nodeIds: [String]
+    ) -> ProbeLogEntry {
+        ProbeLogEntry(
+            day: today.adding(days: -int(&gen, in: 0...10)).iso,
+            nodeId: element(&gen, from: nodeIds),
+            itemId: element(&gen, from: mergeItemIdPool),
+            correct: bool(&gen, trueWeight: 0.6),
+            retry: bool(&gen, trueWeight: 0.2)
+        )
+    }
+
+    /// A syntactically valid, fully-populated `StudentState` for merge property tests. `nodeIds` is the
+    /// caller's fixed small pool; each id is independently included with probability 0.6, so generated
+    /// pairs exercise the merge rule's "key on one side" and "key on both sides" cases with non-trivial
+    /// probability every run.
+    static func studentState(_ gen: inout SeededGenerator, nodeIds: [String], today: CalendarDay)
+        -> StudentState
+    {
+        let generatedMarker = marker(&gen)
+        let presentNodeIds = nodeIds.filter { _ in bool(&gen, trueWeight: 0.6) }
+        let logCount = int(&gen, in: 0...3)
+        return StudentState(
+            schemaVersion: 2,
+            formatVersionSeen: "\(int(&gen, in: 0...2)).\(int(&gen, in: 0...9)).\(int(&gen, in: 0...9))",
+            syllabi: [generatedMarker.courseCode],
+            marker: generatedMarker,
+            nodes: nodesMap(&gen, nodeIds: presentNodeIds, today: today),
+            trail: trail(&gen, courseCode: generatedMarker.courseCode, nodeIds: nodeIds),
+            expeditionLog: (0..<logCount).map { _ in expeditionLogEntry(&gen, today: today) },
+            probeLog: (0..<logCount).map { _ in probeLogEntry(&gen, today: today, nodeIds: nodeIds) },
+            installDay: today.adding(days: -int(&gen, in: 0...60)).iso,
+            consentOn: bool(&gen, trueWeight: 0.8)
+        )
+    }
 }
