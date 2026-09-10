@@ -1,10 +1,11 @@
 # Contract: Interaction contract — three doors over one base
 
-**Contract version:** v0.9.1 (discovery zone — finalized just-in-time by the Demo EPIC) · Source: brief v2
+**Contract version:** v0.9.2 (discovery zone — finalized just-in-time by the Demo EPIC) · Source: brief v2
 §7, D23, D27, D44–D48, v2.7 §3; `map.md`, `expedition.md`, `diagnosis.md`; v0.9.1 adds the numeric
 normalisation rule (expedition Q4), the `remediated(p)` predicate and its two ripples (arbiter Q-A,
 `tasks/arbitration/arbiter-02-predispatch.md`), the `past_last_unit` marker text (arbiter Q-F), and the
-probe "available" definition (arbiter Q-G)
+probe "available" definition (arbiter Q-G); v0.9.2 resolves the marker-drag finalization item (arbiter Q-B,
+`tasks/arbitration/arbiter-03-predispatch.md`)
 
 > The three doors as state machines with named states, events and guards, so `Core` implements them as
 > pure transition functions and `CoreTests` proves the properties. Screens are in the domain docs; this
@@ -72,6 +73,9 @@ item shown ends with its answer visible.
 - `generate_trail`: course segments in unit order; if the marker is past the course's last unit, an
   `extension` segment along downstream edges preferring `next_courses[]`, then undergraduate nodes; every
   segment a path (L0-T) else `EXP_TRAIL_INVALID` and the previous trail stands.
+- The marker is set only by choosing an entry from the selected course's unit list: one entry per unit in
+  unit order, then a final "past the last unit" entry (`past_last_unit: true`). No gesture moves the marker;
+  there is no drag and no snap. A unit-list choice is never off the trail.
 
 ## 4. Diagnosis (Door A)
 
@@ -115,5 +119,5 @@ learning_objects.hint_tier_served · graph.prerequisite_returned`
 Payloads are ids, enums, booleans and small integers only (I5).
 
 ## Finalization owed by the Demo EPIC
-The unit-boundary snap for dragging the marker; the timing of the answer card; whether the summary shows
-region tint deltas. Bump to v1.0.0 on wrap.
+The timing of the answer card; whether the summary shows region tint deltas. Bump to v1.0.0 on wrap.
+(Resolved in v0.9.2: the marker is set from the unit list only — § 3; no drag.)

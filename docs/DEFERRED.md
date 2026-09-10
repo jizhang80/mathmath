@@ -144,3 +144,15 @@ mistake.
 **Hypothesis (unverified):** it is SwiftPM resolution state that Xcode writes when the project is resolved
 directly. An ignore rule is likely correct, but whether `Package.resolved` there should be tracked has not been
 checked.
+
+### D-14 — Marker drag with unit-boundary snap
+
+**Observed:** `interaction-contract.md` v0.9.1 listed "the unit-boundary snap for dragging the marker" as a
+finalization item owed by the Demo EPIC. Arbiter ruling Q-B (`tasks/arbitration/arbiter-03-predispatch.md`)
+resolved it for the Demo: the marker is set only by choosing an entry from the selected course's unit list,
+with a final "past the last unit" entry; no drag gesture is built, and `docs/domains/map.md` § W5 no longer
+describes a drag path.
+**Configuration:** `interaction-contract.md` v0.9.2 § 3; the Demo's marker picker (EPIC 03 task 03.11) is a
+unit-list picker only, with no drag gesture.
+**Revisit trigger:** Demo observations (`DEMO-BRIEF.md` § 7 Acceptance).
+**Hypothesis (unverified):** none.
