@@ -264,12 +264,6 @@ public enum L0Checker {
             uniqueKeysWithValues: bundle.courses.courses.map { ($0.courseCode, $0) })
         let sortedCodes = coursesByCode.keys.sorted()
 
-        for code in sortedCodes {
-            for next in coursesByCode[code]?.nextCourses ?? [] where coursesByCode[next] == nil {
-                violations.append(next)
-            }
-        }
-
         var colour: [String: DFSColour] = [:]
         var stack: [String] = []
         var cycle: [String]?

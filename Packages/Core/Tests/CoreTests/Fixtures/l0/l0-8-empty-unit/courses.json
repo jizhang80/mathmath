@@ -38,7 +38,9 @@
         "title": "Demo hand-written unit list",
         "edition": "2026"
       },
-      "next_courses": []
+      "next_courses": [
+        "MPM2D"
+      ]
     },
     {
       "course_code": "MCR3U",
@@ -68,7 +70,9 @@
           ]
         }
       ],
-      "next_courses": []
+      "next_courses": [
+        "MHF4U"
+      ]
     }
   ]
 }

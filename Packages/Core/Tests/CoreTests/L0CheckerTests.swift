@@ -66,6 +66,44 @@ struct L0CheckerTests {
         }
     }
 
+    // T1b / AC1: `contracts/examples/` is the normative worked example and must satisfy its own
+    // contract. Reads the live contract directory (not a copy) so drift between the example and the
+    // checker is caught here rather than absorbed.
+    @Test("contracts/examples/ validates clean (AC1)")
+    func contractsExamplesValidateClean() throws {
+        let contractsExamplesDir =
+            URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()  // CoreTests
+            .deletingLastPathComponent()  // Tests
+            .deletingLastPathComponent()  // package root (Packages/Core)
+            .deletingLastPathComponent()  // Packages
+            .deletingLastPathComponent()  // repo root
+            .appendingPathComponent("contracts/examples")
+        let report = try L0Checker.validate(bundleDir: contractsExamplesDir)
+
+        #expect(report.passed == true)
+        #expect(report.checks.count == 10)
+        for check in report.checks {
+            #expect(check.passed == true, "\(check.id) unexpectedly failed: \(check.violations)")
+            #expect(check.violations.isEmpty)
+        }
+    }
+
+    // AC2: a `next_courses[]` entry naming a course absent from the bundle is legal data, not a
+    // violation — `valid/`'s MTH1W and MCR3U point at MPM2D and MHF4U, neither resident.
+    @Test("L0-9 records no violation for a non-resident next_courses target (AC2)")
+    func l0_9AllowsNonResidentSuccessor() throws {
+        let bundle = try Self.loadBundle("valid")
+        let residentCodes = Set(bundle.courses.courses.map(\.courseCode))
+        #expect(!residentCodes.contains("MPM2D"))
+        #expect(!residentCodes.contains("MHF4U"))
+
+        let report = L0Checker.validate(bundle: bundle)
+        let l09 = try #require(report.checks.first { $0.id == "L0-9" })
+        #expect(l09.passed == true)
+        #expect(l09.violations.isEmpty)
+    }
+
     // T2 / AC2 / AC3: one negative control per rule, asserting both the exact rule id's `passed ==
     // false` with a non-empty `violations`, and `errorCode(forRuleId:)` for that rule id.
     @Test(
