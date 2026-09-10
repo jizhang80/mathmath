@@ -81,4 +81,198 @@ enum PropertyGen {
     {
         (0..<count).map { _ in bool(&gen, trueWeight: correctWeight) }
     }
+
+    // MARK: - 02.10 additions (`PrerequisiteQueryTests`)
+
+    /// A syntactically minimal `Node`: no expectation codes, no source ref, no probe items — every
+    /// non-optional field carries the smallest value that satisfies its type. Never used as-is for L0
+    /// or content-policy checks (this task's tests never run those), only as graph-structure filler for
+    /// `PrerequisiteQuery`, which reads only `id` and `errorTypes`.
+    static func minimalNode(id: String) -> Node {
+        Node(
+            id: id, name: id, regionId: .algebra, strand: nil, expectationCodes: nil, sourceRef: nil,
+            courses: [], position: Point(x: 0, y: 0), layoutHint: nil,
+            paraphrase: "generated node \(id)", explanation: nil, workedExamples: nil, errorTypes: [],
+            hintTree: [:], probeItems: [])
+    }
+
+    /// A syntactically minimal `Edge` of the given `confidence` — `PrerequisiteQuery` reads only `from`,
+    /// `to` and `confidence`.
+    static func minimalEdge(from: String, to: String, confidence: Double) -> Edge {
+        Edge(
+            from: from, to: to, sources: [], generationAgreement: 1, confidence: confidence,
+            probeStats: ProbeStats(probes: 0, confirmed: 0, downstreamFailGivenUpstreamFail: nil))
+    }
+
+    /// A small synthetic acyclic graph rooted at node id `"origin"`: `1...maxLevels` layers, each layer
+    /// holding `1...maxBranching` nodes, each new node's single outgoing edge pointing (as the
+    /// prerequisite, `edge.from`) to one randomly-chosen node of the layer directly below it (closer to
+    /// `"origin"`) — matching concept-graph's "from = prerequisite (shallower), to = dependent (deeper)"
+    /// edge direction. Every edge points to a strictly lower layer index, so the graph is acyclic by
+    /// construction; every node beyond `"origin"` is reachable from `"origin"` by walking incoming edges
+    /// upward, at the layer's own BFS depth.
+    static func smallLayeredGraph(
+        _ gen: inout SeededGenerator, maxLevels: Int, maxBranching: Int
+    ) -> (nodes: [Node], edges: [Edge], originId: String) {
+        var nodesByLevel: [[String]] = [["origin"]]
+        var nodes: [Node] = [minimalNode(id: "origin")]
+        var edges: [Edge] = []
+        let levels = int(&gen, in: 1...maxLevels)
+        for level in 1...levels {
+            let count = int(&gen, in: 1...maxBranching)
+            var ids: [String] = []
+            for index in 0..<count {
+                let id = "l\(level)n\(index)"
+                ids.append(id)
+                nodes.append(minimalNode(id: id))
+                let parentId = element(&gen, from: nodesByLevel[level - 1])
+                let confidence = Double.random(in: 0.5...1, using: &gen)
+                edges.append(minimalEdge(from: id, to: parentId, confidence: confidence))
+            }
+            nodesByLevel.append(ids)
+        }
+        return (nodes, edges, "origin")
+    }
+
+    // MARK: - 02.12 additions (`StateMergeTests`)
+
+    /// Small closed pools for this task's fixtures — no bundle is loaded (`merge` never reads one, per the
+    /// rule's own first sentence); the pools exist so generated pairs exercise real string comparison in
+    /// the marker tie-break (`mergeCourseCodePool`) and real overlap/disjointness in the log multiset
+    /// (`mergeItemIdPool`).
+    static let mergeCourseCodePool = ["MTH1W", "MCR3U"]
+    static let mergeItemIdPool = ["item-a", "item-b"]
+
+    static func marker(_ gen: inout SeededGenerator) -> Marker {
+        let courseCode = element(&gen, from: mergeCourseCodePool)
+        let unitOrdinal = int(&gen, in: 1...5)
+        let pastLastUnit = element(&gen, from: [true, false, nil] as [Bool?])
+        return Marker(
+            courseCode: courseCode, unitId: "\(courseCode).u\(unitOrdinal)", pastLastUnit: pastLastUnit)
+    }
+
+    static func trail(_ gen: inout SeededGenerator, courseCode: String, nodeIds: [String]) -> Trail {
+        Trail(segments: [TrailSegment(kind: .course, courseCode: courseCode, nodeIds: nodeIds)])
+    }
+
+    static func expeditionLogEntry(_ gen: inout SeededGenerator, today: CalendarDay) -> ExpeditionLogEntry {
+        ExpeditionLogEntry(
+            day: today.adding(days: -int(&gen, in: 0...10)).iso,
+            itemCount: int(&gen, in: 1...5),
+            cleared: int(&gen, in: 0...5),
+            blocked: int(&gen, in: 0...5),
+            abandoned: bool(&gen, trueWeight: 0.2),
+            diagnosisEvents: int(&gen, in: 0...1)
+        )
+    }
+
+    static func probeLogEntry(
+        _ gen: inout SeededGenerator, today: CalendarDay, nodeIds: [String]
+    ) -> ProbeLogEntry {
+        ProbeLogEntry(
+            day: today.adding(days: -int(&gen, in: 0...10)).iso,
+            nodeId: element(&gen, from: nodeIds),
+            itemId: element(&gen, from: mergeItemIdPool),
+            correct: bool(&gen, trueWeight: 0.6),
+            retry: bool(&gen, trueWeight: 0.2)
+        )
+    }
+
+    /// A syntactically valid, fully-populated `StudentState` for merge property tests. `nodeIds` is the
+    /// caller's fixed small pool; each id is independently included with probability 0.6, so generated
+    /// pairs exercise the merge rule's "key on one side" and "key on both sides" cases with non-trivial
+    /// probability every run.
+    static func studentState(_ gen: inout SeededGenerator, nodeIds: [String], today: CalendarDay)
+        -> StudentState
+    {
+        let generatedMarker = marker(&gen)
+        let presentNodeIds = nodeIds.filter { _ in bool(&gen, trueWeight: 0.6) }
+        let logCount = int(&gen, in: 0...3)
+        return StudentState(
+            schemaVersion: 2,
+            formatVersionSeen: "\(int(&gen, in: 0...2)).\(int(&gen, in: 0...9)).\(int(&gen, in: 0...9))",
+            syllabi: [generatedMarker.courseCode],
+            marker: generatedMarker,
+            nodes: nodesMap(&gen, nodeIds: presentNodeIds, today: today),
+            trail: trail(&gen, courseCode: generatedMarker.courseCode, nodeIds: nodeIds),
+            expeditionLog: (0..<logCount).map { _ in expeditionLogEntry(&gen, today: today) },
+            probeLog: (0..<logCount).map { _ in probeLogEntry(&gen, today: today, nodeIds: nodeIds) },
+            installDay: today.adding(days: -int(&gen, in: 0...60)).iso,
+            consentOn: bool(&gen, trueWeight: 0.8)
+        )
+    }
+
+    // MARK: - 02.11 additions (`DiagnosisMachineTests`)
+
+    /// A `Node` carrying two numeric probe items (`<id>-1` correct `"1"`, `<id>-2` correct `"2"`, both
+    /// tagging `"9"` as the `"err"` distractor) — `minimalNode` carries none, so `DiagnosisRun`'s probe
+    /// step (which needs 2 available items to avoid `DIAG_PROBE_UNAVAILABLE`) needs its own graph
+    /// builder.
+    static func probeableNode(id: String) -> Node {
+        let items = [
+            ProbeItem(
+                id: "\(id)-1", type: .numeric, promptLatex: "?", why: "why-\(id)-1", renderFallback: nil,
+                answer: ProbeAnswer(value: "1", tolerance: nil),
+                wrongAnswers: [WrongAnswer(value: "9", errorTypeId: "err")], choices: nil,
+                correctChoiceId: nil, check: nil),
+            ProbeItem(
+                id: "\(id)-2", type: .numeric, promptLatex: "?", why: "why-\(id)-2", renderFallback: nil,
+                answer: ProbeAnswer(value: "2", tolerance: nil),
+                wrongAnswers: [WrongAnswer(value: "9", errorTypeId: "err")], choices: nil,
+                correctChoiceId: nil, check: nil),
+        ]
+        return Node(
+            id: id, name: id, regionId: .algebra, strand: nil, expectationCodes: nil, sourceRef: nil,
+            courses: [], position: Point(x: 0, y: 0), layoutHint: nil, paraphrase: "generated node \(id)",
+            explanation: nil, workedExamples: nil,
+            errorTypes: [
+                ErrorType(id: "err", label: "generated", impliesPrerequisite: nil),
+                ErrorType(id: "none-of-these", label: "None of these", impliesPrerequisite: nil),
+            ], hintTree: [:], probeItems: items)
+    }
+
+    /// `smallLayeredGraph`'s own layered-graph construction, but every node carries two probe items
+    /// (`probeableNode`) so a generated diagnosis can reach `.refuted`/`.confirmed`/`.capped`, not only
+    /// `DIAG_PROBE_UNAVAILABLE`.
+    static func smallLayeredGraphWithProbeItems(
+        _ gen: inout SeededGenerator, maxLevels: Int, maxBranching: Int
+    ) -> (nodes: [Node], edges: [Edge], originId: String) {
+        var nodesByLevel: [[String]] = [["origin"]]
+        var nodes: [Node] = [probeableNode(id: "origin")]
+        var edges: [Edge] = []
+        let levels = int(&gen, in: 1...maxLevels)
+        for level in 1...levels {
+            let count = int(&gen, in: 1...maxBranching)
+            var ids: [String] = []
+            for index in 0..<count {
+                let id = "l\(level)n\(index)"
+                ids.append(id)
+                nodes.append(probeableNode(id: id))
+                let parentId = element(&gen, from: nodesByLevel[level - 1])
+                let confidence = Double.random(in: 0.5...1, using: &gen)
+                edges.append(minimalEdge(from: id, to: parentId, confidence: confidence))
+            }
+            nodesByLevel.append(ids)
+        }
+        return (nodes, edges, "origin")
+    }
+
+    /// One level's worth of decisions against a `probeableNode`-built graph: `declineProbe` rarely true
+    /// (probes mostly proceed), `submittedAnswers` either the two correct values (`pass`) or two tagged
+    /// distractors (`fail`), `acceptFurtherLevel` roughly even.
+    static func diagnosisLevelDecision(_ gen: inout SeededGenerator) -> DiagnosisLevelDecision {
+        let declineProbe = bool(&gen, trueWeight: 0.1)
+        let pass = bool(&gen, trueWeight: 0.4)
+        return DiagnosisLevelDecision(
+            declineProbe: declineProbe, submittedAnswers: pass ? ["1", "2"] : ["9", "9"],
+            acceptFurtherLevel: bool(&gen, trueWeight: 0.6))
+    }
+
+    /// A random `DiagnosisLevelDecision` sequence of the given length — long enough to cover every level
+    /// a `levelBudget <= 2` diagnosis can ever reach.
+    static func diagnosisLevelDecisions(_ gen: inout SeededGenerator, count: Int)
+        -> [DiagnosisLevelDecision]
+    {
+        (0..<count).map { _ in diagnosisLevelDecision(&gen) }
+    }
 }
