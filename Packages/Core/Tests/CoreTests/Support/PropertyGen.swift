@@ -73,4 +73,12 @@ enum PropertyGen {
         }
         return result
     }
+
+    /// A sequence of `count` correct/incorrect outcomes (02.7's `ExpeditionRun.answer` D27 property
+    /// tests), each drawn independently with `correctWeight` probability of `true`.
+    static func outcomeSequence(_ gen: inout SeededGenerator, count: Int, correctWeight: Double = 0.5)
+        -> [Bool]
+    {
+        (0..<count).map { _ in bool(&gen, trueWeight: correctWeight) }
+    }
 }
