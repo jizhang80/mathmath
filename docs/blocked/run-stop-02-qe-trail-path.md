@@ -1,5 +1,7 @@
 # Run stop — EPIC 02, Q-E: what I8's "every generated trail is a path in the graph" means
 
+**RESOLVED 2026-09-10 — owner ruled option A** (`tasks/blocked/Q5-RULING-02-QE.md`). The run resumes.
+
 Raised: 2026-09-10, `/run-epic 02` (chain 02–04), pre-dispatch arbitration.
 Detail: `tasks/blocked/blocked-arbiter-02-03.md`; rulings on the other questions:
 `tasks/arbitration/arbiter-02-predispatch.md`.
