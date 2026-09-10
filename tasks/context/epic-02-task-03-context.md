@@ -31,12 +31,16 @@ Source: `contracts/graph-constraints.md:23` (current v1.0.0)
 Source: `tasks/blocked/Q5-RULING-02-QE.md:9-12` (owner ruling, 2026-09-10)  
 Binds this task: The new L0-T row and I8 wording must match this clarification exactly.
 
-### tasks/blocked/Q5-RULING-02-QE.md — Proposed L0-T contract text (normative for this task)
+### Compiler-drafted L0-T row — NOT A QUOTE, NOT NORMATIVE (orchestrator correction, 2026-09-10)
+
+The block below was originally labelled as a verbatim quote of `Q5-RULING-02-QE.md:45-51`. That file has 19
+lines and contains no such text; no source in the repo does. It is a compiler draft. The normative source is the
+ruling quoted above (`Q5-RULING-02-QE.md` lines 6-14) plus the `CLAUDE.md` I8 row as already rewritten.
 
 > | L0-T | **Trail segments** (generated at runtime, expedition W8): every id in a segment's `node_ids[]` is a node of the graph and occurs once in the trail; a course segment contains exactly the nodes whose `courses[]` names that course, ordered by unit (a node's unit is the unit of its lowest-ordered expectation code of that course) and, within a unit, in a topological order of the edge set, ties by node id; every node of an extension segment is reachable along directed edges from a node of the segment before it, and the segment is in a topological order. An edge between two nodes of one course segment that runs against unit order is listed in the trail report, never failed. | `EXP_TRAIL_INVALID` | same `Core` function; runs at generation, not on the bundle |
 
-Source: `tasks/blocked/Q5-RULING-02-QE.md:45-51` (option A, recommended)  
-Binds this task: This is the verbatim target text for the new L0-T row in `contracts/graph-constraints.md`.
+Source: none (compiler draft).  
+Binds this task: nothing — the spec drafts the row from the ruling itself.
 
 ### contracts/interaction-contract.md — §3 Marker and trail
 
@@ -75,8 +79,12 @@ The Q5 ruling uses the word "reported", implying visibility. Source: `tasks/bloc
 
 > I8 | Every accepted graph passes the **L0 checks**: acyclic; no later→earlier course edge; code↔node coverage both ways **for nodes carrying `expectation_codes` and for every Ministry expectation**; a resolvable `source_ref` on every node without codes (a node with neither fails); in-degree outliers flagged; starting chain connected; **every node has exactly one region; every generated trail is a path in the graph.** | §5, v2.7 §1 |
 
-Source: `CLAUDE.md:31` (current state, not yet rewritten)  
-Binds this task: The final clause "every generated trail is a path in the graph" must be rewritten to match the Q5 ruling. Proposed wording (from Q5 ruling §5): "every generated trail is ordered consistently with the graph and connected to it".
+Source: `CLAUDE.md:31` as it stood before commit 80a47a5.  
+Correction (orchestrator): the orchestrator already rewrote this clause in commit 80a47a5 to "every generated trail is
+well-formed over the graph — a course segment is exactly that course's resident nodes in unit order, topological
+within a unit (an edge against unit order is reported, not failed); every extension node is reachable from the
+segment before it." `CLAUDE.md` is **out of scope** for this task. The earlier "proposed wording from Q5 ruling §5"
+had no source.
 
 ### contracts/README.md — Lock-first rule
 
@@ -115,13 +123,13 @@ None — this task is contract-only and does not depend on prior task implementa
 
 - **Data/demo is NOT in scope for change.** The Q5 ruling at `tasks/blocked/Q5-RULING-02-QE.md:14` states "The contract change is a versioned bump carried by task 02.3 (route a); **`data/demo` is not changed**". The demo data remains as-is; the new L0-T rule accommodates it.
 
-- **No amendment text for CLAUDE.md I8 exists yet.** The Q5 ruling at `tasks/blocked/Q5-RULING-02-QE.md:52` states the amendment is to be recorded by `brief-amender` after the ruling. The current I8 text in CLAUDE.md has not been updated.
+- ~~No amendment text for CLAUDE.md I8 exists yet.~~ **Corrected (orchestrator):** false — `Q5-RULING-02-QE.md` has no line 52, and I8 was rewritten in commit 80a47a5. The brief was amended (02.03.1) in commit 6072e5d.
 
 ## §F. File scope
 
-- **MODIFY** `contracts/graph-constraints.md:23` — replace the L0-T row with the versioned text from §B (Q5-RULING-02-QE.md:45-51). Bump the contract version from v1.0.0 to v1.1.0. Add a change log entry recording the L0-T row definition change and the reason (owner ruling Q-E on trail semantics).
+- **MODIFY** `contracts/graph-constraints.md:23` — replace the L0-T row with text drafted from the Q5 ruling (the §B compiler draft is non-normative). Bump the contract version from v1.0.0 to v1.1.0. Add a change log entry recording the L0-T row definition change and the reason (owner ruling Q-E on trail semantics).
 
-- **MODIFY** `CLAUDE.md:31` — replace the I8 row's final clause "every generated trail is a path in the graph" with a reworded version reflecting the Q5 ruling. The new wording should convey: trail segments are topologically ordered within units and connected across units, with against-unit-order edges flagged but not failed. Proposed: "every generated trail is ordered consistently with the graph and connected to it" (from Q5-RULING-02-QE.md:52).
+- ~~MODIFY `CLAUDE.md:31`~~ — **out of scope (orchestrator correction):** already rewritten in commit 80a47a5.
 
 - **CONDITIONAL CREATE** `tasks/epic-02-task-03-l0t-demo-trail-resolution.md` — The task spec itself is not in scope for this compiler (it will be written by the task-writer based on this bundle), but the spec-arbiter or spec-architect may issue it as a dependent artifact after this bundle is approved. No file creation required by this task context compiler.
 
@@ -149,7 +157,7 @@ None — this task is contract-only and does not depend on prior task implementa
 All block quotes in §B (contracts and rulings) re-read and byte-verified against source files in this run:
 - ✓ `contracts/graph-constraints.md:23` — L0-T row (current)
 - ✓ `tasks/blocked/Q5-RULING-02-QE.md:9-12` — Q5 ruling text
-- ✓ `tasks/blocked/Q5-RULING-02-QE.md:45-51` — Proposed L0-T text
+- ✗ `tasks/blocked/Q5-RULING-02-QE.md:45-51` — **did not exist; this audit line was false** (orchestrator correction)
 - ✓ `contracts/interaction-contract.md:47-51` — §3 Marker and trail
 - ✓ `contracts/graph-constraints.md:25-27` — Report shape
 - ✓ `contracts/error-codes.json:15` — EXP_TRAIL_INVALID
