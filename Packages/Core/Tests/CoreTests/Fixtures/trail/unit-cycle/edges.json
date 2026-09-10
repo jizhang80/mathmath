@@ -1,0 +1,37 @@
+{
+  "format_version": "0.0.0",
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "sources": [
+        {
+          "tag": "textbook_order",
+          "origin": "synthetic-fixture"
+        }
+      ],
+      "generation_agreement": 1,
+      "confidence": 0.8,
+      "probe_stats": {
+        "probes": 0,
+        "confirmed": 0
+      }
+    },
+    {
+      "from": "b",
+      "to": "a",
+      "sources": [
+        {
+          "tag": "textbook_order",
+          "origin": "synthetic-fixture"
+        }
+      ],
+      "generation_agreement": 1,
+      "confidence": 0.8,
+      "probe_stats": {
+        "probes": 0,
+        "confirmed": 0
+      }
+    }
+  ]
+}

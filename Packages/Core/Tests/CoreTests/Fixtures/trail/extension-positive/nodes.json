@@ -1,0 +1,937 @@
+{
+  "format_version": "0.0.0",
+  "nodes": [
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "sign-error",
+          "label": "Dropped or mishandled a negative sign"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "B1.1",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "sign-error": [
+          "Subtracting a negative is the same as adding its opposite.",
+          "-3 - (-7) becomes -3 + 7.",
+          "-3 + 7 = 4."
+        ]
+      },
+      "id": "integer-operations",
+      "name": "Integer operations",
+      "paraphrase": "Add and subtract integers using signed-number rules.",
+      "position": {
+        "x": 0.10621074613276424,
+        "y": 8.34581884672659e-05
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "4"
+          },
+          "check": {
+            "expr": "-3 - (-7)",
+            "kind": "evaluate"
+          },
+          "id": "integer-operations-1",
+          "prompt_latex": "-3 - (-7) = ?",
+          "type": "numeric",
+          "why": "Subtracting a negative flips it to addition: -3 + 7 = 4.",
+          "wrong_answers": [
+            {
+              "error_type_id": "sign-error",
+              "value": "-10"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "-3"
+            },
+            {
+              "error_type_id": "sign-error",
+              "id": "b",
+              "latex": "7"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "integer-operations-2",
+          "prompt_latex": "-5 + 2 = ?",
+          "type": "mc",
+          "why": "Adding a positive to a negative moves it toward zero: -5 + 2 = -3."
+        }
+      ],
+      "region_id": "number-operations",
+      "strand": "B"
+    },
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "wrong-order",
+          "label": "Evaluated operations left to right, ignoring precedence"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "B1.2",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "wrong-order": [
+          "Multiplication and division come before addition and subtraction.",
+          "In 2 + 3 x 4, do the multiplication first.",
+          "3 x 4 = 12, then 2 + 12 = 14."
+        ]
+      },
+      "id": "order-of-operations",
+      "name": "Order of operations",
+      "paraphrase": "Evaluate numeric expressions using the correct order of operations.",
+      "position": {
+        "x": 9.107990118401542e-05,
+        "y": 0.06349844917867677
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "14"
+          },
+          "check": {
+            "expr": "2 + 3*4",
+            "kind": "evaluate"
+          },
+          "id": "order-of-operations-1",
+          "prompt_latex": "2 + 3 \\times 4 = ?",
+          "type": "numeric",
+          "why": "Multiply before adding: 3 x 4 = 12, then 2 + 12 = 14.",
+          "wrong_answers": [
+            {
+              "error_type_id": "wrong-order",
+              "value": "20"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "20"
+            },
+            {
+              "error_type_id": "wrong-order",
+              "id": "b",
+              "latex": "14"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "order-of-operations-2",
+          "prompt_latex": "(2+3)\\times 4 = ?",
+          "type": "mc",
+          "why": "Brackets are evaluated first: (2+3) = 5, then 5 x 4 = 20."
+        }
+      ],
+      "region_id": "number-operations",
+      "strand": "B"
+    },
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "common-denominator-error",
+          "label": "Combined fractions without a common denominator"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "B1.3",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "common-denominator-error": [
+          "Fractions need a common denominator before you add or subtract.",
+          "Rewrite 1/2 and 1/3 over a denominator of 6.",
+          "3/6 + 2/6 = 5/6."
+        ]
+      },
+      "id": "rational-numbers",
+      "name": "Operations with rational numbers",
+      "paraphrase": "Add and subtract fractions with unlike denominators.",
+      "position": {
+        "x": 1.714923044157131e-06,
+        "y": 0.26443094658810135
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "5/6"
+          },
+          "check": {
+            "expr": "1/2 + 1/3",
+            "kind": "evaluate"
+          },
+          "id": "rational-numbers-1",
+          "prompt_latex": "\\frac{1}{2} + \\frac{1}{3} = ?",
+          "type": "numeric",
+          "why": "Rewrite over a common denominator of 6: 3/6 + 2/6 = 5/6.",
+          "wrong_answers": [
+            {
+              "error_type_id": "common-denominator-error",
+              "value": "2/5"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "1/2"
+            },
+            {
+              "error_type_id": "common-denominator-error",
+              "id": "b",
+              "latex": "1/8"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "rational-numbers-2",
+          "prompt_latex": "\\frac{3}{4} - \\frac{1}{4} = ?",
+          "type": "mc",
+          "why": "Same denominator, subtract the numerators: 3 - 1 = 2, giving 2/4 = 1/2."
+        }
+      ],
+      "region_id": "number-operations",
+      "strand": "B"
+    },
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "added-exponents-on-power",
+          "label": "Added the exponents instead of multiplying when raising a power to a power"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "B2.1",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "added-exponents-on-power": [
+          "Look at what happens to the exponent when a power is raised to a power.",
+          "When you raise a power to a power, multiply the exponents.",
+          "(2^3)^2 = 2^(3x2) = 2^6, not 2^5."
+        ]
+      },
+      "id": "exponent-laws",
+      "name": "Exponent laws",
+      "paraphrase": "Simplify products, quotients and powers of powers using the exponent laws.",
+      "position": {
+        "x": 0.08593409212328536,
+        "y": 0.29999143546661816
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "6"
+          },
+          "check": {
+            "equations": [
+              "Eq((2**3)**2, 2**k)"
+            ],
+            "kind": "solve",
+            "unknown": "k"
+          },
+          "id": "exponent-laws-1",
+          "prompt_latex": "(2^3)^2 = 2^{\\,?}",
+          "type": "numeric",
+          "why": "Raising a power to a power multiplies the exponents: 3 x 2 = 6.",
+          "wrong_answers": [
+            {
+              "error_type_id": "added-exponents-on-power",
+              "value": "5"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "x^{7}"
+            },
+            {
+              "error_type_id": "added-exponents-on-power",
+              "id": "b",
+              "latex": "x^{12}"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "exponent-laws-2",
+          "prompt_latex": "\\text{Which equals } x^4 \\cdot x^3 ?",
+          "type": "mc",
+          "why": "Multiplying powers with the same base adds the exponents: 4 + 3 = 7."
+        }
+      ],
+      "region_id": "number-operations",
+      "strand": "B"
+    },
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "decimal-point-error",
+          "label": "Moved the decimal point the wrong number of places or the wrong direction"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "B2.2",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "decimal-point-error": [
+          "The exponent tells you how many places to move the decimal point.",
+          "3.2 x 10^4 means move the decimal 4 places right.",
+          "3.2 -> 32000."
+        ]
+      },
+      "id": "scientific-notation",
+      "name": "Scientific notation",
+      "paraphrase": "Convert numbers to and from scientific notation.",
+      "position": {
+        "x": 8.039855175102494e-07,
+        "y": 0.16560491365149888
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "32000"
+          },
+          "check": {
+            "expr": "3.2*10**4",
+            "kind": "evaluate"
+          },
+          "id": "scientific-notation-1",
+          "prompt_latex": "3.2\\times 10^4 = ?",
+          "type": "numeric",
+          "why": "Move the decimal point 4 places right: 3.2 becomes 32000.",
+          "wrong_answers": [
+            {
+              "error_type_id": "decimal-point-error",
+              "value": "320"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "5.6\\times10^{-4}"
+            },
+            {
+              "error_type_id": "decimal-point-error",
+              "id": "b",
+              "latex": "5.6\\times10^{4}"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "scientific-notation-2",
+          "prompt_latex": "0.00056 \\text{ in scientific notation} = ?",
+          "type": "mc",
+          "why": "Move the decimal point right until one nonzero digit remains: 4 places, so the exponent is -4."
+        }
+      ],
+      "region_id": "number-operations",
+      "strand": "B"
+    },
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "slope-intercept-swap",
+          "label": "Swapped the slope and the y-intercept"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "C1.1",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "slope-intercept-swap": [
+          "In y = mx + b, m is the slope and b is the y-intercept.",
+          "The number multiplying x is the slope.",
+          "In y = 3x + 5, the slope is 3."
+        ]
+      },
+      "id": "linear-relations",
+      "name": "Linear relations",
+      "paraphrase": "Identify the slope and y-intercept of a linear relation.",
+      "position": {
+        "x": 0.27095404966092074,
+        "y": 0.2999853716531279
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "3"
+          },
+          "check": {
+            "expr": "diff(3*x + 5, x)",
+            "kind": "evaluate"
+          },
+          "id": "linear-relations-1",
+          "prompt_latex": "y = 3x + 5 \\Rightarrow \\text{slope} = ?",
+          "type": "numeric",
+          "why": "The coefficient of x is the slope: 3.",
+          "wrong_answers": [
+            {
+              "error_type_id": "slope-intercept-swap",
+              "value": "5"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "7"
+            },
+            {
+              "error_type_id": "slope-intercept-swap",
+              "id": "b",
+              "latex": "-2"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "linear-relations-2",
+          "prompt_latex": "y = -2x + 7 \\Rightarrow y\\text{-intercept} = ?",
+          "type": "mc",
+          "why": "The constant term is the y-intercept: 7."
+        }
+      ],
+      "region_id": "algebra",
+      "strand": "C"
+    },
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "sign-flip-error",
+          "label": "Mishandled a sign when isolating the variable"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "C1.2",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "sign-flip-error": [
+          "Do the same operation to both sides of the equation.",
+          "2x + 3 = 11 becomes 2x = 8 after subtracting 3 from both sides.",
+          "2x = 8 gives x = 4."
+        ]
+      },
+      "id": "solving-linear-equations",
+      "name": "Solving linear equations",
+      "paraphrase": "Solve a linear equation for the unknown by isolating the variable.",
+      "position": {
+        "x": 0.3899821839239268,
+        "y": 0.1581471435957864
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "4"
+          },
+          "check": {
+            "equations": [
+              "Eq(2*x + 3, 11)"
+            ],
+            "kind": "solve",
+            "unknown": "x"
+          },
+          "id": "solving-linear-equations-1",
+          "prompt_latex": "2x + 3 = 11 \\Rightarrow x = ?",
+          "type": "numeric",
+          "why": "Subtract 3 then divide by 2: 2x = 8, so x = 4.",
+          "wrong_answers": [
+            {
+              "error_type_id": "sign-flip-error",
+              "value": "-4"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "2"
+            },
+            {
+              "error_type_id": "sign-flip-error",
+              "id": "b",
+              "latex": "-2"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "solving-linear-equations-2",
+          "prompt_latex": "3x - 6 = 0 \\Rightarrow x = ?",
+          "type": "mc",
+          "why": "Add 6 then divide by 3: 3x = 6, so x = 2."
+        }
+      ],
+      "region_id": "algebra",
+      "strand": "C"
+    },
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "substitution-error",
+          "label": "Substituted or eliminated incorrectly, mixing up the two equations"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "C1.3",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "substitution-error": [
+          "Add or subtract the two equations to eliminate one variable.",
+          "x + y = 10 and x - y = 2 add to 2x = 12.",
+          "2x = 12 gives x = 6."
+        ]
+      },
+      "id": "solving-systems-of-equations",
+      "name": "Solving systems of linear equations",
+      "paraphrase": "Solve a system of two linear equations by substitution or elimination.",
+      "position": {
+        "x": 0.29493193999649775,
+        "y": 1.2071937637381583e-06
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "6"
+          },
+          "check": {
+            "equations": [
+              "Eq(x + y, 10)",
+              "Eq(x - y, 2)"
+            ],
+            "kind": "solve",
+            "unknown": "x"
+          },
+          "id": "solving-systems-of-equations-1",
+          "prompt_latex": "x+y=10,\\ x-y=2 \\Rightarrow x = ?",
+          "type": "numeric",
+          "why": "Adding the two equations eliminates y: 2x = 12, so x = 6.",
+          "wrong_answers": [
+            {
+              "error_type_id": "substitution-error",
+              "value": "4"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "4"
+            },
+            {
+              "error_type_id": "substitution-error",
+              "id": "b",
+              "latex": "6"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "solving-systems-of-equations-2",
+          "prompt_latex": "x+y=10,\\ x-y=2 \\Rightarrow y = ?",
+          "type": "mc",
+          "why": "Subtracting the two equations eliminates x: 2y = 8, so y = 4."
+        }
+      ],
+      "region_id": "algebra",
+      "strand": "C"
+    },
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "unlike-terms-combined",
+          "label": "Combined terms that are not alike, or mis-added the coefficients"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "C2.1",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "unlike-terms-combined": [
+          "Only terms with the same variable and exponent can be combined.",
+          "3x and 5x are like terms, so add their coefficients.",
+          "3 + 5 = 8, giving 8x."
+        ]
+      },
+      "id": "simplifying-expressions",
+      "name": "Simplifying algebraic expressions",
+      "paraphrase": "Combine like terms to simplify an algebraic expression.",
+      "position": {
+        "x": 0.20000207939328019,
+        "y": 0.14168054714430442
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "8"
+          },
+          "check": {
+            "expr": "diff(3*x + 5*x, x)",
+            "kind": "evaluate"
+          },
+          "id": "simplifying-expressions-1",
+          "prompt_latex": "3x+5x = kx.\\ k = ?",
+          "type": "numeric",
+          "why": "Add the coefficients of the like terms: 3 + 5 = 8.",
+          "wrong_answers": [
+            {
+              "error_type_id": "unlike-terms-combined",
+              "value": "2"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "3"
+            },
+            {
+              "error_type_id": "unlike-terms-combined",
+              "id": "b",
+              "latex": "5"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "simplifying-expressions-2",
+          "prompt_latex": "4x - x = kx.\\ k = ?",
+          "type": "mc",
+          "why": "Subtract the coefficients: 4 - 1 = 3."
+        }
+      ],
+      "region_id": "algebra",
+      "strand": "C"
+    },
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "like-terms-miscombined",
+          "label": "Combined the wrong pair of like terms across the two polynomials"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "C2.2",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "like-terms-miscombined": [
+          "Group terms with the same variable and exponent before combining.",
+          "3x^2 and x^2 are like terms; 2x and 5x are like terms.",
+          "3x^2 + x^2 gives a coefficient of 4 for x^2."
+        ]
+      },
+      "id": "polynomials",
+      "name": "Adding and subtracting polynomials",
+      "paraphrase": "Add and subtract polynomials by combining like terms.",
+      "position": {
+        "x": 0.20000272564967955,
+        "y": 0.25499078766638306
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "4"
+          },
+          "check": {
+            "expr": "diff((3*x**2 + 2*x) + (x**2 + 5*x), x, 2)/2",
+            "kind": "evaluate"
+          },
+          "id": "polynomials-1",
+          "prompt_latex": "(3x^2+2x) + (x^2+5x)\\text{, coefficient of }x^2 = ?",
+          "type": "numeric",
+          "why": "Add the x^2 coefficients: 3 + 1 = 4.",
+          "wrong_answers": [
+            {
+              "error_type_id": "like-terms-miscombined",
+              "value": "3"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "3"
+            },
+            {
+              "error_type_id": "like-terms-miscombined",
+              "id": "b",
+              "latex": "7"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "polynomials-2",
+          "prompt_latex": "(5x^2 - 2x) - (2x^2 - x)\\text{, coefficient of }x^2 = ?",
+          "type": "mc",
+          "why": "Subtract the x^2 coefficients: 5 - 2 = 3."
+        }
+      ],
+      "region_id": "algebra",
+      "strand": "C"
+    },
+    {
+      "courses": [
+        {
+          "course_code": "MTH1W",
+          "depth": 0
+        }
+      ],
+      "error_types": [
+        {
+          "id": "sign-error-in-factors",
+          "label": "Chose factor signs that do not multiply to the constant term"
+        },
+        {
+          "id": "none-of-these",
+          "label": "None of these"
+        }
+      ],
+      "expectation_codes": [
+        {
+          "code": "C2.3",
+          "course_code": "MTH1W"
+        }
+      ],
+      "hint_tree": {
+        "sign-error-in-factors": [
+          "The two factor constants must multiply to give the trinomial's constant term.",
+          "For x^2+5x+6, find two numbers that multiply to 6 and add to 5.",
+          "2 and 3 multiply to 6 and add to 5."
+        ]
+      },
+      "id": "factoring",
+      "name": "Factoring quadratic trinomials",
+      "paraphrase": "Factor a quadratic trinomial into two binomials.",
+      "position": {
+        "x": 0.3827669127562797,
+        "y": 3.529854857381746e-05
+      },
+      "probe_items": [
+        {
+          "answer": {
+            "value": "6"
+          },
+          "check": {
+            "at": {
+              "x": "0"
+            },
+            "expr": "x**2 + 5*x + 6",
+            "kind": "evaluate"
+          },
+          "id": "factoring-1",
+          "prompt_latex": "x^2+5x+6=(x+a)(x+b).\\ a\\cdot b = ?",
+          "type": "numeric",
+          "why": "a and b multiply to the constant term: 2 x 3 = 6.",
+          "wrong_answers": [
+            {
+              "error_type_id": "sign-error-in-factors",
+              "value": "-6"
+            }
+          ]
+        },
+        {
+          "choices": [
+            {
+              "id": "a",
+              "latex": "7"
+            },
+            {
+              "error_type_id": "sign-error-in-factors",
+              "id": "b",
+              "latex": "-7"
+            }
+          ],
+          "correct_choice_id": "a",
+          "id": "factoring-2",
+          "prompt_latex": "x^2-7x+12=(x-a)(x-b).\\ a+b = ?",
+          "type": "mc",
+          "why": "a and b add to the coefficient of x (with sign): 3 + 4 = 7."
+        }
+      ],
+      "region_id": "algebra",
+      "strand": "C"
+    },
+    {
+      "id": "quadratic-relations",
+      "name": "Quadratic relations (synthetic)",
+      "region_id": "algebra",
+      "expectation_codes": [
+        {
+          "course_code": "MPM2D",
+          "code": "A1.1"
+        }
+      ],
+      "courses": [
+        {
+          "course_code": "MPM2D",
+          "depth": 1
+        }
+      ],
+      "position": {
+        "x": 0.3,
+        "y": 0.4
+      },
+      "paraphrase": "A synthetic downstream node for the AC4 extension-positive fixture.",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    },
+    {
+      "id": "unreachable-relation",
+      "name": "Unreachable relation (synthetic)",
+      "region_id": "algebra",
+      "expectation_codes": [
+        {
+          "course_code": "MPM2D",
+          "code": "A1.1"
+        }
+      ],
+      "courses": [
+        {
+          "course_code": "MPM2D",
+          "depth": 1
+        }
+      ],
+      "position": {
+        "x": 0.35,
+        "y": 0.45
+      },
+      "paraphrase": "A synthetic MPM2D-resident node with no incoming edge from MTH1W (T5 negative control).",
+      "error_types": [],
+      "hint_tree": {},
+      "probe_items": []
+    }
+  ]
+}
