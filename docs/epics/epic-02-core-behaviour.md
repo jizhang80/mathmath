@@ -17,7 +17,8 @@ and platform (Q3 merge only) are the secondary domains. In scope, sliced at the 
 - **Marker and trail** — §3, expedition W6 + W8. `set_marker(course, unit)`, the default marker, and
   `generate_trail` with the D47 extension segment. The extension prefers `next_courses[]`, then
   undergraduate nodes when they exist. The runtime **L0-T** segment check comes from
-  `contracts/graph-constraints.md`.
+  `contracts/graph-constraints.md`, as rewritten per the owner's Q-E ruling (§9 Q-E; the contract bump is
+  task 02.3).
 - **Fringe and compose** — §2 `compose`, expedition W1. This is the D48 fringe within `marker.unit ∪
   next(marker.unit)`. A unit expedition (D46) narrows it to one unit. The map-queued node goes first (map
   Q5). Next come fringe nodes in trail order, then **≤ 2 review slots** from due cleared nodes, up to 5
@@ -66,20 +67,39 @@ items, distractor tags, hints, explanations) as read-only inputs.
     contract-bump task that writes them into §2 (v0.9.x). The remaining finalization items (marker
     unit-boundary snap, answer-card timing, summary tint deltas) are UI and belong to EPICs 03/04. The
     v1.0.0 bump happens at Demo wrap (EPIC 04), not here.
+  - The same bump task (02.1) also lands the arbiter's normative §1/§2/§3/§4 text for Q-A (`remediated`),
+    Q-F (`past_last_unit`) and Q-G (probe item availability) verbatim from
+    `tasks/arbitration/arbiter-02-predispatch.md`. That text realises existing rules and does not change
+    §1–§5 behaviour.
 - `contracts/graph-constraints.md` (v1.0.0), § L0-T (trail segments) and § *Query rules (also `Core`)*.
-  `READ-ONLY`. L0-T is "the same `Core` function; runs at generation". The query walks ≤ 2 levels
-  breadth-first, treats `fog` as a candidate and uses the confidence → depth → id tie-break.
+  - § *Query rules*: `READ-ONLY`. The query walks ≤ 2 levels breadth-first, treats `fog` as a candidate and
+    uses the confidence → depth → id tie-break.
+  - § L0-T: **BUMP**, per the owner's Q5 ruling on Q-E (`tasks/blocked/Q5-RULING-02-QE.md`, option A). The
+    bump is a versioned contract task, 02.3, route a. The rewritten row says three things:
+    - A **course segment** is exactly that course's nodes resident in the bundle, ordered by unit order,
+      then topologically by the graph within each unit, with ties broken by node id.
+    - An edge running against unit order is **reported (warning)**, not a failure.
+    - Every **extension-segment** node is reachable in the graph from the segment before it.
+
+    L0-T stays "the same `Core` function; runs at generation". **`data/demo` is not changed.** The matching
+    rewrite of `CLAUDE.md` I8 is not a deliverable of this EPIC's brief.
 - `contracts/data-model.md` (v1.2.0).
   - § StudentState, § Time (calendar days only, device-local), § Nulls, enums, unknowns (optional =
     absent), § ProbeItem (`answer.value` / `tolerance`, `wrong_answers[].error_type_id`,
     `choices[].error_type_id`, `correct_choice_id`), and `contracts/schemas/student-state.schema.json`:
     **READ-ONLY** by default.
-  - **BUMP candidates (Q4, route to spec-arbiter — see §9 Q-A and Q-B).** (a) The §2 fringe guard uses
-    `remediated(p)`, but `NodeState` has no field that records it. (b) Platform Q3 says "logs are unioned
-    by entry id; the marker takes the latest write", but `expedition_log[]` / `probe_log[]` entries have
-    no id and the state has no write time. A contract change to a LOCK-FIRST schema is versioned
-    (`contracts/README.md` § Lock-first rule) and gets its own contract-bump task. It is never silently
-    reconciled in code.
+  - **BUMPs, ruled by the spec-arbiter (`tasks/arbitration/arbiter-02-predispatch.md`; see §9 Q-A, Q-B and
+    Q-F).** (a) The §2 fringe guard uses `remediated(p)`, but `NodeState` has no field that records it.
+    (b) Platform Q3 says "logs are unioned by entry id; the marker takes the latest write", but
+    `expedition_log[]` / `probe_log[]` entries have no id and the state has no write time. (c) Nothing
+    represents "the marker is past the course's last unit". The rulings land as:
+    - **v1.3.0 (task 02.2):** optional boolean `remediated` on the node entry (Q-A) and optional boolean
+      `past_last_unit` on `marker` (Q-F). `schema_version` becomes 2, with an identity migration from 1.
+      The schema, the example and the `Core` types change with it.
+    - **v1.4.0 (task 02.9):** a new § StudentState merge subsection (Q-B).
+
+    A contract change to a LOCK-FIRST schema is versioned (`contracts/README.md` § Lock-first rule) and gets
+    its own contract-bump task. It is never silently reconciled in code.
 - `contracts/error-codes.md` + `error-codes.json` (v1.0.0), § Rules: "`Core` defines `enum CoreError:
   String` mirroring the `GRAPH`, `EXP`, `MAP` (validation) and `DIAG` codes". `READ-ONLY`. Additive
   registration needs no bump, but none is needed (see the R-6 line).
@@ -137,7 +157,8 @@ registry-bearing inputs in scope, each checked against `contracts/error-codes.js
   day, never an id of a person, device, install or session. The merge introduces no identifier. The
   existing `IdentifierBlocklistParityTests` and the schema's closed key set stay green.
 - **I7 / I8.** The trail is generated from `syllabi[]` + marker + mastery, never authored. Every segment
-  passes L0-T or `EXP_TRAIL_INVALID` is raised and the previous trail stands (a test covers this).
+  passes L0-T (as rewritten per §9 Q-E) or `EXP_TRAIL_INVALID` is raised and the previous trail stands (a
+  test covers this).
 - **I14.** All functions are pure `Core` functions over values. "Today" is an injected calendar-day input;
   there is no clock read in `Core`, and a grep for `Date()` over `Sources/Core` stays at zero hits. No
   `import` beyond Foundation (the recursive boundary test).
@@ -151,25 +172,38 @@ registry-bearing inputs in scope, each checked against `contracts/error-codes.js
 - The **App build** (`xcodebuild build -scheme mathmath`) stays green but gains no code.
 - **`core-cli`** gains no subcommand. It must still build, because the pipeline seam test from EPIC 01
   exercises it.
-- **Contract artefacts:** the interaction-contract §2 numeric-normalisation text, plus any data-model
-  bump the arbiter rules on (§9 Q-A/Q-B), each landed by its contract-bump task under a
-  `contract(<name>)` commit scope.
+- **Contract artefacts**, each landed by its contract-bump task under a `contract(<name>)` commit scope:
+  - the interaction-contract §2 numeric-normalisation text, plus the arbiter-ruled §1–§4 text (task 02.1);
+  - the data-model v1.3.0 bump for Q-A + Q-F (task 02.2) and the v1.4.0 bump for Q-B (task 02.9);
+  - the graph-constraints L0-T rewrite for Q-E (task 02.3).
 
 ## 4. Acceptance criteria
 1. **§1 transitions.** Two correct answers on **distinct** items clear a `fog` or `blocked` node, set
-   `ladder_rung = 0` and `next_due = today + 1`, and emit `expedition.node_cleared`. The same item answered
-   correctly twice does not clear the node. For a cleared node, a correct review advances the rung, and
-   the rung caps at 4 with the last interval repeating. A missed review resets to rung 0 / `today + 1` and
-   the node stays `cleared`, so fog never returns. `diagnosis_blocked` moves `fog → blocked`.
-2. **§3 marker → trail.** With `syllabi = [MTH1W]` and the default marker, `generate_trail` over
-   `data/demo` produces course segments in unit order that pass L0-T. After `set_marker` moves the marker,
-   the trail is regenerated and the fringe recomputed, and nodes now upstream keep their mastery. With the
-   marker past the course's last unit, the result carries a `kind: extension` segment. With no
-   downstream-course node present, it carries none. A segment that fails L0-T raises `EXP_TRAIL_INVALID`
-   and the previous trail is returned unchanged.
+   `ladder_rung = 0` and `next_due = today + 1`, remove `remediated` (§9 Q-A), and emit
+   `expedition.node_cleared`. The same item answered correctly twice does not clear the node. For a
+   cleared node, a correct review advances the rung, and the rung caps at 4 with the last interval
+   repeating. A missed review resets to rung 0 / `today + 1` and the node stays `cleared`, so fog never
+   returns. `diagnosis_blocked` moves `fog → blocked`.
+2. **§3 marker → trail.**
+   - With `syllabi = [MTH1W]` and the default marker, `generate_trail` over `data/demo` produces a course
+     segment holding **exactly** MTH1W's nodes resident in the bundle. They are ordered by unit order, then
+     topologically by the graph within each unit, with ties broken by node id. The segment passes L0-T as
+     rewritten per §9 Q-E.
+   - The MTH1W edge `solving-linear-equations` (u3) → `exponent-laws` (u2) runs against unit order. It is
+     reported as a warning and does not fail the segment.
+   - After `set_marker` moves the marker, the trail is regenerated and the fringe recomputed, and nodes now
+     upstream keep their mastery.
+   - With the marker past the course's last unit (`marker.past_last_unit == true`, §9 Q-F), the result
+     carries a `kind: extension` segment. Every node in it is reachable in the graph from the segment
+     before it. The positive case runs on an in-memory bundle derived from `data/demo`, because `data/demo`
+     has no `next_courses` target present (§9 Q-G, test-data rule).
+   - With no downstream-course node present, the result carries no extension segment.
+   - A segment that fails L0-T raises `EXP_TRAIL_INVALID` and the previous trail is returned unchanged.
 3. **§2 compose.** Across generated states and markers (property tests):
    - no new-learning slot is ever drawn from a node off the fringe or upstream of the marker unless that
      node is `blocked`;
+   - a prerequisite satisfies the fringe guard only if it is `cleared`, or `blocked` with `remediated ==
+     true` (§9 Q-A);
    - there are never more than 5 slots and never more than 2 review slots;
    - review slots are due cleared nodes, oldest `last_probe` first;
    - a map-queued node on the fringe takes slot 1, and a queued node upstream of the marker is ignored;
@@ -189,15 +223,19 @@ registry-bearing inputs in scope, each checked against `contracts/error-codes.js
 5. **§4 diagnosis.** Property tests over generated graphs and states cover the following:
    - depth ≤ budget ≤ 2 from the origin;
    - no path reaches remediation without a `fail` probe outcome;
-   - every `capped` or `confirmed` candidate is `blocked` in the output state;
+   - every `capped` or `confirmed` candidate is `blocked` in the output state. A `confirmed` candidate
+     carries `remediated = true` once its remediation piece is shown; a `capped` candidate does not (§9 Q-A);
    - a second level is entered only on an explicit accept;
-   - fewer than 2 items on the candidate → `DIAG_PROBE_UNAVAILABLE` → `unconfirmed`;
+   - fewer than 2 **available** items on the candidate → `DIAG_PROBE_UNAVAILABLE` → `unconfirmed`. An item
+     is available unless its answer was already shown in the current run (§9 Q-G);
    - no candidate → `DIAG_NO_PREREQUISITE` → hint → `returned`;
    - declining → `unconfirmed` → hint → `returned`;
    - the query tie-break (highest confidence, then lowest depth, then node id) holds on constructed ties;
    - every path terminates in `returned`.
 6. **Tier 0 completeness (I2).** Each diagnosis terminal is reached with no adapter and no suggestion
-   input, over `data/demo` with the Demo budget of 1.
+   input, over `data/demo` with the Demo budget of 1. The `DIAG_PROBE_UNAVAILABLE` terminal is reached on the
+   real `data/demo` with the constructed `StudentState` of §9 Q-G. Only the state is constructed; the bundle
+   is not substituted.
 7. **C1 seam: expedition ↔ diagnosis.** A test drives a real expedition run on `data/demo` to a second
    miss. It opens a **real** diagnosis event from the emitted `diagnosis_requested`, drives it to
    `returned`, and resumes the **same** run at its next item. It asserts: the run's diagnosis count = 1; the
@@ -208,8 +246,9 @@ registry-bearing inputs in scope, each checked against `contracts/error-codes.js
    the fringe computed from that trail and marker, with no stubbed trail and no hand-built fringe.
 9. **Merge (platform Q3).** `merge` is commutative, idempotent, and never lowers mastery (`cleared` >
    `blocked` > `fog`). `correct_count` is the max, and `last_probe` / `next_due` are the latest. Logs and
-   the marker merge per the rule landed under §9 Q-B. Property tests cover all of these over generated
-   pairs.
+   the marker merge per the rule landed under §9 Q-B (`contracts/data-model.md` v1.4.0 § StudentState
+   merge, task 02.9). The law tests compare logs in canonical order. Property tests cover all of these over
+   generated pairs.
 10. **`CoreError` ⊆ registry** is green with every code named in the §3 R-6 line, and the existing
     negative control still fails an off-registry case. `scripts/gate.sh` is green.
 
@@ -299,10 +338,36 @@ split at the brief's seam.**
   and seam 7. It depends on 02a for the suspended-run hand-off. Q-A's `remediated` guard touches task 4,
   so if Q-A lands in 02b, task 4's fringe guard is re-verified there.
 
+**Split taken** (planner, 2026-09-10; `docs/plans/epic-02-plan.md`, `docs/epic-plan.md` § EPIC 02 split).
+The planner cut 11 tasks + 2 wraps, with one id space. Scope is unchanged. The contract-bump tasks number
+four, because the Q-E ruling adds the L0-T rewrite.
+- **02a — Door B core**, tasks 02.1–02.8, branch `epic-02-core-behaviour`:
+  - contract bumps 02.1 (interaction-contract), 02.2 (data-model v1.3.0, Q-A + Q-F) and 02.3
+    (graph-constraints L0-T, Q-E);
+  - implementation 02.4–02.7 (brief tasks 1–5);
+  - wrap 02.8 (`docs/audits/epic-02a-acceptance.md`).
+- **02b — Door A core + merge**, tasks 02.9–02.13, branch `epic-02b-door-a-core-merge`:
+  - contract bump 02.9 (data-model v1.4.0, Q-B);
+  - implementation 02.10–02.12 (brief tasks 6–8);
+  - wrap 02.13 (`docs/audits/epic-02-acceptance.md`, tracing §4 items 1–10).
+
+Q-A lands in 02a (02.2), before the fringe task 02.6. The "re-verified in 02b" clause above therefore
+does not fire.
+
 Seams (C1) added: expedition↔diagnosis and marker→trail→fringe. No other cross-module seam is crossed.
 
 ## 9. Open questions
+All of Q-A … Q-G are **resolved** (2026-09-10). The pre-dispatch arbiter rulings are in
+`tasks/arbitration/arbiter-02-predispatch.md`. The owner's Q5 ruling on Q-E is in
+`tasks/blocked/Q5-RULING-02-QE.md`. The entries below keep their original analysis.
 - **Q-A (Q4 → spec-arbiter; BUMP candidate on `contracts/data-model.md` + `student-state.schema.json`).**
+  - **RESOLVED.** The arbiter adopted the default (arbiter-02-predispatch § Q-A).
+    - Optional boolean `remediated` on the node entry, absent = false, in data-model v1.3.0 with
+      `schema_version` 2 and an identity migration (task 02.2).
+    - It is set `true` only by diagnosis W4's remediation step, on a `blocked` node, and removed on
+      `cleared`. The merge is OR, then removed unless merged `mastery` is `blocked`.
+    - The interaction-contract §1/§2/§4 text lands in task 02.1: `remediated(p)` ≡ `nodes[p].remediated ==
+      true`.
   - **The conflict.** Interaction-contract §2's fringe guard admits a prerequisite that is `blocked ∧
     remediated(p)`, but `NodeState` records no remediation. Blocked arises three ways: confirmed and
     remediated (diagnosis W4); capped with no remediation (W6); spent-Door-A second miss with no
@@ -315,6 +380,17 @@ Seams (C1) added: expedition↔diagnosis and marker→trail→fringe. No other c
     guard. This changes contract semantics and is itself a contract edit.
   - **Revisit trigger:** the arbiter's ruling, before task 4 is specified.
 - **Q-B (Q4 → spec-arbiter; BUMP candidate or merge-rule clarification).**
+  - **RESOLVED.** The arbiter adopted the default and completed it (arbiter-02-predispatch § Q-B). It lands
+    as a new `contracts/data-model.md` § StudentState merge (v1.4.0, task 02.9):
+    - Logs merge as a multiset union by full value (max multiplicity) in canonical order.
+    - `marker`, `syllabi` and `trail` come from the winning side: latest log day, then marker further
+      along (`past_last_unit` ranks above any unit), then greater `course_code`, then canonical-JSON
+      byte order.
+    - `install_day` takes the earlier value, `format_version_seen` the higher, and `consent_on` is the
+      AND of both sides.
+    - The law tests compare through canonicalisation, with a sum-multiplicity negative control (task
+      02.12).
+    - No identifier is added (I5).
   - **The conflict.** Platform Q3 (ratified) says "logs are unioned by entry id; the marker takes the
     latest write". The schema gives log entries no id and the state no write time. Adding a per-run id
     risks reading as a session id (I5).
@@ -325,6 +401,8 @@ Seams (C1) added: expedition↔diagnosis and marker→trail→fringe. No other c
     contract-bump task.
   - **Revisit trigger:** EPIC 10 (sync), if real conflicts show lost runs.
 - **Q-C (Q1, answered from the ground-truth order: contracts > domain docs).**
+  - **RESOLVED — CONFIRMED** (arbiter-02-predispatch § Q-C). There is no `upstream_hint`. The Demo
+    candidate is the graph query with budget 1 (tasks 02.10, 02.11).
   - **The conflict.** Diagnosis W2 step 2 and DEMO-BRIEF §3.6 name a hand-specified `upstream_hint` for
     the Demo. The locked `nodes.schema.json` has no such field (EPIC 01 shipped without it), and
     interaction-contract §4 + graph-constraints § Query rules define the candidate as the graph query.
@@ -333,12 +411,31 @@ Seams (C1) added: expedition↔diagnosis and marker→trail→fringe. No other c
   - **Revisit trigger:** EPIC 04 acceptance, if a Demo scenario needs a candidate the edges do not yield
     (then it is a data fix in `data/demo`, D26).
 - **Q-D (Q1).**
+  - **RESOLVED — CONFIRMED with a caveat** (arbiter-02-predispatch § Q-D). Task 02.5's W7 reconciliation
+    returns `MAP_MARKER_OFF_TRAIL` as data, together with the default marker; `Core` surfaces no text.
+    - **Default marker:** the first unit of the first course in `syllabi[]` that exists in the bundle.
+    - **No resolvable course:** keep the stored marker and produce an empty trail.
+    - **Off the trail** means `course_code ∉ syllabi[]`, or the course is absent from the bundle, or
+      `unit_id` is not one of that course's units.
+    - **Caveat:** the registry `user_text` does not fit this load path. That is owed to EPIC 03, not this
+      EPIC, and no code is added here.
   - **The situation.** A persisted marker names a unit absent from the bundle or from `syllabi[]`.
   - **Default:** raise `MAP_MARKER_OFF_TRAIL` (registered) and fall back to the default marker (first unit
     of the first selected course, D45). Mastery is untouched.
   - **Revisit trigger:** EPIC 10 content refresh changing unit ids. If the arbiter prefers a dedicated
     `EXP_*` code, that is additive registration with no version bump.
 - **Q-E (Q4 risk to verify in task 3, not a known conflict).**
+  - **RESOLVED by owner Q5 ruling, option A** (`tasks/blocked/Q5-RULING-02-QE.md`). The arbiter confirmed a
+    structural conflict and escalated it (arbiter-02-predispatch § Q-E, `tasks/blocked/blocked-arbiter-02-03.md`,
+    `docs/blocked/run-stop-02-qe-trail-path.md`). The ruling:
+    - A course segment is exactly that course's nodes resident in the bundle, ordered by unit order, then
+      topologically by the graph within each unit, with ties broken by node id.
+    - An edge against unit order is reported as a warning, not a failure.
+    - Every extension-segment node is reachable in the graph from the segment before it.
+    - L0-T in `contracts/graph-constraints.md` is rewritten by the versioned bump in task 02.3 (route a),
+      and `CLAUDE.md` I8 wording is rewritten to match.
+    - `data/demo` is not changed.
+    - §3, §4 criterion 2 and the I7/I8 line above are amended accordingly.
   - **The risk.** L0-T requires "every segment's `node_ids[]` is a directed path in the graph", and
     `data/demo`'s MTH1W / MCR3U node sets in unit order may not be Hamiltonian paths over the 19 demo
     edges.
@@ -347,6 +444,31 @@ Seams (C1) added: expedition↔diagnosis and marker→trail→fringe. No other c
     data, D26, re-validated by L0) or an L0-T clarification (contract bump). Code does not silently accept
     a non-path.
   - **Revisit trigger:** the first `generate_trail` run over `data/demo` in task 3.
+- **Q-F (raised by the arbiter pre-dispatch).**
+  - **The situation.** Nothing in `StudentState` represents "marker past the course's last unit"
+    (interaction-contract §3, v2.7 §4).
+  - **RESOLVED** (arbiter-02-predispatch § Q-F). An optional boolean `past_last_unit` on `marker`, absent =
+    false, lands in data-model v1.3.0 (task 02.2). There is no sentinel `unit_id`. While it is `true`:
+    - `unit_id` names the course's last unit;
+    - the §2 `compose` window is the extension segment's nodes;
+    - the course's nodes are upstream of the marker.
+
+    The interaction-contract §3 text lands in task 02.1.
+- **Q-G (raised by the arbiter pre-dispatch).**
+  - **The situation.** Every `data/demo` node has exactly 2 items. Under a pool-size reading,
+    `DIAG_PROBE_UNAVAILABLE` would therefore be unreachable, contradicting §4 criterion 6.
+  - **RESOLVED** (arbiter-02-predispatch § Q-G). An item is *available* for the probe unless its answer was
+    already shown in the current run. Under `map_check_here`, every item of the candidate is available. The
+    interaction-contract §4 text lands in task 02.1.
+  - **Reachability.** The terminal is reachable on the real `data/demo` with a constructed state (task
+    02.11):
+    - `syllabi = [MTH1W]`;
+    - `exponent-laws` and `polynomials` are `blocked`, `simplifying-expressions` is `cleared`;
+    - `exponent-laws` is missed and then retried, so both of its answers are shown;
+    - `polynomials` is missed twice, which opens a diagnosis with budget 1.
+  - **Test-data rule:** in-memory bundles derived from `data/demo` are allowed only for property tests over
+    generated graphs and for the extension positive case. The C1 seams and the AC6 terminal suite run on
+    the real `data/demo`.
 - **Technical defaults (not Q5; decided per owner calibration that technical detail is never a Q5):**
   - No unused item for a D27 retry → skip the retry, log `EXP_ITEM_POOL_EMPTY`, continue the run.
   - Item draw prefers items with no `probe_log` entry, then the least recently used, deterministic by
@@ -354,11 +476,83 @@ Seams (C1) added: expedition↔diagnosis and marker→trail→fringe. No other c
   - A hint whose error type has no `hint_tree` entry falls back to the node's `none-of-these` hint.
   - A `map_check_here` diagnosis outside a run logs no `expedition_log` entry (its effects are the
     `blocked` marks and `probe_log` rows). `diagnosis_events` stays ≤ 1 per entry per the schema.
-- **Q5 candidates:** none. Every decision above is taken from D1–D49, the ratified domain defaults and the
-  contracts. Q-A and Q-B are contract realisations of ratified defaults, routed to the spec-arbiter; they
-  are not owner decisions unless the arbiter finds that a ratified default itself must change.
+- **Q5 candidates:** none at authoring. Every decision above is taken from D1–D49, the ratified domain
+  defaults and the contracts. Q-A and Q-B are contract realisations of ratified defaults, routed to the
+  spec-arbiter; they are not owner decisions unless the arbiter finds that a ratified default itself must
+  change. *Post-authoring:* the arbiter escalated Q-E to Q5, because every passing rule changes I8's
+  meaning. The owner ruled it on 2026-09-10 (option A). No locked decision D1–D49 was changed, and none
+  remains open.
 
 ## 10. Change log
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-09-10 | epic-scoper | Initial brief synthesized. |
+| 2026-09-10 | brief-amender (owner Q5 ruling `tasks/blocked/Q5-RULING-02-QE.md` + arbiter pre-dispatch rulings `tasks/arbitration/arbiter-02-predispatch.md`) | §2 marker/trail bullet, §3 (interaction-contract, graph-constraints, data-model entries; I7/I8 line; artifact line), §4 criteria 1, 2, 3, 5, 6, 9, §8 split record, and §9 Q-A…Q-G marked resolved (Q-F and Q-G added). Scope unchanged. See Amendment 02.03.1. |
+
+## Amendment log
+
+### Amendment 02.03.1 — 2026-09-10
+
+**Trigger**: tier-6 brief-amender, invoked by the orchestrating session with the owner's Q5 ruling on Q-E and the spec-arbiter's pre-dispatch rulings on Q-A, Q-B, Q-C, Q-D, Q-F and Q-G, ahead of task 02.3 dispatch.
+**Architect escalation**: none on disk under `tasks/blocked/architect-escalation-02-03.md`. The Q-E block was raised by the spec-arbiter (`tasks/blocked/blocked-arbiter-02-03.md`), stopped at `docs/blocked/run-stop-02-qe-trail-path.md` and ruled in `tasks/blocked/Q5-RULING-02-QE.md`. The other rulings are in `tasks/arbitration/arbiter-02-predispatch.md`.
+
+**Passage 1 — §3, graph-constraints entry.**
+
+**Original brief text**:
+> `contracts/graph-constraints.md` (v1.0.0), § L0-T (trail segments) and § *Query rules (also `Core`)*.
+> `READ-ONLY`. L0-T is "the same `Core` function; runs at generation". The query walks ≤ 2 levels
+> breadth-first, treats `fog` as a candidate and uses the confidence → depth → id tie-break.
+
+**Amended brief text**:
+> § *Query rules*: `READ-ONLY`, with the same query rules. § L0-T: **BUMP**, per the owner's Q5 ruling on
+> Q-E (option A; task 02.3, route a). A course segment is exactly the course's resident nodes, ordered by
+> unit order, then topologically within each unit, with ties broken by node id. An edge against unit order
+> is a warning, not a failure. Every extension node is reachable from the preceding segment. `data/demo` is
+> not changed. (See the full text in §3.)
+
+**Passage 2 — §4 acceptance criterion 2.**
+
+**Original brief text**:
+> With `syllabi = [MTH1W]` and the default marker, `generate_trail` over `data/demo` produces course
+> segments in unit order that pass L0-T. [...] With the marker past the course's last unit, the result
+> carries a `kind: extension` segment. With no downstream-course node present, it carries none. A segment
+> that fails L0-T raises `EXP_TRAIL_INVALID` and the previous trail is returned unchanged.
+
+**Amended brief text** (summarised; see §4 item 2 for the full wording):
+> The course segment holds exactly MTH1W's resident nodes, ordered by unit order, then topologically within
+> each unit, with ties broken by node id. It passes the rewritten L0-T. The against-unit-order edge
+> `solving-linear-equations` (u3) → `exponent-laws` (u2) is a warning, not a failure. Past the last unit
+> (`marker.past_last_unit == true`), the extension segment's nodes are each reachable from the segment
+> before it; the positive case runs on an in-memory bundle derived from `data/demo`. The "none" and
+> `EXP_TRAIL_INVALID` clauses are unchanged.
+
+**Passage 3 — specificity from the arbiter rulings, with no criterion added or removed.**
+- §2 marker/trail bullet: L0-T is read "as rewritten per the owner's Q-E ruling".
+- §3 interaction-contract entry: task 02.1 also lands the arbiter's Q-A, Q-F and Q-G text.
+- §3 data-model entry: "BUMP candidates" becomes the ruled v1.3.0 (Q-A + Q-F, task 02.2) and v1.4.0 (Q-B, task 02.9).
+- §3 I7/I8 line: "passes L0-T (as rewritten per §9 Q-E)".
+- §3 artifact line: the four contract-bump tasks are enumerated.
+- §4 criteria:
+  - 1: a clear removes `remediated` (Q-A).
+  - 3: a new bullet for the fringe-guard reading of `remediated` (Q-A).
+  - 5: `confirmed` sets `remediated` and `capped` does not (Q-A); "available" items are defined (Q-G).
+  - 6: `DIAG_PROBE_UNAVAILABLE` is reached on the real `data/demo` with a constructed state (Q-G).
+  - 9: the merge rule is in data-model v1.4.0 and the law tests compare in canonical order (Q-B).
+- §8: the planner's 02a/02b split is recorded.
+- §9: Q-A…Q-E are marked resolved with pointers, and Q-F and Q-G are added as resolved. The Q5-candidates line gains a post-authoring note.
+
+**Source**:
+- `tasks/blocked/Q5-RULING-02-QE.md`: owner ruling, option A, the four bullets.
+- `tasks/arbitration/arbiter-02-predispatch.md` § Summary, § Q-A, § Q-B, § Q-C, § Q-D, § Q-F, § Q-G, including their normative text and the test-data rule.
+- `docs/plans/epic-02-plan.md` (header and task table) and `docs/epic-plan.md` § EPIC 02 split, for the 02a/02b split.
+- `contracts/graph-constraints.md` v1.0.0 § L0-T is the current row. The rewrite is owed by task 02.3; this amendment does not edit it.
+
+**Effect on deliverables**: NONE (specificity added).
+- Every item of §2 and §7 is unchanged, and no deliverable is added, dropped or deferred.
+- The contract bumps were already anticipated in brief §3 and §8 (normalisation, Q-A, Q-B). The L0-T rewrite is the owner's own ruling, carried by task 02.3.
+- The split is the one the brief's §8 already specified, and it is taken at the brief's seam.
+- I8 is not weakened by this brief. Every segment is still checked at generation, and `EXP_TRAIL_INVALID` still leaves the previous trail standing. What a valid segment means follows the owner's ruling.
+
+**Effect on owner-facing acceptance**: NONE beyond the owner's own ruling.
+- Criterion 2 now states the trail rule the owner ratified in the Q5 ruling, instead of the "directed path" reading the ruling replaced. It still asserts the same four behaviours: pass on the course segment, regeneration on `set_marker`, an extension present or absent, and `EXP_TRAIL_INVALID` with the previous trail standing.
+- Criteria 1, 3, 5, 6 and 9 gain assertions from the arbiter rulings. None is weakened, removed or renumbered, and criteria 4, 7, 8 and 10 and §5 are unchanged.
