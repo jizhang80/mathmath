@@ -1,6 +1,6 @@
 # Contract: Data model (LOCK-FIRST)
 
-**Contract version:** v1.2.0 · Source: brief v2 §5 as amended (D20–D22, D32, D33, D43–D48), `docs/domains/*.md`; v1.1.0 adds `ProbeItem.check` and `Landmark.source_title` (owner Q5 ruling 2026-09-09, `tasks/blocked/Q5-RULING-01-07.md`); v1.2.0 corrects § Probe answer derivation — the name allow-list alone does not close the parse environment, so an AST-shape allow-list is added and the true name list is stated (owner ruling 2026-09-09 on `tasks/blocked/tester-blocked-01-07.md`)
+**Contract version:** v1.2.0 · Source: brief v2 §5 as amended (D20–D22, D32, D33, D43–D48), `docs/domains/*.md`; v1.1.0 adds `ProbeItem.check` and `Landmark.source_title` (owner Q5 ruling 2026-09-09, `tasks/blocked/Q5-RULING-01-07.md`); v1.2.0 corrects § Probe answer derivation — the name allow-list alone does not close the parse environment, so an AST-shape allow-list is added and the true name list is stated (orchestrating session's authorization 2026-09-09, `tasks/blocked/AUTHORIZATION-01-07a-contract-write.md`, on the defect reported in `tasks/blocked/tester-blocked-01-07.md`; not an owner ruling)
 
 > The shapes every bundle file, the student state and `Core`'s `Codable` types share. The **JSON Schemas in
 > `contracts/schemas/` are normative**; this file states the rules the schemas cannot. `Core` decodes exactly
