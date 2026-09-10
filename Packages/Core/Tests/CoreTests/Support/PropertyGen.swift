@@ -201,4 +201,78 @@ enum PropertyGen {
             consentOn: bool(&gen, trueWeight: 0.8)
         )
     }
+
+    // MARK: - 02.11 additions (`DiagnosisMachineTests`)
+
+    /// A `Node` carrying two numeric probe items (`<id>-1` correct `"1"`, `<id>-2` correct `"2"`, both
+    /// tagging `"9"` as the `"err"` distractor) — `minimalNode` carries none, so `DiagnosisRun`'s probe
+    /// step (which needs 2 available items to avoid `DIAG_PROBE_UNAVAILABLE`) needs its own graph
+    /// builder.
+    static func probeableNode(id: String) -> Node {
+        let items = [
+            ProbeItem(
+                id: "\(id)-1", type: .numeric, promptLatex: "?", why: "why-\(id)-1", renderFallback: nil,
+                answer: ProbeAnswer(value: "1", tolerance: nil),
+                wrongAnswers: [WrongAnswer(value: "9", errorTypeId: "err")], choices: nil,
+                correctChoiceId: nil, check: nil),
+            ProbeItem(
+                id: "\(id)-2", type: .numeric, promptLatex: "?", why: "why-\(id)-2", renderFallback: nil,
+                answer: ProbeAnswer(value: "2", tolerance: nil),
+                wrongAnswers: [WrongAnswer(value: "9", errorTypeId: "err")], choices: nil,
+                correctChoiceId: nil, check: nil),
+        ]
+        return Node(
+            id: id, name: id, regionId: .algebra, strand: nil, expectationCodes: nil, sourceRef: nil,
+            courses: [], position: Point(x: 0, y: 0), layoutHint: nil, paraphrase: "generated node \(id)",
+            explanation: nil, workedExamples: nil,
+            errorTypes: [
+                ErrorType(id: "err", label: "generated", impliesPrerequisite: nil),
+                ErrorType(id: "none-of-these", label: "None of these", impliesPrerequisite: nil),
+            ], hintTree: [:], probeItems: items)
+    }
+
+    /// `smallLayeredGraph`'s own layered-graph construction, but every node carries two probe items
+    /// (`probeableNode`) so a generated diagnosis can reach `.refuted`/`.confirmed`/`.capped`, not only
+    /// `DIAG_PROBE_UNAVAILABLE`.
+    static func smallLayeredGraphWithProbeItems(
+        _ gen: inout SeededGenerator, maxLevels: Int, maxBranching: Int
+    ) -> (nodes: [Node], edges: [Edge], originId: String) {
+        var nodesByLevel: [[String]] = [["origin"]]
+        var nodes: [Node] = [probeableNode(id: "origin")]
+        var edges: [Edge] = []
+        let levels = int(&gen, in: 1...maxLevels)
+        for level in 1...levels {
+            let count = int(&gen, in: 1...maxBranching)
+            var ids: [String] = []
+            for index in 0..<count {
+                let id = "l\(level)n\(index)"
+                ids.append(id)
+                nodes.append(probeableNode(id: id))
+                let parentId = element(&gen, from: nodesByLevel[level - 1])
+                let confidence = Double.random(in: 0.5...1, using: &gen)
+                edges.append(minimalEdge(from: id, to: parentId, confidence: confidence))
+            }
+            nodesByLevel.append(ids)
+        }
+        return (nodes, edges, "origin")
+    }
+
+    /// One level's worth of decisions against a `probeableNode`-built graph: `declineProbe` rarely true
+    /// (probes mostly proceed), `submittedAnswers` either the two correct values (`pass`) or two tagged
+    /// distractors (`fail`), `acceptFurtherLevel` roughly even.
+    static func diagnosisLevelDecision(_ gen: inout SeededGenerator) -> DiagnosisLevelDecision {
+        let declineProbe = bool(&gen, trueWeight: 0.1)
+        let pass = bool(&gen, trueWeight: 0.4)
+        return DiagnosisLevelDecision(
+            declineProbe: declineProbe, submittedAnswers: pass ? ["1", "2"] : ["9", "9"],
+            acceptFurtherLevel: bool(&gen, trueWeight: 0.6))
+    }
+
+    /// A random `DiagnosisLevelDecision` sequence of the given length — long enough to cover every level
+    /// a `levelBudget <= 2` diagnosis can ever reach.
+    static func diagnosisLevelDecisions(_ gen: inout SeededGenerator, count: Int)
+        -> [DiagnosisLevelDecision]
+    {
+        (0..<count).map { _ in diagnosisLevelDecision(&gen) }
+    }
 }
