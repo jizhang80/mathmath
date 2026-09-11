@@ -343,7 +343,7 @@ struct MapViewModelTests {
                 declineProbe: false, submittedAnswers: ["wrong", "wrong"], acceptFurtherLevel: false)
         ]
         let outcome = DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: "polynomials", failedAttempts: [], levelBudget: 1,
+            trigger: .mapCheckHere, originNodeId: "polynomials", misses: [], levelBudget: 1,
             decisions: decisions, shownItemIdsInRun: [], state: diagnosisState, bundle: bundle,
             today: today)
         #expect(outcome.terminal == .confirmed)
