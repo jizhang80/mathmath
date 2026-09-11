@@ -45,10 +45,12 @@ Invariants in play:
 - **I1** — not implicated: hints are neither `ProbeItem` answers nor `WorkedExample` steps, so no CAS
   re-derivation applies to this task's content (`contracts/content-policy.md` § Generated content, quoted
   §3: CAS re-derivation binds `numeric` `ProbeItem.check` only).
-- **I2** — every `none-of-these` string names no specific `error_types[]` member of its node; the fallback
-  never borrows a sibling error type's hint (arbiter ruling Rule 1). Satisfied by construction: every string
-  in §4's table is written generically ("look again at…", "recheck…", "redo…") and never repeats or
-  paraphrases a sibling key's tier text.
+- **I2** — every `none-of-these` string names no specific `error_types[]` member of its node and describes no
+  sibling member's misconception; the fallback never borrows a sibling error type's hint
+  (`tasks/arbitration/arbiter-04-hint-fallback-reconciliation.md` Rule 1 and Rule 4: "No string names or describes
+  a sibling `error_types[]` member's misconception (I2)."). This is not satisfied by construction: it is
+  machine-verified by the I2 token check of `tasks/arbitration/arbiter-04-01b-generic-hint-i2.md` § The mechanical check (AC9),
+  which has committed negative controls. §4's table is that ruling's replacement set.
 - **I6** — every string is the project's own plain English, never Ministry prose; no `verbatim` key is
   touched or added.
 - **I9** — zero human content-review step: the 60 strings are agent-authored in this spec and machine-verified
@@ -82,6 +84,14 @@ Acceptance criteria (each independently verifiable):
 - AC8: `App/Sources/DemoSnapshot/nodes.json` is byte-identical to `data/demo/nodes.json` after this task's
   edit; `Packages/Core/Tests/CoreTests/DemoSnapshotSeamTests.swift`'s byte-identity test (03.4 AC8) stays
   green.
+- AC9: `Packages/Core/Tests/CoreTests/DemoBundleNoneOfTheseHintsTests.swift` implements
+  `i2Violations(name:siblings:noneTiers:)` exactly as specified in `tasks/arbitration/arbiter-04-01b-generic-hint-i2.md` § The
+  mechanical check (tokenization, stoplist, 4-character prefix stem, `name`-derived allowlist, S1 substring rule,
+  S2 qualifier list — all copied as literals). It asserts `i2Violations(…) == []` for every node in `data/demo`
+  (node count > 0, and every node's sibling-token set and allowlist non-empty; empty = FAIL). It also asserts the
+  exact results of the committed controls NC1, NC2, NC3, NC3b and NC4 of that section. Instrument:
+  `xcodebuild test -scheme Core-Package` on the simulator. It excludes the semantic residue of that ruling's R3,
+  which is discharged by the ruling's pre-checked strings.
 
 ## §2 File scope
 
@@ -109,8 +119,8 @@ In-scope (the implementer touches EXACTLY these; nothing else):
   at line 180 (`/// \`hint_tree\` tier strings are 63/143 of the real scan and all parse clean — ...`):
   update `63/143` to `123/203`. This is a comment only; the test body below it (`mutationProofHintTree`,
   lines 182-189) uses a synthetic fixture, not the real bundle counts, and needs no other edit.
-- `Packages/Core/Tests/CoreTests/DemoBundleNoneOfTheseHintsTests.swift` — CREATE. The companion test for
-  AC1/AC2/AC6 (§4 step 4, §5).
+- `Packages/Core/Tests/CoreTests/DemoBundleNoneOfTheseHintsTests.swift` — MODIFY (created by this task's first
+  pass). The companion test for AC1/AC2/AC6/AC9 (§4 step 4, §5).
 
 Out-of-scope (do not touch even if tempted):
 
@@ -250,36 +260,37 @@ Prior signatures / test shapes this task builds on (verbatim from direct file re
    `"none-of-these": [tier1, tier2, tier3]` to that node's existing `hint_tree` object (do not replace or
    reorder the node's existing key(s); add `none-of-these` alongside them). Use these exact strings —
    verified against the node's `name`, `paraphrase` and existing `hint_tree` entry in `data/demo/nodes.json`
-   (`tasks/context/epic-04-task-01b-context.md` §H), so each nudges toward the node's own method without
-   naming any of the node's `error_types[]` members:
+   (`tasks/context/epic-04-task-01b-context.md` §H), so each is a non-diagnosing nudge (reread, check against the node's
+   definition, a simpler case, substitution, estimation) that passes the AC9 I2 token check
+   (`tasks/arbitration/arbiter-04-01b-generic-hint-i2.md`):
 
    | Node id | tier 1 | tier 2 | tier 3 |
    |---|---|---|---|
-   | `integer-operations` | Look again at how the signs combine in this expression. | Rewrite the expression one operation at a time before evaluating. | Redo the calculation step by step, checking the sign at each step. |
-   | `order-of-operations` | Look again at which operation was evaluated first. | Work through the expression one operation at a time, in the correct order. | Redo the expression from the start, following the order of operations. |
-   | `rational-numbers` | Look again at how the fractions were combined. | Rewrite each fraction and recheck every step of the combination. | Redo the calculation from the original fractions, checking each step. |
-   | `exponent-laws` | Look again at which exponent rule applies here. | Identify whether the expression multiplies powers, raises a power to a power, or divides powers. | Redo the simplification, applying the matching exponent law one step at a time. |
-   | `scientific-notation` | Look again at how the conversion between forms was done. | Recheck the direction and number of places the decimal point moved. | Redo the conversion from the original number, one place at a time. |
-   | `linear-relations` | Look again at which part of the equation was read off. | Match each number in the equation to its role: slope or y-intercept. | Redo the identification directly from the equation's form. |
-   | `solving-linear-equations` | Look again at how the variable was isolated. | Redo each step of isolating the variable, checking both sides stay balanced. | Solve the equation again from the start, one step at a time. |
-   | `solving-systems-of-equations` | Look again at how the two equations were combined. | Recheck which variable was eliminated and how. | Redo the elimination or substitution from the original two equations. |
-   | `simplifying-expressions` | Look again at which terms were combined. | Recheck that each pair of combined terms is actually alike. | Redo the simplification, grouping only truly like terms. |
-   | `polynomials` | Look again at how the two polynomials were combined. | Recheck which terms from each polynomial were paired together. | Redo the addition or subtraction, matching terms by variable and exponent. |
-   | `factoring` | Look again at the pair of numbers chosen for the factors. | Recheck that the pair of numbers multiplies and adds correctly. | Redo the factoring, testing pairs of numbers against both conditions. |
-   | `solving-quadratics` | Look again at how the roots were found. | Recheck each root against the original equation. | Redo the solving process from the original equation, one step at a time. |
-   | `rational-expressions` | Look again at how the expression was simplified. | Recheck the factoring before simplifying. | Redo the simplification, factoring fully before cancelling. |
-   | `quadratic-functions` | Look again at how the vertex coordinates were read. | Recheck each coordinate against the equation's form. | Redo the identification of the vertex directly from the equation. |
-   | `function-concept` | Look again at how the input was substituted. | Recheck that every occurrence of x was replaced with the given value. | Redo the substitution and evaluation from the original rule. |
-   | `function-transformations` | Look again at how the transformation changes the graph. | Recheck the direction and size of the shift or reflection. | Redo the transformation, tracking each change to the graph one at a time. |
-   | `function-notation` | Look again at how the function notation was read. | Recheck that the rule was applied to the correct input. | Redo the evaluation, reading the notation carefully from the start. |
-   | `domain-and-range` | Look again at what restricts the domain here. | Recheck which values would make the expression undefined. | Redo the domain check, testing the expression for each kind of restriction. |
-   | `exponential-functions` | Look again at how the power was evaluated. | Recheck how many times the base is multiplied by itself. | Redo the evaluation by writing out the repeated multiplication. |
-   | `logarithms` | Look again at how the log was converted to exponential form. | Recheck what question the logarithm is asking. | Redo the conversion, writing the equivalent exponential equation first. |
+   | `integer-operations` | Reread the expression and work through it one operation at a time. | Check each operation on its own against the rules for integers. | Redo the calculation one operation at a time, then compare the result with a rough estimate. |
+   | `order-of-operations` | Reread the expression and list the operations it contains. | Check each step against the order of operations for this expression. | Redo the expression from the start, following the order of operations. |
+   | `rational-numbers` | Reread the calculation and name each operation it asks for. | Check the result with a rough decimal estimate of each rational number. | Redo the calculation step by step and compare the result with that estimate. |
+   | `exponent-laws` | Look again at which exponent rule applies here. | Check the result on a simpler case, with small exponents written out. | Redo the simplification, applying the matching exponent law one step at a time. |
+   | `scientific-notation` | Look again at how the conversion between forms was done. | Estimate the size of the original quantity and compare it with the answer. | Redo the conversion from the start, then convert the answer back to check it. |
+   | `linear-relations` | Reread what is being asked about the line and its equation. | Check the answer against the graph by plotting two points from the equation. | Redo the work from the equation, then confirm the answer with a point on the line. |
+   | `solving-linear-equations` | Reread the equation from the start before changing anything. | Check the answer by substituting it into the original equation. | Solve the equation again from the start, one step at a time. |
+   | `solving-systems-of-equations` | Reread both equations and what the system asks for. | Check the answer by putting both values into each original equation. | Solve the system again from the start, one step at a time. |
+   | `simplifying-expressions` | Reread the original expression before simplifying it again. | Check the answer by putting a small number in for x in both expressions. | Redo the simplification one step at a time, then repeat that check. |
+   | `polynomials` | Reread which operation, addition or subtraction, is being asked for. | Check the answer by putting a small value for x into both the original polynomials and the result. | Redo the addition or subtraction one step at a time, then repeat that check. |
+   | `factoring` | Reread the trinomial and what form the factored answer takes. | Check the factored form by expanding it back into a trinomial. | Redo the factoring from the start, then expand again to confirm the result. |
+   | `solving-quadratics` | Look again at how the equation was solved. | Check each solution by substituting it into the original equation. | Redo the solving process from the original equation, one step at a time. |
+   | `rational-expressions` | Look again at how the expression was simplified. | Check the answer by putting a simple value for x into the original expression and the result. | Redo the simplification from the start, then repeat that check with a second value. |
+   | `quadratic-functions` | Look again at the equation in vertex form before answering. | Check the vertex by putting its x-value into the equation and comparing the result. | Redo the identification of the vertex directly from the equation. |
+   | `function-concept` | Reread the function and the point where it is to be evaluated. | Work the evaluation out one operation at a time, writing each line down. | Redo the evaluation from the start, then check the result with a rough estimate. |
+   | `function-transformations` | Reread the transformed function and compare it with the original function. | Check the answer by picking one point on the original function and transforming it. | Redo the transformation from the start, then test a second point the same way. |
+   | `function-notation` | Look again at the function notation before evaluating it. | Check the answer by working the evaluation out one operation at a time. | Redo the evaluation from the start, then check the result with a rough estimate. |
+   | `domain-and-range` | Reread the function before stating its domain again. | Recheck which values would make the expression undefined. | Redo the domain from the start, then test one value inside it and one outside it. |
+   | `exponential-functions` | Reread the exponential function and the value it is evaluated at. | Check the answer against a rough estimate of how fast the function grows. | Redo the evaluation from the start, writing out every step, and compare the result with that estimate. |
+   | `logarithms` | Reread the logarithm carefully before evaluating it again. | Check the answer on a simpler logarithm whose value is already clear. | Redo the evaluation from the start, then test the answer against the definition of a logarithm. |
 
    For `exponential-functions`, this node's `hint_tree` carries two existing keys
    (`base-exponent-swapped`: "Which number is being multiplied repeatedly?"; `multiplied-instead-of-power`:
    "Exponentiation is repeated multiplication of the base by itself, not base times exponent."). Its
-   `none-of-these` tier 1 ("Look again at how the power was evaluated.") is verified distinct from both
+   `none-of-these` tier 1 ("Reread the exponential function and the value it is evaluated at.") is verified distinct from both
    (AC2).
 
 3. **Sync the embedded copy.** Run `scripts/embed-demo-snapshot.sh` (the regenerating script from EPIC 03
@@ -301,6 +312,10 @@ Prior signatures / test shapes this task builds on (verbatim from direct file re
    - As the negative control (AC6), during authoring temporarily plant one node's `none-of-these` tier-1 as
      an exact copy of that node's other key's tier-1, confirm this test reds, then revert before committing
      — record the red/green pair in the PR description; do not ship the planted duplicate.
+   - The I2 token check (AC9): add `i2Violations` and its real-bundle assertion and committed controls NC1–NC4
+     (incl. NC3b) as specified in the arbiter ruling § The mechanical check. The controls are in-memory literal
+     fixtures, committed, never planted-and-reverted. If a §4 string fails the check, report it as a BLOCK; do not
+     edit the stoplist, the qualifier list or the allowlist rule.
 
 5. **Manifest hash check (conditional).** Read `data/demo/manifest.json`'s six `files[].sha256` values. If
    all six are still the all-zero placeholder (`"0000000000000000000000000000000000000000000000000000000000000000"`,
@@ -318,7 +333,7 @@ Prior signatures / test shapes this task builds on (verbatim from direct file re
 
 - T1 happy path: `swift test --filter DemoBundleNoneOfTheseHintsTests` is green — every node's
   `hint_tree["none-of-these"]` has 3 non-empty tiers, tier 1 distinct from every sibling key's tier 1 (AC1,
-  AC2, AC6).
+  AC2, AC6), and the AC9 I2 token check (zero violations on all 20 nodes).
 - T2 negative — invalid input rejected at the boundary: `pytest pipeline/tests/test_contracts.py::test_data_bundles_validate`
   fails loudly if any `none-of-these` array does not have exactly 3 non-empty strings (schema `minItems`/
   `maxItems`/`minLength`); this task's Done gate requires that test green, so a malformed entry surfaces
@@ -328,13 +343,15 @@ Prior signatures / test shapes this task builds on (verbatim from direct file re
   on all ten L0 checks (AC3), unaffected since no id/edge/course/region data changes.
 - T4 conformance per requirements §B.1: `BundleRenderCheckTests.scansRealBundleClean` (AC4) confirms every
   new `hint_tree[N]` field entry is scanned and resolves (plain text has no LaTeX to fail parsing); I2 is
-  satisfied by construction (§4 step 2's table review) and further guarded by T5 below; I6 is satisfied since
+  machine-verified by the AC9 token check; I6 is satisfied since
   no string is Ministry prose and no `verbatim` key is touched.
 - T5 negative control for every regression guard: (a) AC6's guard — plant a sibling-tier-1 duplicate, confirm
   `DemoBundleNoneOfTheseHintsTests` reds, then revert (§4 step 4); (b) AC5's guard —
   `countStalenessGuardRedsOnFabricatedMismatch` in `OutcomeRecordAndImportBoundaryTests.swift` already proves
   the staleness comparison is load-bearing (its own `999`-mismatch fixture), unaffected by this task's
-  63→123/143→203 literal-consistency edit to the surrounding rows in that same fixture.
+  63→123/143→203 literal-consistency edit to the surrounding rows in that same fixture; (c) AC9's guard —
+  NC1/NC2/NC3 red with their exact expected violations, NC3b proves the allowlist is load-bearing, NC4 proves the
+  stoplist admits generic nudge words (all committed).
 - T6 idempotency / no-leak: re-running `scripts/embed-demo-snapshot.sh` after this task's edit is
   idempotent — a second run produces no further diff in `App/Sources/DemoSnapshot/nodes.json` (03.4's
   determinism guarantee, exercised here as a regression check over this specific edit).
@@ -360,6 +377,9 @@ Prior signatures / test shapes this task builds on (verbatim from direct file re
   verified by the field-kind breakdown already using `hint_tree[N]` per-entry field names
   (`OutcomeRecordAndImportBoundaryTests.swift:66`, `$0.field.hasPrefix("hint_tree[")`), confirming one scan
   entry per tier string, not per node or per key.
+- IF a hint needs a concept word that the AC9 check flags THEN rewrite it using a word from the node's `name` or
+  a generic move (reread, redo, substitution, estimation, simpler case); never widen the stoplist, qualifier list
+  or allowlist in this task (per `tasks/arbitration/arbiter-04-01b-generic-hint-i2.md` § The mechanical check).
 
 Standing defaults: identifiers are stable, opaque, lowercase kebab-case slugs (`contracts/data-model.md` §
 Identifiers, quoted §3) — the key added is `"none-of-these"`, never `none_of_these`; no field anywhere
