@@ -303,7 +303,7 @@ Prior signatures / test shapes this task builds on (verbatim from direct file re
      — record the red/green pair in the PR description; do not ship the planted duplicate.
 
 5. **Manifest hash check (conditional).** Read `data/demo/manifest.json`'s six `files[].sha256` values. If
-   all six are still the all-zero placeholder (`"00000000000000000000000000000000000000000000000000000000000000"`,
+   all six are still the all-zero placeholder (`"0000000000000000000000000000000000000000000000000000000000000000"`,
    64 hex chars) — the confirmed state on the tree this spec was written against
    (`data/demo/manifest.json:24,29,34,39,44,49`) — leave the manifest untouched (per the arbiter ruling's
    Rule 4 cascade: "while they are placeholders, leave them"). If any hash is no longer a placeholder (a

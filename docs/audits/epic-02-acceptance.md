@@ -82,6 +82,7 @@ report covers **02b** (02.9–02.12, plus the fix task 02.5b) and traces brief �
 ## 6. Findings and deferrals
 
 - `data/demo/manifest.json` has placeholder sha256 values of 66 hex characters, not the 64 of a SHA-256 digest (found by the 04.1b reviewer). Routed to the embedded-snapshot hash-verification DEFERRED entry that EPIC 03 task 03.8 writes (trigger EPIC 10). No 02b entry.
+  - **Erratum (EPIC 04a start, 2026-09-11):** re-measured, the six placeholders are 64 hex characters, the SHA-256 length. The 66 report was a measurement error; its likely source is a 62-zero literal mis-quoted in the 04.1b spec, now fixed. `docs/DEFERRED.md` D-15 is corrected.
 - Context bundles again carried fabricated or misattributed citations. The downstream writer or reviewer caught every one, with arbitration where needed (§7), and none reached code.
 
 ### Test-suite determinism: the live-landmark flake recurred in CI
