@@ -125,7 +125,9 @@ Acceptance criteria (each independently verifiable):
   without this task computing any tint itself.
 - AC10: The App builds green (gate 4, `scripts/gate.sh:22`) with every file in this task's scope compiled into
   the target via the synchronized `Sources` group (no `pbxproj` edit); the 03.9 `AppSourcesBoundary` scan
-  (`xcodebuild test -scheme Core-Package`) stays green over the complete `App/Sources` tree, with **no**
+  (`xcodebuild test -scheme Core-Package`) stays green over the complete `App/Sources` tree, every `CoreTests`
+  suite is green — including `AppShellStructuralTests.swift` and `MapPanelsPickersHandOffStructuralTests.swift`
+  as updated by §4.14, with every test in them that §4.14 does not name unmodified — with **no**
   widening of `AppSourcesBoundary.allowedImportModules` or `defaultRules` by this task (§6 default 4 — this
   task's code calls only `DoorFacade`/`MapFacade`/`CoreErrorText`/`MathView`/`DoorKeypad`, none of which is on
   03.9's forbidden-name list, and imports only `SwiftUI`/`Foundation`/`Core`/`Rendering`, all already
@@ -160,10 +162,17 @@ In-scope (the implementer touches EXACTLY these; nothing else):
   `fullScreenCover` on the `.ready` case presenting this task's new, private `DoorBRunScreen`; update
   `AppShell.handOff` for the renamed `.doorBStarted` case; add a "Start expedition" toolbar button to
   `MapScreen`, next to the existing "Set marker" / "Change course" buttons.
+- `Packages/Core/Tests/CoreTests/AppShellStructuralTests.swift` — MODIFY (03.12 tester's file, commit
+  `fca1513`). Lockstep update, in this task's commit, of the 03.12 guards AC7/§4.9 invalidate — exactly
+  §4.14.1; no other test in the file is edited.
+- `Packages/Core/Tests/CoreTests/MapPanelsPickersHandOffStructuralTests.swift` — MODIFY (03.11 tester's file,
+  commit `c4aa9fe`). Lockstep update, in this task's commit, of the 03.11 guards AC6/§4.8 invalidate — exactly
+  §4.14.2; no other test in the file is edited.
 
 Out-of-scope (do not touch even if tempted):
 
-- `Packages/Core/**`, `Packages/Rendering/**` — read-only; call only `DoorFacade`'s, `MapFacade`'s,
+- `Packages/Core/**` (except the two structural-suite test files listed in-scope above), `Packages/Rendering/**` — read-only;
+  call only `DoorFacade`'s, `MapFacade`'s,
   `CoreErrorText`'s and `MathView`'s public entry points, never a `Core`-internal flow type directly.
 - `App/Sources/MapUI/NodePanelView.swift`, `RegionPanelView.swift`, `LandmarkPanelView.swift`,
   `CoursePickerView.swift`, `UnitListPickerView.swift` — 03.11's remaining files; this task adds no call site
@@ -963,6 +972,454 @@ parameter anywhere (I2's confidence-threshold/fallback requirement is not engage
 gate 4, re-read this session with 03.12's added `-configuration`/`-derivedDataPath` flags) — must be green, with
 every file in this task's scope compiled into the target via the synchronized `Sources` group.
 
+### 4.14 Lockstep EPIC 03 structural-guard updates
+
+AC6/AC7/AC9 change the exact shapes two EPIC 03 structural suites pin, so this task updates them in its own
+commit, preserving each guard's intent and negative control
+(`tasks/arbitration/arbiter-04-08-structural-suite-ownership.md`). Expected shapes live in one `private static
+let` list per guard so 04.9's later deltas are list substitutions.
+
+#### 4.14.1 AppShellStructuralTests.swift
+
+(from `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md` §4.1)
+
+**A1 — replace lines 127–196 in full.** The span runs from `// MARK: - AC7: handOff switches over exactly three
+HandOffDestination names, in two case clauses` through the closing brace of
+`plantedFacadeCallInPlaceholderBranchIsCaught()`. It covers 4 tests (`handOffSwitchesOverExactlyThreeDestinationNames`,
+`plantedFourthHandOffCaseIsCaught`, `diagnosisAndUnitExpeditionBranchCallsNoFurtherCoreFunction`,
+`plantedFacadeCallInPlaceholderBranchIsCaught`). Replace it with this block of 4 tests plus 2 helpers:
+
+```swift
+    // MARK: - AC7 (03.12) as re-scoped by 04.8 AC7: one clause per HandOffDestination case; no branch calls Core
+
+    /// The case-clause prefixes `AppShell.handOff`'s switch carries after task 04.8
+    /// (`tasks/epic-04-task-08-app-expedition-screens.md` §4.9). Task 04.9 replaces `"case .diagnosis:"` with
+    /// `"case .diagnosisStarted("` in this list.
+    private static let expectedHandOffCaseClausePrefixes = [
+        "case .included(", "case .doorBStarted(", "case .diagnosis:",
+    ]
+
+    private static let coreCallPattern = #"\b(MapFacade|DoorFacade|MapLaunch)\.\w+\("#
+
+    /// One `case` clause of `block`: from the line starting with `prefix` up to (excluding) the next line
+    /// starting with `case ` or `default:`, or the end of `block`.
+    private static func caseBranch(startingWith prefix: String, in block: String) -> String? {
+        let lines = block.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        guard
+            let start = lines.firstIndex(where: {
+                $0.trimmingCharacters(in: .whitespaces).hasPrefix(prefix)
+            })
+        else { return nil }
+        var branch = [lines[start]]
+        for line in lines[(start + 1)...] {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("case ") || trimmed.hasPrefix("default:") { break }
+            branch.append(line)
+        }
+        return branch.joined(separator: "\n")
+    }
+
+    @Test(
+        "AC7 (03.12, re-scoped by 04.8 AC7): AppShell.handOff has exactly one case clause per HandOffDestination case"
+    )
+    func handOffSwitchHasOneClausePerDestination() throws {
+        let source = try Self.readShell("AppShell.swift")
+        guard let body = Self.balancedBraceBlock(after: "switch destination {", in: source) else {
+            Issue.record("could not locate AppShell.handOff's switch body")
+            return
+        }
+        let cases = Self.caseLines(in: body)
+        let expected = Self.expectedHandOffCaseClausePrefixes
+        #expect(cases.count == expected.count, "expected \(expected.count) case clauses, found: \(cases)")
+        for prefix in expected {
+            #expect(
+                cases.filter { $0.hasPrefix(prefix) }.count == 1,
+                "expected exactly one clause starting \(prefix): \(cases)")
+        }
+        #expect(!body.contains(".unitExpedition"), "03.11's retired .unitExpedition case must not reappear")
+    }
+
+    @Test("negative control: a planted extra case clause in the handOff switch is caught")
+    func plantedExtraHandOffCaseIsCaught() {
+        let fixture = """
+            switch destination {
+            case .included(let map):
+                holder.replace(with: map)
+            case .doorBStarted(let outcome):
+                doorHolder.replace(with: snapshot(outcome))
+            case .diagnosis:
+                break
+            case .somethingElse:
+                break
+            }
+            """
+        guard let body = Self.balancedBraceBlock(after: "switch destination {", in: fixture) else {
+            Issue.record("fixture setup failed")
+            return
+        }
+        let cases = Self.caseLines(in: body)
+        #expect(
+            cases.count == Self.expectedHandOffCaseClausePrefixes.count + 1,
+            "planted extra case clause was not detected: \(cases)")
+    }
+
+    @Test(
+        "I14 (04.8 AC7): no handOff branch calls a façade or launch function; .doorBStarted only replaces the door holder; the .diagnosis placeholder touches no holder"
+    )
+    func handOffBranchesCallNoFurtherCoreFunction() throws {
+        let source = try Self.readShell("AppShell.swift")
+        guard let body = Self.balancedBraceBlock(after: "switch destination {", in: source) else {
+            Issue.record("could not locate AppShell.handOff's switch body")
+            return
+        }
+        #expect(
+            body.range(of: Self.coreCallPattern, options: .regularExpression) == nil,
+            "a handOff branch calls a façade/launch function; the action's one call belongs to its button (I14)")
+        guard let doorB = Self.caseBranch(startingWith: "case .doorBStarted(", in: body) else {
+            Issue.record("could not isolate the .doorBStarted branch")
+            return
+        }
+        #expect(doorB.components(separatedBy: "doorHolder.replace(").count - 1 == 1)
+        guard let placeholder = Self.caseBranch(startingWith: "case .diagnosis:", in: body) else {
+            Issue.record("could not isolate the .diagnosis placeholder branch")
+            return
+        }
+        #expect(!placeholder.contains("replace("), "the .diagnosis placeholder must not touch either holder")
+    }
+
+    @Test("negative control: a planted DoorFacade call inside a handOff branch is caught")
+    func plantedFacadeCallInHandOffBranchIsCaught() {
+        let fixture = """
+            switch destination {
+            case .included(let map):
+                holder.replace(with: map)
+            case .doorBStarted(let outcome):
+                _ = DoorFacade.backToMap(outcome.runState, today: today)
+            case .diagnosis:
+                break
+            }
+            """
+        guard let body = Self.balancedBraceBlock(after: "switch destination {", in: fixture) else {
+            Issue.record("fixture setup failed")
+            return
+        }
+        #expect(
+            body.range(of: Self.coreCallPattern, options: .regularExpression) != nil,
+            "planted façade call was not detected")
+        let doorB = Self.caseBranch(startingWith: "case .doorBStarted(", in: body)
+        #expect(doorB?.contains("doorHolder.replace(") == false, "planted missing replace was not detected")
+    }
+```
+
+**A2 — replace lines 333–355 in full.** The span runs from `// MARK: - AC3 / arbiter-03 § Q-A: CoreErrorText is the
+only source of student text; one code named` through the closing brace of `plantedThirdCoreErrorTextCallSiteIsCaught()`
+and covers 2 tests. Replace it with:
+
+```swift
+    // MARK: - AC3 / arbiter-03 § Q-A (re-scoped by 04.8 §4.9): CoreErrorText is the only source of student text
+
+    /// Every `CoreErrorText.text(for:` call site in `App/Sources/Shell` after task 04.8 (§4.9): 03.12's two,
+    /// plus 04.8's summary write-failure resolution and `DoorBRunScreen.startAnother`'s error text. Task 04.9
+    /// appends `"CoreErrorText.text(for: coreError)"` (its `writeFailureBanner`) and nothing else.
+    private static let expectedShellCoreErrorTextSites = [
+        "CoreErrorText.text(for: refusal.studentCode)",
+        "CoreErrorText.text(for: .platformStateUnreadable)",
+        "flatMap(CoreErrorText.text(for:))",
+        "CoreErrorText.text(for: error)",
+    ]
+
+    @Test(
+        "AC3 (03.12, re-scoped by 04.8 §4.9): CoreErrorText.text(for:) is called at exactly the expected App/Sources/Shell sites, no more"
+    )
+    func coreErrorTextCalledOnlyAtExpectedShellSites() throws {
+        let combined = Self.codeOnlyLines(in: try Self.combinedShellSource())
+        let count = combined.components(separatedBy: "CoreErrorText.text(for:").count - 1
+        let expected = Self.expectedShellCoreErrorTextSites
+        #expect(count == expected.count, "expected \(expected.count) CoreErrorText.text(for: sites, found \(count)")
+        for site in expected {
+            #expect(combined.contains(site), "missing expected CoreErrorText call site: \(site)")
+        }
+    }
+
+    @Test("negative control: one CoreErrorText.text(for:) call site beyond the expected set is caught by the count")
+    func plantedExtraCoreErrorTextCallSiteIsCaught() {
+        let fixture = (Self.expectedShellCoreErrorTextSites + ["CoreErrorText.text(for: .expNoFringe)"])
+            .joined(separator: "\n")
+        let count = fixture.components(separatedBy: "CoreErrorText.text(for:").count - 1
+        #expect(
+            count == Self.expectedShellCoreErrorTextSites.count + 1, "planted extra call site was not detected")
+    }
+```
+
+No other line of this file changes. `@Test(` count stays 44.
+
+#### 4.14.2 MapPanelsPickersHandOffStructuralTests.swift
+
+(from `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md` §4.2)
+
+**B0 — add these helpers directly after `readAllReal()` (after line 50).**
+
+```swift
+    /// Strips `///`/`//` comment lines before a code-only scan, mirroring
+    /// `AppShellStructuralTests.codeOnlyLines(in:)`: a doc comment naming a retired call shape is not a call.
+    private static func codeOnlyLines(in source: String) -> String {
+        source.split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+    }
+
+    private static func matchCount(of pattern: String, in text: String) -> Int {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return -1 }
+        return regex.numberOfMatches(in: text, range: NSRange(text.startIndex..., in: text))
+    }
+```
+
+**B1 — replace lines 202–227.** This covers `handOffDestinationHasExactlyThreeCases` and
+`plantedFourthCaseIsCaught`, from the `@Test("AC9: HandOffDestination has exactly three cases …")` line through the
+closing brace of `plantedFourthCaseIsCaught()`. Replace it with:
+
+```swift
+    /// The exact `HandOffDestination` case texts after task 04.8 (§4.8). Task 04.9 replaces
+    /// `"diagnosis(event: DiagnosisEvent)"` with `"diagnosisStarted(DoorAStartOutcome)"` in this list.
+    private static let expectedHandOffCases = [
+        "diagnosis(event: DiagnosisEvent)", "doorBStarted(DoorBStartOutcome)", "included(map: MapState)",
+    ]
+
+    @Test("AC9 (03.11, re-scoped by 04.8 AC6): HandOffDestination has exactly the three expected cases")
+    func handOffDestinationHasExactlyThreeCases() throws {
+        let source = try Self.readReal("MapActionsView.swift")
+        let cases = Self.handOffDestinationCaseLines(in: source)
+        let expected = Self.expectedHandOffCases
+        #expect(cases.count == expected.count, "expected \(expected.count) cases, found \(cases.count): \(cases)")
+        for text in expected {
+            #expect(cases.contains("case \(text)"), "missing case \(text): \(cases)")
+        }
+        #expect(
+            !Self.codeOnlyLines(in: source).contains("ComposeResult"),
+            "03.11's retired ComposeResult payload must not reappear")
+        #expect(
+            source.contains("typealias HandOffHook = (HandOffDestination) -> Void"),
+            "HandOffHook must be exactly this type alias")
+    }
+
+    @Test("AC9 negative control: a planted fourth case is caught by the extractor")
+    func plantedFourthCaseIsCaught() {
+        let fixture = """
+            enum HandOffDestination {
+                case diagnosis(event: DiagnosisEvent)
+                case doorBStarted(DoorBStartOutcome)
+                case included(map: MapState)
+                case somethingElse
+            }
+            """
+        let cases = Self.handOffDestinationCaseLines(in: fixture)
+        #expect(cases.count == Self.expectedHandOffCases.count + 1, "planted fourth case was not detected: \(cases)")
+    }
+```
+
+**B2 — replace lines 229–289.** The span runs from `// MARK: - AC2/AC3/AC4: exactly one façade call per action
+button, in MapActionsView.swift` through the closing brace of `catchBlockCallingHandOffIsCaught()`. It covers
+`mapActionsViewCallsFacadeExactlyOncePerButton`, `plantedSecondFacadeCallIsCaught`,
+`unitExpeditionButtonCallsHandOffOnlyOnSuccess` and `catchBlockCallingHandOffIsCaught`. Keep `textBetween` at
+lines 291–296 unchanged. Replace the span with:
+
+```swift
+    // MARK: - AC2/AC3/AC4 (03.11, re-scoped by 04.8 AC6): one façade call and one success handOff per button
+
+    /// Every façade call in `MapActionsView.swift` after task 04.8 (§4.8), one per action button. Task 04.9
+    /// replaces `"MapFacade.checkHere("` with `"DoorFacade.checkHere("` in this list.
+    private static let expectedActionFacadeCalls = [
+        "MapFacade.checkHere(", "MapFacade.include(", "DoorFacade.startUnitExpedition(",
+        "DoorFacade.startExpedition(",
+    ]
+
+    /// Each success-path `handOff(` shape after task 04.8, as a regex (`\s*`: swift-format may wrap after
+    /// `handOff(`), with its site count. Task 04.9 replaces the `.diagnosis(event: event)` key with
+    /// `#"handOff\(\s*\.diagnosisStarted\(\s*DoorAStartOutcome\("#` (count 1).
+    private static let expectedHandOffCallPatterns: [String: Int] = [
+        #"handOff\(\s*\.diagnosis\(event: event\)\)"#: 1,
+        #"handOff\(\s*\.included\(map: newMap\)\)"#: 1,
+        #"handOff\(\s*\.doorBStarted\("#: 2,
+    ]
+
+    private static let facadeCallPattern = #"\b(MapFacade|DoorFacade)\.\w+\("#
+
+    @Test(
+        "AC2/AC3/AC4 (03.11, re-scoped by 04.8 AC6): MapActionsView.swift makes exactly one façade call and one success-path handOff per action button"
+    )
+    func mapActionsViewCallsExactlyOneFacadeEntryPerButton() throws {
+        let code = Self.codeOnlyLines(in: try Self.readReal("MapActionsView.swift"))
+        let calls = Self.expectedActionFacadeCalls
+        let total = Self.matchCount(of: Self.facadeCallPattern, in: code)
+        #expect(total == calls.count, "expected \(calls.count) façade call sites, found \(total)")
+        for call in calls {
+            #expect(code.components(separatedBy: call).count - 1 == 1, "expected exactly one \(call) call site")
+        }
+        #expect(
+            !code.contains("MapFacade.unitExpedition("),
+            "Unit expedition must call DoorFacade.startUnitExpedition, never MapFacade.unitExpedition (04.8 AC6)")
+        let handOffTotal = code.components(separatedBy: "handOff(").count - 1
+        let expectedTotal = Self.expectedHandOffCallPatterns.values.reduce(0, +)
+        #expect(handOffTotal == expectedTotal, "expected \(expectedTotal) handOff( sites, found \(handOffTotal)")
+        for (pattern, count) in Self.expectedHandOffCallPatterns {
+            #expect(
+                Self.matchCount(of: pattern, in: code) == count,
+                "expected \(count) handOff site(s) matching /\(pattern)/")
+        }
+    }
+
+    @Test("negative control: a planted second façade call in one button is caught by the count")
+    func plantedSecondFacadeCallIsCaught() {
+        let fixture = """
+            private func start() {
+                let (runState, screen, failure, _) = try DoorFacade.startExpedition(
+                    mapState: mapState, today: today)
+                _ = MapFacade.include(nodeId: nodeId, mapState: mapState)
+                handOff(.doorBStarted(DoorBStartOutcome(runState: runState, screen: screen, writeFailureCode: failure)))
+            }
+            """
+        #expect(
+            Self.matchCount(of: Self.facadeCallPattern, in: fixture) == 2, "planted extra façade call was not detected")
+    }
+
+    @Test("negative control: a wrapped third .doorBStarted handOff is counted, so the per-shape count catches it")
+    func plantedWrappedExtraDoorBHandOffIsCaught() {
+        let fixture = """
+            handOff(.doorBStarted(DoorBStartOutcome(runState: a, screen: b, writeFailureCode: c)))
+            handOff(
+                .doorBStarted(DoorBStartOutcome(runState: a, screen: b, writeFailureCode: c)))
+            handOff(.doorBStarted(DoorBStartOutcome(runState: a, screen: b, writeFailureCode: c)))
+            """
+        #expect(Self.matchCount(of: #"handOff\(\s*\.doorBStarted\("#, in: fixture) == 3)
+    }
+
+    @Test(
+        "AC4 (03.11) + 04.8 AC6: every CoreError catch block in MapActionsView.swift sets errorText and calls handOff zero times"
+    )
+    func actionButtonsCallHandOffOnlyOnSuccess() throws {
+        let source = try Self.readReal("MapActionsView.swift")
+        var blocks: [String] = []
+        var searchFrom = source.startIndex
+        while let startRange = source.range(
+            of: "catch let error as CoreError {", range: searchFrom..<source.endIndex),
+            let endRange = source.range(of: "catch {", range: startRange.upperBound..<source.endIndex)
+        {
+            blocks.append(String(source[startRange.upperBound..<endRange.lowerBound]))
+            searchFrom = endRange.upperBound
+        }
+        #expect(blocks.count == 2, "expected one CoreError catch block per throwing button, found \(blocks.count)")
+        for block in blocks {
+            #expect(!block.contains("handOff("), "a CoreError catch block must not call handOff")
+            #expect(block.contains("CoreErrorText.text(for: error)"))
+        }
+    }
+
+    @Test("negative control: a catch block that also calls handOff is caught")
+    func catchBlockCallingHandOffIsCaught() {
+        let fixture = """
+            catch let error as CoreError {
+                errorText = CoreErrorText.text(for: error)
+                handOff(.doorBStarted(fakeOutcome))
+            }
+            catch {
+            """
+        let block = Self.textBetween(fixture, "catch let error as CoreError {", "catch {")
+        #expect(block?.contains("handOff(") == true, "planted violation was not detected")
+    }
+```
+
+**B3 — replace lines 485–510.** The span runs from `// MARK: - I14: exactly one @State property across all six
+files; no @State holds a Core state type` through the closing brace of `plantedSecondStatePropertyIsCaught()` and
+covers 2 tests. Keep `noStatePropertyHoldsCoreStateType` (line 512 onward) unchanged. Replace the span with:
+
+```swift
+    // MARK: - I14 (03.11, re-scoped by 04.8 AC6): exactly two @State properties, one errorText per throwing button
+
+    @Test(
+        "I14 (re-scoped by 04.8 AC6): exactly two @State properties exist across all six files, each `@State private var errorText: String?` in MapActionsView.swift, one per Unit/Start button"
+    )
+    func exactlyTwoStatePropertiesAcrossAllFiles() throws {
+        let contents = try Self.readAllReal()
+        var stateLines: [String] = []
+        for (name, source) in contents {
+            for line in source.split(separator: "\n") where line.contains("@State") {
+                stateLines.append("\(name): \(line.trimmingCharacters(in: .whitespaces))")
+            }
+        }
+        #expect(stateLines.count == 2, "expected exactly two @State properties, found: \(stateLines)")
+        for line in stateLines {
+            #expect(
+                line == "MapActionsView.swift: @State private var errorText: String?",
+                "unexpected @State property: \(line)")
+        }
+        let actions = try Self.readReal("MapActionsView.swift")
+        for button in ["UnitExpeditionActionButton", "StartExpeditionActionButton"] {
+            let header = Self.textBetween(actions, "struct \(button): View {", "var body")
+            #expect(
+                header?.contains("@State private var errorText: String?") == true,
+                "\(button) must own its own errorText @State")
+        }
+    }
+
+    @Test("I14 negative control: a third planted @State property is caught by the count and the name check")
+    func plantedThirdStatePropertyIsCaught() {
+        let lines = [
+            "@State private var errorText: String?", "@State private var errorText: String?",
+            "@State private var cachedMapState: MapState?",
+        ]
+        #expect(lines.filter { $0.contains("@State") }.count == 3, "planted third @State was not detected")
+        #expect(
+            lines.contains { $0 != "@State private var errorText: String?" }, "planted foreign @State not detected")
+    }
+```
+
+**B4 — in `errorTextCallSiteMatchesRegistrySurfaceForExpNoFringe()`, replace lines 575–580**, from
+`let source = try Self.readReal("MapActionsView.swift")` through the closing `)` of the count `#expect`. Leave the
+registry cross-check above it and the test's display name unchanged. The new lines are:
+
+```swift
+        let code = Self.codeOnlyLines(in: try Self.readReal("MapActionsView.swift"))
+        let coreErrorTextCallCount = code.components(separatedBy: "CoreErrorText.text(for:").count - 1
+        #expect(
+            coreErrorTextCallCount == 2,
+            "expected exactly two CoreErrorText.text(for:) sites (Unit, Start buttons), found \(coreErrorTextCallCount)"
+        )
+        #expect(code.components(separatedBy: "CoreErrorText.text(for: error)").count - 1 == 2)
+```
+
+Then add this negative control directly after that test:
+
+```swift
+    @Test("negative control: a third CoreErrorText.text(for:) site in MapActionsView.swift is caught by the count")
+    func plantedThirdMapActionsCoreErrorTextSiteIsCaught() {
+        let fixture = """
+            errorText = CoreErrorText.text(for: error)
+            errorText = CoreErrorText.text(for: error)
+            Text(CoreErrorText.text(for: .expTrailInvalid) ?? "")
+            """
+        #expect(fixture.components(separatedBy: "CoreErrorText.text(for:").count - 1 == 3)
+    }
+```
+
+No other line of this file changes. `@Test(` count: 36 → 38. Two tests are added
+(`plantedWrappedExtraDoorBHandOffIsCaught`, `plantedThirdMapActionsCoreErrorTextSiteIsCaught`), and none is
+removed.
+
+#### Intent kept, guard by guard
+
+(from `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md` §4.3, verbatim)
+
+| Old guard | Intent | New guard | Negative control |
+|---|---|---|---|
+| `handOffSwitchesOverExactlyThreeDestinationNames` | Exhaustive switch, one clause per case | `handOffSwitchHasOneClausePerDestination` | `plantedExtraHandOffCaseIsCaught` |
+| `diagnosisAndUnitExpeditionBranchCallsNoFurtherCoreFunction` | I14: handOff re-enters no façade, and the placeholder touches no holder | `handOffBranchesCallNoFurtherCoreFunction` (now all branches) | `plantedFacadeCallInHandOffBranchIsCaught` |
+| `coreErrorTextCalledExactlyTwiceAcrossShell` | `CoreErrorText` is the only text source, at known sites | `coreErrorTextCalledOnlyAtExpectedShellSites` | `plantedExtraCoreErrorTextCallSiteIsCaught` |
+| `handOffDestinationHasExactlyThreeCases` | Exactly three destinations | same name, list-driven | `plantedFourthCaseIsCaught` |
+| `mapActionsViewCallsFacadeExactlyOncePerButton` | I14 one call per action, one success `handOff` per action | `mapActionsViewCallsExactlyOneFacadeEntryPerButton` | `plantedSecondFacadeCallIsCaught`, `plantedWrappedExtraDoorBHandOffIsCaught` |
+| `unitExpeditionButtonCallsHandOffOnlyOnSuccess` (still green) | No `handOff` on a thrown `CoreError` | `actionButtonsCallHandOffOnlyOnSuccess` (now both buttons, per AC6) | `catchBlockCallingHandOffIsCaught` |
+| `errorTextCallSiteMatchesRegistrySurfaceForExpNoFringe` | Only the registered student text is shown | same test, count 2 | `plantedThirdMapActionsCoreErrorTextSiteIsCaught` |
+| `exactlyOneStatePropertyAcrossAllFiles` | `@State` discipline: presentation-only error text | `exactlyTwoStatePropertiesAcrossAllFiles` | `plantedThirdStatePropertyIsCaught` |
+
 ## §5 Test plan (risk: seam — full plan)
 
 **C3 note (owner-verified, no agent claim of pixel-level or tap-level correctness).** `App/mathmath.xcodeproj`
@@ -983,9 +1440,10 @@ establish for `App/Sources`-only code with no `Core` counterpart, restated per t
   answer card still renders (`correct == false`, from `ItemChecker`'s own grammar check, 04.4's concern), never
   a crash — confirmed by inspection that `submit(_:current:)` performs no precondition on `value` before
   calling `DoorFacade.answer`.
-- **T3 error-taxonomy:** `rg -n "CoreErrorText"` over this task's scope shows exactly three call sites
-  (`StartExpeditionActionButton.start`, `UnitExpeditionActionButton.start`, `DoorBRunScreen.startAnother`, plus
-  the one `writeFailureText` resolution in `DoorBRunScreen.content(for:)`); `rg -n "\.expNoFringe|\.expStateWriteFailed"`
+- **T3 error-taxonomy:** `rg -n "CoreErrorText"` over this task's scope shows exactly four call sites
+  (`StartExpeditionActionButton.start`, `UnitExpeditionActionButton.start`, `DoorBRunScreen.startAnother`, and
+  the `writeFailureText` resolution in `DoorBRunScreen.content(for:)`) — the same four the re-scoped guards of
+  §4.14 pin (two in `MapActionsView.swift`, two added to `AppShell.swift`); `rg -n "\.expNoFringe|\.expStateWriteFailed"`
   shows the only two registered codes this task's code ever names; no `Text(` literal anywhere in this task's
   scope names an error condition ad hoc.
 - **T4 conformance per requirements §B.1** (`contracts/interaction-contract.md` § 2, `contracts/data-model.md`
@@ -1028,14 +1486,41 @@ establish for `App/Sources`-only code with no `Core` counterpart, restated per t
   - AC10's "no allow-list widening" guard: a diff of `AppSourcesBoundaryTests.swift` before and after this
     task's implementation shows zero lines changed (this task's file scope, §2, excludes that file entirely) —
     proving the claim "04.8 needs no 03.9 widening" is checkable, not merely asserted in prose.
+  - EPIC 03 structural guards, re-scoped (§4.14):
+    - Assertions:
+      - `handOffSwitchHasOneClausePerDestination`
+      - `handOffBranchesCallNoFurtherCoreFunction`
+      - `coreErrorTextCalledOnlyAtExpectedShellSites`
+      - `handOffDestinationHasExactlyThreeCases`
+      - `mapActionsViewCallsExactlyOneFacadeEntryPerButton`
+      - `actionButtonsCallHandOffOnlyOnSuccess`
+      - `errorTextCallSiteMatchesRegistrySurfaceForExpNoFringe`
+      - `exactlyTwoStatePropertiesAcrossAllFiles`
+
+      Each asserts the post-04.8 shape of §4.8/§4.9.
+    - Instrument: Swift Testing `#expect` over comment-stripped source text, run by gate 3 on the simulator. It
+      excludes runtime, tap and presentation behaviour (C3).
+    - Empty handling: an extractor that returns no case/branch records an `Issue` (empty = FAIL).
+    - Negative controls:
+      - `plantedExtraHandOffCaseIsCaught`
+      - `plantedFacadeCallInHandOffBranchIsCaught`
+      - `plantedExtraCoreErrorTextCallSiteIsCaught`
+      - `plantedFourthCaseIsCaught`
+      - `plantedSecondFacadeCallIsCaught`
+      - `plantedWrappedExtraDoorBHandOffIsCaught`
+      - `catchBlockCallingHandOffIsCaught`
+      - `plantedThirdMapActionsCoreErrorTextSiteIsCaught`
+      - `plantedThirdStatePropertyIsCaught`
+    - Test counts: `rg -c "@Test\("` gives 44 (AppShell) and 38 (MapPanels), up from 44/36. No guard is deleted.
 - **T6 idempotency / no-leak:** `DoorBRunScreen.continueTapped` called twice on the same `Equatable`-equal
   `DoorBAnswerAdvance` (via `DoorFacade.continueAfterAnswer`'s own idempotency, 04.5 T6) returns
   `==` `DoorBScreen` values (04.5 T6 compares the accompanying `DoorRunState` field-wise, since it is not
   `Equatable`), so this task's rendering re-derives the identical screen either way; `rg -n
-  "@State"` over `App/Sources/Doors` and the `DoorBRunScreen` addition to `AppShell.swift` shows exactly the
-  two expected instances (`DoorBViewState` in `DoorBRunScreen`, `errorText` in each of the two action buttons
-  in `MapActionsView.swift`) — no file holds a `Core` value across calls beyond the `DoorRunHolder`/
-  `MapStateHolder` themselves, which are explicitly designed to (I14).
+  "@State"` over `App/Sources/Doors` and the `DoorBRunScreen` addition to `AppShell.swift` shows exactly one
+  instance (`@State private var viewState = DoorBViewState()` in `DoorBRunScreen`), and `MapActionsView.swift`
+  holds exactly two (`errorText` in each of the two action buttons, pinned by §4.14's
+  `exactlyTwoStatePropertiesAcrossAllFiles`) — no file holds a `Core` value across calls beyond the
+  `DoorRunHolder`/`MapStateHolder` themselves, which are explicitly designed to (I14).
 
 ## §6 Decision defaults
 
@@ -1104,6 +1589,10 @@ establish for `App/Sources`-only code with no `Core` counterpart, restated per t
   (`fullScreenCover` binds on `doorHolder.current != nil`; `@Observable` needs no conformance), and a hand-written
   `==` over `Core` state would put equality semantics in the render layer (I14). Per
   `tasks/arbitration/arbiter-04-doorrunstate-equatable.md`.
+- IF an EPIC 03 structural guard pins a shape this task's ACs change THEN this task updates it in its own
+  commit exactly per §4.14. It never deletes, `.disabled`s or leaves the guard red, and never edits a guard
+  §4.14 does not name. The tester may add guards but may not weaken §4.14's.
+  (`tasks/arbitration/arbiter-04-08-structural-suite-ownership.md`)
 - Standing defaults: identifiers and timestamps are untouched by this task — every id/timestamp already on
   `DoorItemContent`/`DoorAnswerCardContent`/`DoorBSummaryScreen`/`MapState` passes through opaquely, and no
   file constructs one. Model calls do not exist anywhere in this task's code (I2 vacuous). Telemetry is
@@ -1125,6 +1614,9 @@ The task is done when ALL gates pass:
 - the 03.9 `AppSourcesBoundary` scan (`xcodebuild test -scheme Core-Package`, gate 3) stays green with this
   task's files present in `App/Sources`, with no edit to `AppSourcesBoundaryTests.swift` or
   `AppSourcesBoundaryNegativeControlTests.swift` (§6 default 4, §5 T5's diff guard).
+- the full `Core` test suite (gate 3) is green. This includes `AppShellStructuralTests.swift` and
+  `MapPanelsPickersHandOffStructuralTests.swift` as updated by §4.14. `MapCanvasViewStructuralTests`,
+  `AppSourcesBoundary*Tests`, `DoorFacade*Tests` and every other `CoreTests` file pass unmodified.
 - 03.12's simulator smoke (`scripts/sim-smoke.sh`, gate 4) stays green: this task adds no App launch-path code
   and no state-file interaction of its own, so the fresh-install and seeded-relaunch scenarios (both scoped to
   launch/relaunch, before any course or Door action) are unaffected by this task's file scope.

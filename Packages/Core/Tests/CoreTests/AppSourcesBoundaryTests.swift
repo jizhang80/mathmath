@@ -134,6 +134,20 @@ struct AppSourcesBoundaryTests {
         #expect(violations.contains { $0.contains("planted future-door marker") })
     }
 
+    // 04.10 AC1: the extended Door rule set (defaultRules + doorRules) is clean over the real App/Sources
+    // tree, and doorCopyRule (run alone, since it applies only to Door student-facing copy) is clean over
+    // App/Sources/Doors.
+    @Test("App/Sources has no I1/I2/I10/I14 Door boundary violations (04.10)")
+    func appSourcesIsCleanWithDoorRules() throws {
+        let appSources = Self.repoRoot.appendingPathComponent("App/Sources")
+        let violations = try AppSourcesBoundary.violations(
+            in: appSources, rules: AppSourcesBoundary.defaultRules + AppSourcesBoundary.doorRules)
+        #expect(violations.isEmpty, "Door boundary violations: \(violations)")
+        let copyViolations = try AppSourcesBoundary.violations(
+            in: appSources.appendingPathComponent("Doors"), rules: [AppSourcesBoundary.doorCopyRule])
+        #expect(copyViolations.isEmpty, "Door copy literal violations: \(copyViolations)")
+    }
+
     // AC8: the façade's own call surface must never false-positive against the forbidden-call rule, and
     // genuine Core-internal calls in the same tree must still be caught.
     @Test(

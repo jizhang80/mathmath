@@ -16,8 +16,11 @@ model: sonnet
 > - `App/Sources/Doors/ExpeditionItemView.swift`, `ExpeditionAnswerCardView.swift`, `DoorBViewState.swift`
 >   exist exactly as `tasks/epic-04-task-08-app-expedition-screens.md` §4 describes (quoted verbatim §3
 >   below), and `App/Sources/MapUI/MapActionsView.swift` / `App/Sources/Shell/AppShell.swift` carry 04.8's own
->   edits on top of 03.11's / 03.12's originals (also quoted verbatim §3, from 04.8's own already-written
->   spec, since neither file exists yet on the tree used to write this spec).
+>   edits on top of 03.11's / 03.12's originals, and `Packages/Core/Tests/CoreTests/AppShellStructuralTests.swift`
+>   / `MapPanelsPickersHandOffStructuralTests.swift` carry 04.8's §4.14 re-scoped guards (also quoted verbatim §3,
+>   from 04.8's own already-written spec, since neither file exists yet on the tree used to write this spec), and
+>   `Packages/Core/Tests/CoreTests/DoorExpeditionScreensStructuralTests.swift` exists as 04.8's tester committed it
+>   (`fc7ffa1`, 47 `@Test`s).
 > - `Packages/Core/Sources/Core/Door/DiagnosisContent.swift` / `DiagnosisFlow.swift` (04.3) and the Door A
 >   half of `Packages/Core/Sources/Core/Platform/MapLaunch.swift`'s `DoorFacade` (04.5) exist exactly as
 >   `tasks/epic-04-task-03-core-door-a-diagnosis-flow.md` §4 and `tasks/epic-04-task-05-core-door-entries-
@@ -163,7 +166,8 @@ Acceptance criteria (each independently verifiable):
   04.5's Door A calls persisted), and dismisses the presentation (clears `doorHolder.current`).
 - AC9: The App builds green (gate 4, `scripts/gate.sh:22`) with every file in this task's scope compiled into
   the target via the synchronized `Sources` group (no `pbxproj` edit); the 03.9 `AppSourcesBoundary` scan
-  (`xcodebuild test -scheme Core-Package`) stays green over the complete `App/Sources` tree, with **no**
+  (`xcodebuild test -scheme Core-Package`) stays green over the complete `App/Sources` tree, every `CoreTests`
+  suite is green — including the two EPIC 03 structural suites and 04.8's `DoorExpeditionScreensStructuralTests.swift` as updated by §4.11 — with **no**
   widening of `AppSourcesBoundary.allowedImportModules`/`defaultRules`/`forbiddenCoreTypeNames` by this task
   (§6 default 3 — mirrors 04.8's own §6 default 4 exactly: every call this task's code makes is to
   `DoorFacade.*`, `CoreErrorText.*`, `AppShell.resolveToday()` or `MathView.*`, none of which is on 03.9's
@@ -197,10 +201,18 @@ In-scope (the implementer touches EXACTLY these; nothing else):
   `decideProbe(_:accept:current:)`, `answerProbeItem(_:submitted:current:)`,
   `continueDiagnosisTapped(_:current:)`, `decideFurtherLevel(_:accept:current:)`,
   `returnFromDiagnosis(outcome:current:)` functions.
+- `Packages/Core/Tests/CoreTests/AppShellStructuralTests.swift` — MODIFY (carrying 04.8's §4.14 edits).
+  Lockstep list/branch deltas for AC5's `.diagnosisStarted` routing and the `writeFailureBanner` `CoreErrorText`
+  site — exactly §4.11.1.
+- `Packages/Core/Tests/CoreTests/MapPanelsPickersHandOffStructuralTests.swift` — MODIFY (carrying 04.8's §4.14
+  edits). Lockstep list deltas for AC4's `.diagnosisStarted` case and `DoorFacade.checkHere` call — exactly
+  §4.11.2.
+- `Packages/Core/Tests/CoreTests/DoorExpeditionScreensStructuralTests.swift` — MODIFY (04.8 tester's file, commit `fc7ffa1`). Lockstep update, in this task's commit, of the 04.8 guards that this task's §4.2–§4.4 (three new Doors files, `MathView(latex: step)`, "Yes"/"Not now") and §4.6 (`.diagnosisAnswerCard`, five new actions) invalidate or would silently stop covering — exactly §4.11.3; no other test in the file is edited.
 
 Out-of-scope (do not touch even if tempted):
 
-- `Packages/Core/**`, `Packages/Rendering/**` — read-only; call only `DoorFacade`'s, `CoreErrorText`'s and
+- `Packages/Core/**` (except the three structural-suite test files listed in-scope above), `Packages/Rendering/**` — read-only;
+  call only `DoorFacade`'s, `CoreErrorText`'s and
   `MathView`'s public entry points, never a `Core`-internal flow type directly.
 - `App/Sources/Doors/ExpeditionItemView.swift`, `ExpeditionAnswerCardView.swift`, `DoorBViewState.swift`,
   `NumericKeypadView.swift`, `ChoiceButtonsView.swift`, `ExpeditionSummaryView.swift` — 04.8's files; this task
@@ -1040,6 +1052,390 @@ optional Tier-1 "what did you do?" line (EPIC 13) is out of this task's scope an
 gate 4) — must be green, with every file in this task's scope compiled into the target via the synchronized
 `Sources` group.
 
+### 4.11 Lockstep structural-guard updates (EPIC 03 suites and 04.8's Doors suite)
+
+(from `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md` §5) §4.11.3 is from
+`tasks/arbitration/arbiter-04-09-doors-structural-suite-addendum.md` §3.
+
+In every expected-shape list's doc comment named below, replace the sentence that begins `Task 04.9 replaces`
+or `Task 04.9 appends` with `Updated by task 04.9.`
+
+#### 4.11.1 `AppShellStructuralTests.swift`
+
+(from `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md` §5.1)
+
+- **D1.** In `expectedHandOffCaseClausePrefixes`, change `"case .diagnosis:"` to `"case .diagnosisStarted("`, and
+  update its doc comment as above.
+- **D2.** In `handOffBranchesCallNoFurtherCoreFunction()`, replace the `.diagnosis` placeholder check with the
+  code below. The old code runs from `guard let placeholder = Self.caseBranch(startingWith: "case .diagnosis:", in: body)`
+  through its closing `#expect(!placeholder.contains("replace("), …)`. Also rename the test's display string to
+  `"I14 (04.8 AC7, 04.9 AC5): no handOff branch calls a façade or launch function; each door branch only replaces the door holder with its origin tag"`.
+
+  ```swift
+          #expect(doorB.contains("isStandaloneDiagnosis: false"), ".doorBStarted opens an expedition run (04.9 AC5)")
+          guard let doorA = Self.caseBranch(startingWith: "case .diagnosisStarted(", in: body) else {
+              Issue.record("could not isolate the .diagnosisStarted branch")
+              return
+          }
+          #expect(doorA.components(separatedBy: "doorHolder.replace(").count - 1 == 1)
+          #expect(doorA.contains("isStandaloneDiagnosis: true"), ".diagnosisStarted opens a standalone event (04.9 AC5)")
+  ```
+
+- **D3.** In both negative-control fixtures (`plantedExtraHandOffCaseIsCaught`, `plantedFacadeCallInHandOffBranchIsCaught`),
+  change each
+  `case .diagnosis:` / `break` pair to `case .diagnosisStarted(let outcome):` / `doorHolder.replace(with: snapshot(outcome))`.
+  Both controls stay count- and pattern-relative, so their assertions do not change.
+- **D4.** In `expectedShellCoreErrorTextSites`, append `"CoreErrorText.text(for: coreError)",` as the last entry, and
+  update its doc comment as above.
+
+#### 4.11.2 `MapPanelsPickersHandOffStructuralTests.swift`
+
+(from `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md` §5.2)
+
+- **D5.** In `expectedHandOffCases`, change `"diagnosis(event: DiagnosisEvent)"` to `"diagnosisStarted(DoorAStartOutcome)"`, and
+  update its doc comment as above. In the `plantedFourthCaseIsCaught` fixture, change
+  `case diagnosis(event: DiagnosisEvent)` to `case diagnosisStarted(DoorAStartOutcome)`.
+- **D6.** In `expectedActionFacadeCalls`, change `"MapFacade.checkHere("` to `"DoorFacade.checkHere("`, and update its doc
+  comment as above. In `mapActionsViewCallsExactlyOneFacadeEntryPerButton()`, add this directly after the
+  `MapFacade.unitExpedition(` `#expect`:
+  `#expect(!code.contains("MapFacade.checkHere("), "Check me here must call DoorFacade.checkHere (04.9 AC4)")`.
+- **D7.** In `expectedHandOffCallPatterns`, replace the key `#"handOff\(\s*\.diagnosis\(event: event\)\)"#` with
+  `#"handOff\(\s*\.diagnosisStarted\(\s*DoorAStartOutcome\("#`, and update its doc comment as above. Its value stays
+  `1`. 04.9 §4.5 wraps after `handOff(` and after `.diagnosisStarted(`, and `\s*` absorbs both.
+- **D8.** No `@State` change: 04.9 adds none in MapUI, so the count stays 2. No `CoreErrorText` change in MapUI:
+  `CheckHereActionButton` resolves no text, so the count stays 2.
+- **D9.** Update the display strings of `handOffDestinationHasExactlyThreeCases` and
+  `mapActionsViewCallsExactlyOneFacadeEntryPerButton` from `re-scoped by 04.8 AC6` to `re-scoped by 04.8 AC6 / 04.9 AC4`.
+
+`@Test(` counts after 04.9: AppShell 44, MapPanels 38 (no test added or removed in either);
+DoorExpeditionScreens 48 (47 + one negative control, §4.11.3 E1).
+
+#### 4.11.3 DoorExpeditionScreensStructuralTests.swift
+
+04.8's tester pins 04.8's exact Doors shapes. This task changes them (§4.2–§4.4, §4.6), so it updates the
+suite in its own commit. Each guard keeps its intent and its negative control, and each reads its expected
+shape from one `private static let` list, so a later task changes one entry
+(`tasks/arbitration/arbiter-04-09-doors-structural-suite-addendum.md`).
+
+Principles, as in the parent ruling:
+- Each re-scoped guard reads its expected shape from one `private static let` list.
+- Every negative control is written relative to that list (`expected.count + 1`), so a later task changes one entry
+  and no guard logic.
+- The code below is normative and its layout follows swift-format. Run `xcrun swift-format format -i` on the file,
+  then `lint --strict` must be clean. Test display strings and long marker literals may exceed 110 columns, as the
+  existing ones already do (`:361`, `:371`).
+
+##### E0 — header doc comment (`:6-8`)
+
+Old: ``/// Comprehensive structural (source-text) guards for task 04.8 (`tasks/epic-04-task-08-app-expedition-screens.md`):
+/// the six `App/Sources/Doors/*.swift` files, plus``
+New: ``/// Comprehensive structural (source-text) guards for task 04.8 (`tasks/epic-04-task-08-app-expedition-screens.md`),
+/// as updated in lockstep by task 04.9 (`tasks/arbitration/arbiter-04-09-doors-structural-suite-addendum.md`):
+/// every `App/Sources/Doors/*.swift` file (`doorFileNames`), plus``
+Also in the header: old `the parts of … this task adds` becomes `the parts of … 04.8 and 04.9 add`. The C3
+exclusion paragraph does not change.
+
+##### E1 — Doors inventory: `doorFileNames` (`:35-38`) and `allDoorFilesExist` (`:117-126`); keeps the "Doors file inventory" intent and adds exhaustiveness
+
+Replace `:35-38` with:
+
+```swift
+    /// Every `.swift` file in `App/Sources/Doors` after task 04.9 (§4.2–§4.4). Every Doors-wide scan in this suite
+    /// reads exactly this list, and `allDoorFilesExistAndListIsExhaustive` fails when the directory and the list
+    /// differ, so a later task that adds a Doors file adds one entry here.
+    private static let doorFileNames = [
+        "ExpeditionItemView.swift", "ExpeditionAnswerCardView.swift", "ExpeditionSummaryView.swift",
+        "NumericKeypadView.swift", "ChoiceButtonsView.swift", "DoorBViewState.swift",
+        "HypothesisCardView.swift", "RemediationView.swift", "DiagnosisReturnView.swift",
+    ]
+```
+
+Replace `:117-126` (the MARK line through the closing brace of `allDoorFilesExist()`) with:
+
+```swift
+    // MARK: - Fixture presence (every App/Sources/Doors file is listed, and every listed file exists)
+
+    @Test("every listed App/Sources/Doors file exists, and the list names every .swift file in the directory")
+    func allDoorFilesExistAndListIsExhaustive() throws {
+        for name in Self.doorFileNames {
+            #expect(
+                FileManager.default.fileExists(atPath: Self.doorsRoot.appendingPathComponent(name).path),
+                "missing file: \(name)")
+        }
+        let onDisk = try FileManager.default.contentsOfDirectory(atPath: Self.doorsRoot.path)
+            .filter { $0.hasSuffix(".swift") }
+        #expect(!onDisk.isEmpty, "App/Sources/Doors holds no .swift file (empty = FAIL)")
+        #expect(
+            Set(onDisk) == Set(Self.doorFileNames),
+            "Doors inventory drift — unlisted: \(Set(onDisk).subtracting(Self.doorFileNames)), missing: \(Set(Self.doorFileNames).subtracting(onDisk))"
+        )
+    }
+
+    @Test("negative control: a Doors file absent from doorFileNames is caught by the inventory comparison")
+    func plantedUnlistedDoorsFileIsCaught() {
+        let onDisk = Self.doorFileNames + ["ProbeView.swift"]
+        #expect(Set(onDisk) != Set(Self.doorFileNames), "planted unlisted Doors file was not detected")
+    }
+```
+
+Also change the `doorsFilesHoldNoStateProperties` display string (`:648`). Old: `"@State discipline: zero @State
+properties across all six App/Sources/Doors files (pure render layer)"`. New: `"@State discipline: zero @State
+properties across every App/Sources/Doors file (pure render layer)"`. Its logic does not change; it now reads nine
+files (F17: 0 matches).
+
+##### E2 — I3 phase discipline: replace `:331-358` (both tests) — **the one hard break**
+
+```swift
+    /// The exact `DoorBPhase` case prefixes after task 04.9 (§4.6). Each phase is a distinct, explicit render
+    /// state that only its own continue control leaves (I3); a later task that adds a phase edits this list only.
+    private static let expectedDoorBPhaseCasePrefixes = [
+        "case screen(", "case answerCard(", "case diagnosisAnswerCard(",
+    ]
+
+    @Test("I3: DoorBPhase declares exactly the expected cases (.screen, .answerCard, .diagnosisAnswerCard)")
+    func doorBPhaseHasExactlyTheExpectedCases() throws {
+        let source = try Self.readShell()
+        guard let body = Self.balancedBraceBlock(after: "enum DoorBPhase: Equatable {", in: source) else {
+            Issue.record("could not locate DoorBPhase's body")
+            return
+        }
+        let cases = body.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { $0.hasPrefix("case ") }
+        let expected = Self.expectedDoorBPhaseCasePrefixes
+        #expect(cases.count == expected.count, "expected \(expected.count) DoorBPhase cases, found: \(cases)")
+        for prefix in expected {
+            #expect(
+                cases.filter { $0.hasPrefix(prefix) }.count == 1, "expected exactly one \(prefix) case: \(cases)")
+        }
+    }
+
+    @Test("negative control: a planted extra DoorBPhase case is caught")
+    func plantedExtraDoorBPhaseCaseIsCaught() {
+        let fixture = """
+            enum DoorBPhase: Equatable {
+                case screen(DoorBScreen)
+                case answerCard(DoorBAnswerAdvance)
+                case diagnosisAnswerCard(DoorAProbeAnswerAdvance)
+                case autoAdvancing
+            }
+            """
+        guard let body = Self.balancedBraceBlock(after: "enum DoorBPhase: Equatable {", in: fixture) else {
+            Issue.record("fixture setup failed")
+            return
+        }
+        let cases = body.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { $0.hasPrefix("case ") }
+        #expect(
+            cases.count == Self.expectedDoorBPhaseCasePrefixes.count + 1,
+            "planted extra DoorBPhase case was not detected: \(cases)")
+    }
+```
+
+##### E3 — I3 answer-card routing: replace `continueAfterAnswerHasExactlyOneCallSite` (`:360-399`); the control `plantedAnswerCardBypassIsCaught` (`:401-416`) is unchanged
+
+```swift
+    /// Each answer-card `DoorBPhase` arm, the one `DoorFacade` continue entry that alone leaves it, the action
+    /// method that makes that call, and the call its continue control makes (I3): 04.8's Door B card and 04.9's
+    /// Door A probe card (§4.6). A later answer-card phase adds one entry.
+    private static let expectedAnswerCardRoutes:
+        [(arm: String, facadeCall: String, action: String, onContinue: String)] = [
+            (
+                arm: "case .answerCard(let advance):", facadeCall: "DoorFacade.continueAfterAnswer(",
+                action: "private func continueTapped(_ advance: DoorBAnswerAdvance, current: DoorBRunSnapshot) {",
+                onContinue: "continueTapped(advance, current: current)"
+            ),
+            (
+                arm: "case .diagnosisAnswerCard(let advance):", facadeCall: "DoorFacade.continueAfterProbeAnswer(",
+                action:
+                    "private func continueDiagnosisTapped(_ advance: DoorAProbeAnswerAdvance, current: DoorBRunSnapshot) {",
+                onContinue: "continueDiagnosisTapped(advance, current: current)"
+            ),
+        ]
+
+    @Test(
+        "I3: each answer-card phase is left only via its one DoorFacade continue call, reached only from that phase's ExpeditionAnswerCardView continue control"
+    )
+    func answerCardPhasesAreLeftOnlyViaTheirContinueCall() throws {
+        let shell = try Self.readShell()
+        guard let content = Self.balancedBraceBlock(after: "switch current.phase {", in: shell) else {
+            Issue.record("could not locate DoorBRunScreen's phase switch")
+            return
+        }
+        for route in Self.expectedAnswerCardRoutes {
+            #expect(
+                shell.components(separatedBy: route.facadeCall).count - 1 == 1,
+                "\(route.facadeCall) must have exactly one call site, in its continue action")
+            guard let action = Self.balancedBraceBlock(after: route.action, in: shell) else {
+                Issue.record("could not locate the body of \(route.action)")
+                continue
+            }
+            #expect(action.contains(route.facadeCall))
+            guard let arm = Self.caseBranch(startingWith: route.arm, in: content) else {
+                Issue.record("could not locate the \(route.arm) arm")
+                continue
+            }
+            #expect(arm.contains("ExpeditionAnswerCardView("), "\(route.arm) must render the answer card")
+            #expect(arm.contains(route.onContinue), "\(route.arm)'s onContinue must call \(route.onContinue)")
+            for next in [
+                "ExpeditionItemView(", "ExpeditionSummaryView(", "HypothesisCardView(", "DiagnosisReturnView(",
+                "diagnosisContent(",
+            ] {
+                #expect(!arm.contains(next), "\(route.arm) must not itself render the next screen (\(next))")
+            }
+        }
+    }
+```
+
+This keeps every assertion of the old test for the `.answerCard` route. Its `DoorFacade\.continueAfterAnswer\(`
+regex count becomes an equivalent literal-substring count over the same raw source. The only change is that the
+route is now one list entry.
+
+##### E4 — I14 one call per action: replace the local `markers` in `doorBRunScreenActionsMakeExactlyOneCallEach` (`:475-492`); the control `:494-508` is unchanged
+
+```swift
+    /// Every `DoorBRunScreen` action method, by its exact signature text through the opening `{`, each making
+    /// exactly one textual `DoorFacade` call (I14): 04.8's four, plus 04.9's five (§4.6). `returnFromDiagnosis`'s
+    /// one call is `resumeAfterDiagnosis`, in its non-standalone arm; its standalone arm makes none (04.5 AC8),
+    /// asserted separately. A later action adds one entry.
+    private static let expectedDoorBRunScreenActionMarkers = [
+        "private func submit(_ value: String, current: DoorBRunSnapshot) {",
+        "private func continueTapped(_ advance: DoorBAnswerAdvance, current: DoorBRunSnapshot) {",
+        "private func startAnother(current: DoorBRunSnapshot) {",
+        "private func backToMap(current: DoorBRunSnapshot) {",
+        "private func decideProbe(_ offer: ProbeOffer, accept: Bool, current: DoorBRunSnapshot) {",
+        "private func answerProbeItem(_ probe: ProbeInProgress, submitted: String, current: DoorBRunSnapshot) {",
+        "private func continueDiagnosisTapped(_ advance: DoorAProbeAnswerAdvance, current: DoorBRunSnapshot) {",
+        "private func decideFurtherLevel(_ offer: FurtherLevelOffer, accept: Bool, current: DoorBRunSnapshot) {",
+        "private func returnFromDiagnosis(outcome: DiagnosisOutcome, current: DoorBRunSnapshot) {",
+    ]
+
+    @Test(
+        "I14: each listed DoorBRunScreen action method makes exactly one DoorFacade call; the standalone diagnosis return makes none"
+    )
+    func doorBRunScreenActionsMakeExactlyOneCallEach() throws {
+        let shell = try Self.readShell()
+        for marker in Self.expectedDoorBRunScreenActionMarkers {
+            guard let body = Self.balancedBraceBlock(after: marker, in: shell) else {
+                Issue.record("could not locate body for \(marker)")
+                continue
+            }
+            let count = Self.matchCount(of: Self.doorFacadeCallPattern, in: body)
+            #expect(count == 1, "expected exactly one DoorFacade call in \(marker), found \(count)")
+        }
+        guard let standalone = Self.balancedBraceBlock(after: "if current.isStandaloneDiagnosis {", in: shell) else {
+            Issue.record("could not locate returnFromDiagnosis's standalone arm")
+            return
+        }
+        #expect(
+            Self.matchCount(of: Self.doorFacadeCallPattern, in: standalone) == 0,
+            "the standalone map_check_here return calls no DoorFacade entry (04.5 AC8, 04.9 AC8)")
+    }
+```
+
+Markers are the landed signature text. If swift-format wraps a signature, which F19 says it should not, the
+marker must copy the landed text including the line break. A marker that matches nothing records an `Issue`
+(empty = FAIL). It never passes silently. The existing control (`plantedSecondDoorFacadeCallInSubmitIsCaught`)
+already shows that the count pattern detects calls. The zero-count assertion uses the same pattern.
+
+##### E5 — `MathView` routing: replace `:690-713` (both tests)
+
+```swift
+    // MARK: - MathView usage: exactly the expected call sites, each routing a latex field
+
+    /// Every `MathView(latex:)` call site in `App/Sources/Doors` after task 04.9, each routing a latex field
+    /// (`contracts/data-model.md` § Text): 04.8's prompt, choice label and latex answer; 04.9's worked-example
+    /// step (§4.3). `why`, hint prose and every plain field never reach `MathView`. A later site adds one entry.
+    private static let expectedMathViewSites = [
+        "MathView(latex: content.promptLatex)", "MathView(latex: choice.latex)",
+        "MathView(latex: content.correctAnswerDisplay)", "MathView(latex: step)",
+    ]
+
+    @Test("MathView: the App/Sources/Doors call sites are exactly the expected set, each field-routed")
+    func mathViewCallSitesAreExactlyTheExpectedSet() throws {
+        let combined = try Self.combinedDoorsSource()
+        let count = Self.matchCount(of: #"MathView\(latex:"#, in: combined)
+        let expected = Self.expectedMathViewSites
+        #expect(count == expected.count, "expected \(expected.count) MathView(latex:) call sites, found \(count)")
+        for site in expected {
+            #expect(combined.components(separatedBy: site).count - 1 == 1, "expected exactly one \(site)")
+        }
+        let remediation = try Self.readDoor("RemediationView.swift")
+        #expect(
+            remediation.contains("ForEach(example.stepsLatex, id: \\.self) { step in"),
+            "`step` must be bound from WorkedExample.stepsLatex, never from a plain-text field")
+    }
+
+    @Test("negative control: a planted extra MathView(latex:) call site (why, rendered as latex) is caught")
+    func plantedExtraMathViewCallSiteIsCaught() {
+        let fixture = (Self.expectedMathViewSites + ["MathView(latex: content.why)"]).joined(separator: "\n")
+        #expect(
+            Self.matchCount(of: #"MathView\(latex:"#, in: fixture) == Self.expectedMathViewSites.count + 1,
+            "planted extra MathView call site was not detected")
+    }
+```
+
+##### E6 — chrome-only literals: `:715-753` (both tests)
+
+Add, directly above `doorsStringLiteralsAreOnlyKnownChrome`:
+
+```swift
+    /// The App-authored chrome labels permitted in `App/Sources/Doors`: 1–2 words each, never a `Core`-supplied
+    /// string. 04.8: "Continue", "Submit" (04.8 §4.6); 04.9: "Yes", "Not now" (04.9 §4.2, §4.4, §6). A later task
+    /// that adds a chrome label adds one entry here.
+    private static let doorsChromeAllowList: Set<String> = ["Continue", "Submit", "Yes", "Not now"]
+```
+
+In `doorsStringLiteralsAreOnlyKnownChrome()`, replace `let allowList: Set<String> = ["Continue", "Submit"]` with
+`let allowList = Self.doorsChromeAllowList`. Keep the `found == allowList` expectation. Append after it:
+
+```swift
+        for label in allowList {
+            #expect(label.split(separator: " ").count <= 2, "chrome label \"\(label)\" exceeds 2 words")
+        }
+        for copy in [
+            DoorADiagnosisCopy.costLine, DoorADiagnosisCopy.refutedLine, DoorADiagnosisCopy.cappedLine,
+            DoorADiagnosisCopy.furtherLevelQuestion,
+        ] {
+            #expect(!combined.contains("\"\(copy)\""), "Core copy duplicated as an App string literal: \(copy)")
+        }
+```
+
+In `plantedForeignChromeLiteralIsCaught()`, replace `!found.subtracting(["Continue", "Submit"]).isEmpty` with
+`!found.subtracting(Self.doorsChromeAllowList).isEmpty`. Append:
+
+```swift
+        #expect(
+            "Include in my next expedition".split(separator: " ").count > 2,
+            "a 4-word label was not caught by the 2-word bound")
+        let plantedCoreCopy = "Text(\"\(DoorADiagnosisCopy.costLine)\")"
+        #expect(
+            plantedCoreCopy.contains("\"\(DoorADiagnosisCopy.costLine)\""),
+            "planted Core copy literal was not detected")
+```
+
+The chrome stays App-authored chrome only: "Yes" and "Not now" are 1 and 2 words and match no `DoorADiagnosisCopy`
+value (F18). Every Door A content string still comes from `Core` (04.9 §1).
+
+##### Tests not touched
+
+Every other test in the file stays byte-unchanged (§2 table). `@Test(` count goes from **47 to 48**. The one
+addition is `plantedUnlistedDoorsFileIsCaught`. Four tests are renamed in place: `allDoorFilesExist`,
+`doorBPhaseHasExactlyTwoCases` / `plantedThirdDoorBPhaseCaseIsCaught`, `continueAfterAnswerHasExactlyOneCallSite`,
+and `mathViewHasExactlyThreeCallSitesInDoors` / `plantedFourthMathViewCallSiteIsCaught`. No test is deleted, and none
+is `.disabled`.
+
+##### Intent kept, guard by guard
+
+| Old guard | Intent | New guard | Negative control |
+|---|---|---|---|
+| `allDoorFilesExist` | Doors file inventory | `allDoorFilesExistAndListIsExhaustive` (now exhaustive) | `plantedUnlistedDoorsFileIsCaught` (new) |
+| `doorBPhaseHasExactlyTwoCases` | I3 phase discipline | `doorBPhaseHasExactlyTheExpectedCases` | `plantedExtraDoorBPhaseCaseIsCaught` (list-relative) |
+| `continueAfterAnswerHasExactlyOneCallSite` | I3 only continue leaves a card | `answerCardPhasesAreLeftOnlyViaTheirContinueCall` (both cards) | `plantedAnswerCardBypassIsCaught` (unchanged) |
+| `doorBRunScreenActionsMakeExactlyOneCallEach` | I14 one call per action | same name, list of 9, plus the standalone arm = 0 | `plantedSecondDoorFacadeCallInSubmitIsCaught` (unchanged) |
+| `mathViewHasExactlyThreeCallSitesInDoors` | `MathView` routes latex fields only | `mathViewCallSitesAreExactlyTheExpectedSet` | `plantedExtraMathViewCallSiteIsCaught` (list-relative) |
+| `doorsStringLiteralsAreOnlyKnownChrome` | chrome-only literals | same name, list-driven, plus ≤ 2 words and no Core copy | `plantedForeignChromeLiteralIsCaught` (list-relative, extended) |
+| `doorsFilesHoldNoStateProperties` / `doorBRunScreenHoldsExactlyOneStateProperty` | `@State` discipline | unchanged logic, now over 9 files / unchanged | unchanged |
+
 ## §5 Test plan (risk: seam — full plan)
 
 **C3 note (owner-verified, no agent claim of pixel-level or tap-level correctness).** `App/mathmath.xcodeproj`
@@ -1141,12 +1537,32 @@ report claims screenshot-level or tap-level correctness (D29).
     App/Sources/Shell/AppShell.swift` returns no match inside `returnFromDiagnosis` — the only field of
     `outcome` this task's code reads is the one `resumeAfterDiagnosis(outcome:)` parameter itself, never a
     branch on any of its sub-fields.
+  - EPIC 03 structural guards, re-scoped (§4.11):
+    - Assertions: the same eight guards as 04.8 §5 T5, now asserting `.diagnosisStarted` /
+      `DoorFacade.checkHere` / `isStandaloneDiagnosis: true|false` per branch and 5 Shell `CoreErrorText` sites.
+    - Instrument and exclusions: as 04.8 §5 T5.
+    - Negative controls: the list-relative ones inherited from 04.8.
+    - Test counts stay 44/38.
+  - 04.8's Doors structural suite, re-scoped (§4.11.3):
+    - Assertions: `allDoorFilesExistAndListIsExhaustive`, `doorBPhaseHasExactlyTheExpectedCases`,
+      `answerCardPhasesAreLeftOnlyViaTheirContinueCall`, `doorBRunScreenActionsMakeExactlyOneCallEach`,
+      `mathViewCallSitesAreExactlyTheExpectedSet`, `doorsStringLiteralsAreOnlyKnownChrome`, each over its
+      `private static let` list; every other Doors-wide guard now reads all nine `App/Sources/Doors` files.
+    - Instrument: Swift Testing `#expect` over source text, gate 3 on the simulator; excludes runtime, tap and
+      presentation behaviour (C3). An extractor or marker that matches nothing records an `Issue` (empty = FAIL);
+      an empty `App/Sources/Doors` = FAIL.
+    - Negative controls: `plantedUnlistedDoorsFileIsCaught` (new), `plantedExtraDoorBPhaseCaseIsCaught`,
+      `plantedAnswerCardBypassIsCaught`, `plantedSecondDoorFacadeCallInSubmitIsCaught`,
+      `plantedExtraMathViewCallSiteIsCaught`, `plantedForeignChromeLiteralIsCaught` — list-relative where they
+      count.
+    - Test count: `rg -c "@Test\("` gives 48, up from 47. No guard is deleted.
 - **T6 idempotency / no-leak:** `continueDiagnosisTapped` called twice on the same `Equatable`-equal
   `DoorAProbeAnswerAdvance` (via `DoorFacade.continueAfterProbeAnswer`'s own idempotency, 04.5 T6) returns
   `Equatable`-equal `DoorADiagnosisScreen` values, so this task's rendering re-derives the identical screen
-  either way; `rg -n "@State"` over `App/Sources/Doors` shows no new instance beyond 04.8's own
-  `DoorBViewState`/button `errorText` fields (this task adds none) — no file holds a `Core` value across calls
-  beyond the `DoorRunHolder`/`MapStateHolder` themselves (I14).
+  either way; `rg -n "@State"` over `App/Sources/Doors` shows zero matches (this task adds none; pinned by
+  `doorsFilesHoldNoStateProperties` over all nine Doors files, §4.11.3), and `DoorBRunScreen` keeps exactly one
+  (`doorBRunScreenHoldsExactlyOneStateProperty`) — no file holds a `Core` value across calls beyond the
+  `DoorRunHolder`/`MapStateHolder` themselves (I14).
 
 ## §6 Decision defaults
 
@@ -1212,6 +1628,14 @@ report claims screenshot-level or tap-level correctness (D29).
   (`fullScreenCover` binds on `doorHolder.current != nil`; `@Observable` needs no conformance), and a hand-written
   `==` over `Core` state would put equality semantics in the render layer (I14). Per
   `tasks/arbitration/arbiter-04-doorrunstate-equatable.md`.
+- IF an EPIC 03 structural guard, or a 04.8 guard in `DoorExpeditionScreensStructuralTests.swift`, pins a shape this task's ACs change THEN this task updates it in its own
+  commit exactly per §4.11. It never deletes, `.disabled`s or leaves the guard red, and never edits a guard
+  §4.11 does not name. The tester may add guards but may not weaken §4.11's.
+  (`tasks/arbitration/arbiter-04-08-structural-suite-ownership.md`, `tasks/arbitration/arbiter-04-09-doors-structural-suite-addendum.md`)
+- IF a Doors-wide guard reads a fixed file list that omits this task's new Doors files (so it stays green
+  while no longer scanning them) THEN the list is extended and made exhaustive against the directory
+  (§4.11.3 E1). A guard that passes only because it cannot see the new code is a silent weakening, not a
+  pass (`tasks/arbitration/arbiter-04-09-doors-structural-suite-addendum.md` §2).
 
 Standing defaults: identifiers and timestamps are untouched by this task — every id/timestamp already on
 `DoorADiagnosisScreen`/`DoorATerminalContent`/`DoorRunState`/`MapState` passes through opaquely, and no file
@@ -1234,6 +1658,9 @@ The task is done when ALL gates pass:
 - the 03.9 `AppSourcesBoundary` scan (`xcodebuild test -scheme Core-Package`, gate 3) stays green with this
   task's files present in `App/Sources`, with no edit to `AppSourcesBoundaryTests.swift` or
   `AppSourcesBoundaryNegativeControlTests.swift` (§6 default 3).
+- the full `Core` test suite (gate 3) is green. This includes `AppShellStructuralTests.swift`,
+  `MapPanelsPickersHandOffStructuralTests.swift` and `DoorExpeditionScreensStructuralTests.swift` as updated by §4.11. `MapCanvasViewStructuralTests`,
+  `AppSourcesBoundary*Tests`, `DoorFacade*Tests` and every other `CoreTests` file pass unmodified.
 - 03.12's simulator smoke (`scripts/sim-smoke.sh`, gate 4) stays green: this task adds no App launch-path code
   and no state-file interaction of its own beyond what 04.5's already-tested `DoorFacade` performs, so the
   fresh-install and seeded-relaunch scenarios (both scoped to launch/relaunch, before any Door A action) are

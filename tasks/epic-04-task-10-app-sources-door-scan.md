@@ -72,12 +72,17 @@ Invariants in play:
 
 Acceptance criteria (each independently verifiable):
 
-- AC1: `AppSourcesBoundary.doorRules` (new, in `DoorAppSourcesBoundaryTests.swift`) contains exactly three
-  `Rule` values: (a) "answer / correct_choice_id comparison outside CAS", (b) "free-text entry (TextField/
-  TextEditor) bound to an answer-named value", (g) "Door student-facing copy as an inline string literal (4+
-  words)". `AppSourcesBoundary.violations(in: realAppSources, rules: AppSourcesBoundary.defaultRules +
-  AppSourcesBoundary.doorRules)` returns `[]` over the real, landed `App/Sources` tree.
-- AC2: for each of the two new `doorRules` violation classes plus the Door-scoped `TextEditor` extension of (b),
+- AC1: `AppSourcesBoundary.doorRules` (new, in `DoorAppSourcesBoundaryTests.swift`) contains exactly two `Rule`
+  values: (a) "answer / correct_choice_id comparison outside CAS", (b) "free-text entry (TextField/TextEditor) bound
+  to an answer-named value"; `AppSourcesBoundary.doorCopyRule` (new, same file) is rule (g) "Door student-facing
+  copy as an inline string literal (4+ words)", isolated like 03.9's `networkRule` because it runs alone against
+  `App/Sources/Doors`. `violations(in: realAppSources, rules: defaultRules + doorRules)` returns `[]` over the real
+  `App/Sources` tree, and `violations(in: realAppSources/Doors, rules: [doorCopyRule])` returns `[]` over the real
+  `App/Sources/Doors` tree (instrument: Swift Testing `#expect`, gate 3; excludes files outside `Doors`, whose
+  EPIC 03 map chrome — `MapActionsView.swift:38`, `UnitListPickerView.swift:19`, `RegionPanelView.swift:16` —
+  carries 4+-token literals that are not Door copy; empty `Doors` = FAIL via the helper's own empty-scan guard).
+- AC2: for (a), for (g) (`doorCopyRule`, run with `rules: [AppSourcesBoundary.doorCopyRule]`) and for the
+  Door-scoped `TextEditor` extension of (b),
   a dedicated negative-control test plants exactly that violation in a synthetic fixture two directories deep
   and asserts `AppSourcesBoundary.violations(in:)` (with `defaultRules + doorRules`) reports it, mirroring
   03.9's own per-class negative-control shape (fresh `UUID()`-named temp dir, `defer`-removed, one plant, one
@@ -354,14 +359,19 @@ extension AppSourcesBoundary {
         Rule(name: "free-text entry (TextField/TextEditor) bound to an answer-named value") { line in
             line.range(of: #"(TextField|TextEditor)\s*\([^)]*[Aa]nswer"#, options: .regularExpression) != nil
         },
-        Rule(name: "Door student-facing copy as an inline string literal (4+ words)") { line in
-            doorCopyLiteralWordCount(in: line) >= 4
-        },
     ]
 
+    /// Rule (g), isolated as its own named rule (03.9's `networkRule` precedent) because it runs alone against
+    /// `App/Sources/Doors`, the Door view files: EPIC 03's map chrome outside that directory legitimately
+    /// carries 4+-token literals ("Include in my next expedition", "Past the last unit", "% cleared").
+    static let doorCopyRule = Rule(name: "Door student-facing copy as an inline string literal (4+ words)") {
+        line in
+        doorCopyLiteralWordCount(in: line) >= 4
+    }
+
     /// Counts whitespace-delimited words inside a `Text("...")`/`Button("...")` string literal on this line.
-    /// Every legitimate chrome label 04.8/04.9 ship ("Continue", "Submit", "Yes", "Not now", "Start expedition",
-    /// "Unit expedition", "Check me here") is 1–3 words; a planted sentence-shaped literal (4+ words) is the
+    /// Every chrome literal in App/Sources/Doors after 04.8/04.9 ("Continue", "Submit", "Yes", "Not now") is
+    /// 1–3 words; a planted sentence-shaped literal (4+ words) is the
     /// class this rule exists to catch — student-facing prose must come from a `Core`-computed value, never be
     /// authored inline in `App/Sources` (I6's spirit, applied to Door copy specifically).
     private static func doorCopyLiteralWordCount(in line: String) -> Int {
@@ -574,6 +584,9 @@ func appSourcesIsCleanWithDoorRules() throws {
     let violations = try AppSourcesBoundary.violations(
         in: appSources, rules: AppSourcesBoundary.defaultRules + AppSourcesBoundary.doorRules)
     #expect(violations.isEmpty, "Door boundary violations: \(violations)")
+    let copyViolations = try AppSourcesBoundary.violations(
+        in: appSources.appendingPathComponent("Doors"), rules: [AppSourcesBoundary.doorCopyRule])
+    #expect(copyViolations.isEmpty, "Door copy literal violations: \(copyViolations)")
 }
 ```
 
@@ -609,9 +622,10 @@ The implementer writes the remaining cases following this shape exactly, one pla
 
 - `TextEditor("Your answer", text: $answerText)` → "free-text entry (TextField/TextEditor) bound to an
   answer-named value".
-- `Text("Hard-coded error message here")` (5 words) → "Door student-facing copy as an inline string literal
-  (4+ words)"; a companion assertion in the SAME or a separate test confirms `Text("Continue")` (1 word) and
-  `Button("Check me here")` (3 words) do NOT trigger this rule (the clean-fixture proof for AC1).
+- `Text("Hard-coded error message here")` (5 words), scanned with `rules: [AppSourcesBoundary.doorCopyRule]` →
+  "Door student-facing copy as an inline string literal (4+ words)"; a companion assertion in the SAME or a
+  separate test confirms `Text("Continue")` (1 word) and `Button("Check me here")` (3 words) do NOT trigger
+  this rule (the clean-fixture proof for AC1).
 - `import FoundationModels` → the existing "non-allow-listed import" rule from `defaultRules` (AC3).
 - `import PencilKit` → the same existing rule (AC4).
 - `doorButtonActionViolations`, planted as a fixture `.swift` file containing a function with two `DoorFacade.*`
@@ -641,7 +655,8 @@ other model-calling path out of `App/Sources` (I2).
 
 ## §5 Test plan (risk: seam — full plan)
 
-- **T1 happy path:** `appSourcesIsCleanWithDoorRules()` (AC1) over the real, landed `App/Sources`;
+- **T1 happy path:** `appSourcesIsCleanWithDoorRules()` (AC1) over the real, landed `App/Sources`; plus
+  `doorCopyRule` over `App/Sources/Doors`;
   `doorButtonActionsAreClean()` (AC7) over the real `AppShell.swift`/`MapActionsView.swift`; both registry tests
   (AC5, AC6) resolving to their expected sets over the real `DoorFacadeSeamTests.swift`/`MapLaunch.swift`.
 - **T2 negative — invalid input rejected at the boundary:** not applicable in the schema-validation sense (this
@@ -710,11 +725,14 @@ other model-calling path out of `App/Sources` (I2).
   execution", quoted in this spec's branch note). This is the same category of accepted heuristic-over-AST
   limitation 03.9 itself already documents for its `TextField`-bound-to-answer rule.
 - IF the word-count threshold for rule (g) should be lower (e.g., 2+ words) to catch shorter invented prose THEN
-  it stays at 4+: every real, landed chrome literal 04.8/04.9 ship — "Continue", "Submit", "Yes", "Not now",
-  "Start expedition", "Unit expedition", "Check me here" — is 1–3 words (confirmed by direct read of both
-  specs' code blocks this session, §3); a 2-word or 3-word threshold would false-positive against this
-  already-correct, already-landed code. 4+ words is the smallest threshold that admits every confirmed-clean
-  literal while still catching a planted sentence-shaped violation.
+  it stays at 4+, and rule (g) (`doorCopyRule`) runs over `App/Sources/Doors` only: every chrome literal there
+  after 04.8/04.9 — "Continue", "Submit", "Yes", "Not now" — is 1–2 words, while three EPIC 03 map-chrome
+  literals outside `Doors` are 4+ tokens (`MapActionsView.swift:38`, `UnitListPickerView.swift:19`,
+  `RegionPanelView.swift:16` — `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md` F15) and are not
+  Door copy; a tree-wide (g) would be red on arrival.
+- IF AC9's "fails its own empty-match #expect" needs an instrument THEN wrap the call in Swift
+  Testing's `withKnownIssue { … }` so the helper's recorded issue is the asserted outcome (a known issue that does
+  not occur fails the test); never assert on the returned `[]`.
 - Standing defaults: no identifier or timestamp is introduced by this task (it is test-only); no model call
   exists in this task's code, so the confidence-threshold/Tier-0-fallback rule is satisfied vacuously; no
   telemetry path is touched; no node gains a `paraphrase` or verbatim-text field, since this task adds no

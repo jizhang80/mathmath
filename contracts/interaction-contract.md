@@ -1,13 +1,13 @@
 # Contract: Interaction contract — three doors over one base
 
-**Contract version:** v0.9.3 (discovery zone — finalized just-in-time by the Demo EPIC) · Source: brief v2
+**Contract version:** v1.0.0 (finalized by the Demo EPIC) · Source: brief v2
 §7, D23, D27, D44–D48, v2.7 §3; `map.md`, `expedition.md`, `diagnosis.md`; v0.9.1 adds the numeric
 normalisation rule (expedition Q4), the `remediated(p)` predicate and its two ripples (arbiter Q-A,
 `tasks/arbitration/arbiter-02-predispatch.md`), the `past_last_unit` marker text (arbiter Q-F), and the
 probe "available" definition (arbiter Q-G); v0.9.2 resolves the marker-drag finalization item (arbiter Q-B,
 `tasks/arbitration/arbiter-03-predispatch.md`); v0.9.3 resolves the answer-card timing and summary-tint
 finalization items and records the in-run abandoned log entry (arbiter Q-A, Q-G,
-`tasks/arbitration/arbiter-04-predispatch.md`)
+`tasks/arbitration/arbiter-04-predispatch.md`); v1.0.0 closes the discovery zone at the Demo wrap
 
 > The three doors as state machines with named states, events and guards, so `Core` implements them as
 > pure transition functions and `CoreTests` proves the properties. Screens are in the domain docs; this
@@ -134,4 +134,4 @@ Payloads are ids, enums, booleans and small integers only (I5).
 ## Finalization owed by the Demo EPIC
 Nothing remains owed. Resolved in v0.9.2: the marker is set from the unit list only — § 3; no drag. Resolved
 in v0.9.3: the answer card stays until the student continues, and the summary shows no region tint deltas —
-§ 2. Bump to v1.0.0 on wrap.
+§ 2. Finalized at v1.0.0.
