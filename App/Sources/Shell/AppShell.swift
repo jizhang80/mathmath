@@ -10,6 +10,31 @@ final class MapStateHolder {
     func replace(with newValue: MapState) { mapState = newValue }
 }
 
+/// The Door B render phase `DoorRunHolder` presents: either a screen `DoorFacade` returned, or the pending
+/// answer card `DoorFacade.answer` returned, until the continue control's tap replaces it (I3).
+enum DoorBPhase: Equatable {
+    case screen(DoorBScreen)
+    case answerCard(DoorBAnswerAdvance)
+}
+
+/// One Door B run's presentation state (§1: never named `*Session*`, `contracts/domain-glossary.md:29`).
+/// Not `Equatable`: it holds a `DoorRunState`, which is not `Equatable` (04.5 §4.1,
+/// `tasks/arbitration/arbiter-04-doorrunstate-equatable.md`).
+struct DoorBRunSnapshot {
+    let runState: DoorRunState
+    let phase: DoorBPhase
+    let writeFailureCode: String?
+}
+
+/// The App's ephemeral `@Observable` holder over the current Door B run, mirroring `MapStateHolder`'s own
+/// "replaced wholesale" discipline (arbiter-03 § Q-F).
+@Observable
+final class DoorRunHolder {
+    private(set) var current: DoorBRunSnapshot?
+    func replace(with newValue: DoorBRunSnapshot) { current = newValue }
+    func clear() { current = nil }
+}
+
 /// The App's launch shell (EPIC 03 task 03.12): resolves the embedded snapshot URL and the Application
 /// Support state-file URL, reads today from the device calendar, calls `MapLaunch.open`, and renders the
 /// refusal screen, the course picker, or the map screen. Composes 03.7's `MapLaunch`/`MapFacade`, 03.10's
@@ -25,6 +50,7 @@ struct AppShell: View {
     }
 
     @State private var holder = MapStateHolder()
+    @State private var doorHolder = DoorRunHolder()
     @State private var phase: Phase = .launching
     private let today = AppShell.resolveToday()
 
@@ -53,7 +79,16 @@ struct AppShell: View {
                     holder: holder, today: today, handOff: handOff,
                     onChangeCourse: { bundle, state in
                         phase = .courseSelection(bundle: bundle, previousState: state, unreadable: false)
-                    })
+                    }
+                )
+                .fullScreenCover(
+                    isPresented: Binding(
+                        get: { doorHolder.current != nil }, set: { if !$0 { doorHolder.clear() } })
+                ) {
+                    DoorBRunScreen(
+                        holder: doorHolder, mapHolder: holder, today: today,
+                        onDismiss: { doorHolder.clear() })
+                }
             }
         }
         .onAppear(perform: launch)
@@ -83,8 +118,13 @@ struct AppShell: View {
         switch destination {
         case .included(let map):
             holder.replace(with: map)
-        case .diagnosis, .unitExpedition:
-            break  // EPIC 04 (tasks 04.8/04.9) replaces this with a real screen.
+        case .doorBStarted(let outcome):
+            doorHolder.replace(
+                with: DoorBRunSnapshot(
+                    runState: outcome.runState, phase: .screen(outcome.screen),
+                    writeFailureCode: outcome.writeFailureCode))
+        case .diagnosis:
+            break  // EPIC 04 task 04.9 replaces this with a real screen.
         }
     }
 
@@ -139,6 +179,9 @@ private struct MapScreen: View {
                     ToolbarItem {
                         Button("Change course") { onChangeCourse(mapState.bundle, mapState.state) }
                     }
+                    ToolbarItem {
+                        StartExpeditionActionButton(mapState: mapState, today: today, handOff: handOff)
+                    }
                 }
                 .sheet(
                     isPresented: Binding(
@@ -165,5 +208,85 @@ private struct MapScreen: View {
         } else {
             EmptyView()
         }
+    }
+}
+
+/// The Door B (expedition) run screen: a pure phase switcher over `DoorRunHolder.current`, composing this
+/// task's own `App/Sources/Doors` views. Every state-changing action calls exactly one `DoorFacade` entry
+/// point (I14). Diagnosis (Door A) renders `EmptyView()` — EPIC 04 task 04.9's scope.
+private struct DoorBRunScreen: View {
+    let holder: DoorRunHolder
+    let mapHolder: MapStateHolder
+    let today: CalendarDay
+    let onDismiss: () -> Void
+
+    @State private var viewState = DoorBViewState()
+
+    var body: some View {
+        if let current = holder.current {
+            content(for: current)
+        } else {
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func content(for current: DoorBRunSnapshot) -> some View {
+        switch current.phase {
+        case .screen(.item(let item)):
+            ExpeditionItemView(
+                content: item, keypadInput: $viewState.keypadInput,
+                onSubmitNumeric: { submitted in submit(submitted, current: current) },
+                onSubmitChoice: { submitted in submit(submitted, current: current) })
+        case .screen(.diagnosis):
+            EmptyView()  // EPIC 04 task 04.9 replaces this.
+        case .screen(.summary(let summary)):
+            ExpeditionSummaryView(
+                summary: summary,
+                writeFailureText: current.writeFailureCode.flatMap {
+                    CoreError(rawValue: $0).flatMap(CoreErrorText.text(for:))
+                },
+                startAnotherErrorText: viewState.startAnotherErrorText,
+                onStartAnother: { startAnother(current: current) },
+                onBackToMap: { backToMap(current: current) })
+        case .answerCard(let advance):
+            ExpeditionAnswerCardView(content: advance.answerCard) {
+                continueTapped(advance, current: current)
+            }
+        }
+    }
+
+    private func submit(_ value: String, current: DoorBRunSnapshot) {
+        let (advance, runState, failure) = DoorFacade.answer(current.runState, submitted: value, today: today)
+        viewState.keypadInput = ""
+        holder.replace(
+            with: DoorBRunSnapshot(runState: runState, phase: .answerCard(advance), writeFailureCode: failure)
+        )
+    }
+
+    private func continueTapped(_ advance: DoorBAnswerAdvance, current: DoorBRunSnapshot) {
+        let (screen, runState) = DoorFacade.continueAfterAnswer(advance, runState: current.runState)
+        holder.replace(
+            with: DoorBRunSnapshot(runState: runState, phase: .screen(screen), writeFailureCode: nil))
+    }
+
+    private func startAnother(current: DoorBRunSnapshot) {
+        do {
+            let (runState, screen, failure, _) = try DoorFacade.startAnother(
+                mapState: current.runState.map, today: today)
+            viewState.startAnotherErrorText = nil
+            holder.replace(
+                with: DoorBRunSnapshot(runState: runState, phase: .screen(screen), writeFailureCode: failure))
+        } catch let error as CoreError {
+            viewState.startAnotherErrorText = CoreErrorText.text(for: error)
+        } catch {
+            viewState.startAnotherErrorText = nil
+        }
+    }
+
+    private func backToMap(current: DoorBRunSnapshot) {
+        let (mapState, _) = DoorFacade.backToMap(current.runState, today: today)
+        mapHolder.replace(with: mapState)
+        onDismiss()
     }
 }

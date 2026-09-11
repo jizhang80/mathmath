@@ -1,16 +1,25 @@
 import Core
 import SwiftUI
 
-/// EPIC 04 (tasks 04.8/04.9) replaces the destinations this enum stands in for
+/// EPIC 04 task 04.9 replaces the `.diagnosis` destination this enum stands in for
 /// (`docs/epics/epic-03-app-map-shell.md` § 2). Each case carries exactly the value its façade call
 /// already returns — nothing this task invents.
 enum HandOffDestination {
     case diagnosis(event: DiagnosisEvent)
-    case unitExpedition(result: ComposeResult)
+    case doorBStarted(DoorBStartOutcome)
     case included(map: MapState)
 }
 
 typealias HandOffHook = (HandOffDestination) -> Void
+
+/// The payload `.doorBStarted` carries — one `DoorFacade` start call's result, unchanged, for `AppShell` to
+/// hand to its `DoorRunHolder`. Not `Equatable`: it holds a `DoorRunState`, which is not `Equatable`
+/// (04.5 §4.1, `tasks/arbitration/arbiter-04-doorrunstate-equatable.md`).
+struct DoorBStartOutcome {
+    let runState: DoorRunState
+    let screen: DoorBScreen
+    let writeFailureCode: String?
+}
 
 /// Map W2 step 2, the `blocked`/upstream branch: opens diagnosis (D28) on this node.
 struct CheckHereActionButton: View {
@@ -65,9 +74,46 @@ struct UnitExpeditionActionButton: View {
 
     private func start() {
         do {
-            let (result, _) = try MapFacade.unitExpedition(unitId: unitId, mapState: mapState, today: today)
+            let (runState, screen, failure, _) = try DoorFacade.startUnitExpedition(
+                unitId: unitId, mapState: mapState, today: today)
             errorText = nil
-            handOff(.unitExpedition(result: result))
+            handOff(
+                .doorBStarted(
+                    DoorBStartOutcome(runState: runState, screen: screen, writeFailureCode: failure)))
+        } catch let error as CoreError {
+            errorText = CoreErrorText.text(for: error)
+        } catch {
+            errorText = nil
+        }
+    }
+}
+
+/// The domain doc's own name for the map entry point into Door B (`docs/domains/expedition.md`: "Entered
+/// from the Map 'Start expedition' button"), identical in shape to `UnitExpeditionActionButton`.
+struct StartExpeditionActionButton: View {
+    let mapState: MapState
+    let today: CalendarDay
+    let handOff: HandOffHook
+
+    @State private var errorText: String?
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Button("Start expedition") { start() }
+            if let errorText {
+                Text(errorText)
+            }
+        }
+    }
+
+    private func start() {
+        do {
+            let (runState, screen, failure, _) = try DoorFacade.startExpedition(
+                mapState: mapState, today: today)
+            errorText = nil
+            handOff(
+                .doorBStarted(
+                    DoorBStartOutcome(runState: runState, screen: screen, writeFailureCode: failure)))
         } catch let error as CoreError {
             errorText = CoreErrorText.text(for: error)
         } catch {

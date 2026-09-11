@@ -124,75 +124,125 @@ struct AppShellStructuralTests {
         #expect(cases.count == 5, "planted fifth Phase case was not detected: \(cases)")
     }
 
-    // MARK: - AC7: handOff switches over exactly three HandOffDestination names, in two case clauses
+    // MARK: - AC7 (03.12) as re-scoped by 04.8 AC7: one clause per HandOffDestination case; no branch calls Core
+
+    /// The case-clause prefixes `AppShell.handOff`'s switch carries after task 04.8
+    /// (`tasks/epic-04-task-08-app-expedition-screens.md` §4.9). Task 04.9 replaces `"case .diagnosis:"` with
+    /// `"case .diagnosisStarted("` in this list.
+    private static let expectedHandOffCaseClausePrefixes = [
+        "case .included(", "case .doorBStarted(", "case .diagnosis:",
+    ]
+
+    private static let coreCallPattern = #"\b(MapFacade|DoorFacade|MapLaunch)\.\w+\("#
+
+    /// One `case` clause of `block`: from the line starting with `prefix` up to (excluding) the next line
+    /// starting with `case ` or `default:`, or the end of `block`.
+    private static func caseBranch(startingWith prefix: String, in block: String) -> String? {
+        let lines = block.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        guard
+            let start = lines.firstIndex(where: {
+                $0.trimmingCharacters(in: .whitespaces).hasPrefix(prefix)
+            })
+        else { return nil }
+        var branch = [lines[start]]
+        for line in lines[(start + 1)...] {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("case ") || trimmed.hasPrefix("default:") { break }
+            branch.append(line)
+        }
+        return branch.joined(separator: "\n")
+    }
 
     @Test(
-        "AC7: AppShell.handOff switches over exactly three HandOffDestination names (.included, .diagnosis, .unitExpedition) in exactly two case clauses"
+        "AC7 (03.12, re-scoped by 04.8 AC7): AppShell.handOff has exactly one case clause per HandOffDestination case"
     )
-    func handOffSwitchesOverExactlyThreeDestinationNames() throws {
+    func handOffSwitchHasOneClausePerDestination() throws {
         let source = try Self.readShell("AppShell.swift")
         guard let body = Self.balancedBraceBlock(after: "switch destination {", in: source) else {
             Issue.record("could not locate AppShell.handOff's switch body")
             return
         }
         let cases = Self.caseLines(in: body)
-        #expect(cases.count == 2, "expected exactly 2 case clauses (one combined), found \(cases.count)")
-        #expect(cases.contains { $0.hasPrefix("case .included(") })
-        #expect(cases.contains("case .diagnosis, .unitExpedition:"))
+        let expected = Self.expectedHandOffCaseClausePrefixes
+        #expect(cases.count == expected.count, "expected \(expected.count) case clauses, found: \(cases)")
+        for prefix in expected {
+            #expect(
+                cases.filter { $0.hasPrefix(prefix) }.count == 1,
+                "expected exactly one clause starting \(prefix): \(cases)")
+        }
+        #expect(!body.contains(".unitExpedition"), "03.11's retired .unitExpedition case must not reappear")
     }
 
-    @Test("negative control: a planted fourth case in the handOff switch is caught")
-    func plantedFourthHandOffCaseIsCaught() {
+    @Test("negative control: a planted extra case clause in the handOff switch is caught")
+    func plantedExtraHandOffCaseIsCaught() {
         let fixture = """
             switch destination {
             case .included(let map):
                 holder.replace(with: map)
+            case .doorBStarted(let outcome):
+                doorHolder.replace(with: snapshot(outcome))
             case .diagnosis:
-                break
-            case .unitExpedition:
                 break
             case .somethingElse:
                 break
             }
             """
-        let body = Self.balancedBraceBlock(after: "switch destination {", in: fixture)
-        #expect(body != nil)
-        let cases = Self.caseLines(in: body!)
-        #expect(cases.count == 4, "planted extra case clauses were not detected: \(cases)")
+        guard let body = Self.balancedBraceBlock(after: "switch destination {", in: fixture) else {
+            Issue.record("fixture setup failed")
+            return
+        }
+        let cases = Self.caseLines(in: body)
+        #expect(
+            cases.count == Self.expectedHandOffCaseClausePrefixes.count + 1,
+            "planted extra case clause was not detected: \(cases)")
     }
 
     @Test(
-        "AC7: neither .diagnosis nor .unitExpedition calls any further Core function — the branch is a bare placeholder"
+        "I14 (04.8 AC7): no handOff branch calls a façade or launch function; .doorBStarted only replaces the door holder; the .diagnosis placeholder touches no holder"
     )
-    func diagnosisAndUnitExpeditionBranchCallsNoFurtherCoreFunction() throws {
+    func handOffBranchesCallNoFurtherCoreFunction() throws {
         let source = try Self.readShell("AppShell.swift")
-        guard let body = Self.balancedBraceBlock(after: "switch destination {", in: source),
-            let marker = body.range(of: "case .diagnosis, .unitExpedition:")
-        else {
-            Issue.record("could not locate the .diagnosis, .unitExpedition branch")
+        guard let body = Self.balancedBraceBlock(after: "switch destination {", in: source) else {
+            Issue.record("could not locate AppShell.handOff's switch body")
             return
         }
-        let branch = String(body[marker.upperBound...])
-        #expect(!branch.contains("MapFacade."), "the placeholder branch must call no further façade function")
-        #expect(!branch.contains("holder.replace"), "the placeholder branch must not touch the map state")
         #expect(
-            branch.range(of: #"\bMapLaunch\."#, options: .regularExpression) == nil,
-            "the placeholder branch must not re-enter MapLaunch")
+            body.range(of: Self.coreCallPattern, options: .regularExpression) == nil,
+            "a handOff branch calls a façade/launch function; the action's one call belongs to its button (I14)"
+        )
+        guard let doorB = Self.caseBranch(startingWith: "case .doorBStarted(", in: body) else {
+            Issue.record("could not isolate the .doorBStarted branch")
+            return
+        }
+        #expect(doorB.components(separatedBy: "doorHolder.replace(").count - 1 == 1)
+        guard let placeholder = Self.caseBranch(startingWith: "case .diagnosis:", in: body) else {
+            Issue.record("could not isolate the .diagnosis placeholder branch")
+            return
+        }
+        #expect(!placeholder.contains("replace("), "the .diagnosis placeholder must not touch either holder")
     }
 
-    @Test("negative control: a planted MapFacade call inside the placeholder branch is caught")
-    func plantedFacadeCallInPlaceholderBranchIsCaught() {
+    @Test("negative control: a planted DoorFacade call inside a handOff branch is caught")
+    func plantedFacadeCallInHandOffBranchIsCaught() {
         let fixture = """
             switch destination {
             case .included(let map):
                 holder.replace(with: map)
-            case .diagnosis, .unitExpedition:
-                _ = MapFacade.checkHere(nodeId: "x", mapState: someMap)
+            case .doorBStarted(let outcome):
+                _ = DoorFacade.backToMap(outcome.runState, today: today)
+            case .diagnosis:
+                break
             }
             """
-        let body = Self.balancedBraceBlock(after: "switch destination {", in: fixture)!
-        let branch = String(body[body.range(of: "case .diagnosis, .unitExpedition:")!.upperBound...])
-        #expect(branch.contains("MapFacade."), "planted violation was not detected")
+        guard let body = Self.balancedBraceBlock(after: "switch destination {", in: fixture) else {
+            Issue.record("fixture setup failed")
+            return
+        }
+        #expect(
+            body.range(of: Self.coreCallPattern, options: .regularExpression) != nil,
+            "planted façade call was not detected")
+        let doorB = Self.caseBranch(startingWith: "case .doorBStarted(", in: body)
+        #expect(doorB?.contains("doorHolder.replace(") == false, "planted missing replace was not detected")
     }
 
     // MARK: - I14: MapLaunch.open is the only launch entry point; AppShell never calls BundleLoader directly
@@ -330,28 +380,43 @@ struct AppShellStructuralTests {
         #expect(fixture.contains("CalendarDay(iso: iso)!"), "planted violation was not detected")
     }
 
-    // MARK: - AC3 / arbiter-03 § Q-A: CoreErrorText is the only source of student text; one code named
+    // MARK: - AC3 / arbiter-03 § Q-A (re-scoped by 04.8 §4.9): CoreErrorText is the only source of student text
+
+    /// Every `CoreErrorText.text(for:` call site in `App/Sources/Shell` after task 04.8 (§4.9): 03.12's two,
+    /// plus 04.8's summary write-failure resolution and `DoorBRunScreen.startAnother`'s error text. Task 04.9
+    /// appends `"CoreErrorText.text(for: coreError)"` (its `writeFailureBanner`) and nothing else.
+    private static let expectedShellCoreErrorTextSites = [
+        "CoreErrorText.text(for: refusal.studentCode)",
+        "CoreErrorText.text(for: .platformStateUnreadable)",
+        "flatMap(CoreErrorText.text(for:))",
+        "CoreErrorText.text(for: error)",
+    ]
 
     @Test(
-        "AC3: CoreErrorText.text(for:) is called exactly twice across App/Sources/Shell — RefusalView's studentCode lookup and AppShell's platformStateUnreadable lookup"
+        "AC3 (03.12, re-scoped by 04.8 §4.9): CoreErrorText.text(for:) is called at exactly the expected App/Sources/Shell sites, no more"
     )
-    func coreErrorTextCalledExactlyTwiceAcrossShell() throws {
-        let combined = try Self.combinedShellSource()
+    func coreErrorTextCalledOnlyAtExpectedShellSites() throws {
+        let combined = Self.codeOnlyLines(in: try Self.combinedShellSource())
         let count = combined.components(separatedBy: "CoreErrorText.text(for:").count - 1
-        #expect(count == 2, "expected exactly 2 CoreErrorText.text(for:) call sites, found \(count)")
-        #expect(combined.contains("CoreErrorText.text(for: refusal.studentCode)"))
-        #expect(combined.contains("CoreErrorText.text(for: .platformStateUnreadable)"))
+        let expected = Self.expectedShellCoreErrorTextSites
+        #expect(
+            count == expected.count,
+            "expected \(expected.count) CoreErrorText.text(for: sites, found \(count)")
+        for site in expected {
+            #expect(combined.contains(site), "missing expected CoreErrorText call site: \(site)")
+        }
     }
 
-    @Test("negative control: a planted third CoreErrorText.text(for:) call site is caught by the count")
-    func plantedThirdCoreErrorTextCallSiteIsCaught() {
-        let fixture = """
-            CoreErrorText.text(for: refusal.studentCode)
-            CoreErrorText.text(for: .platformStateUnreadable)
-            CoreErrorText.text(for: .expNoFringe)
-            """
+    @Test(
+        "negative control: one CoreErrorText.text(for:) call site beyond the expected set is caught by the count"
+    )
+    func plantedExtraCoreErrorTextCallSiteIsCaught() {
+        let fixture = (Self.expectedShellCoreErrorTextSites + ["CoreErrorText.text(for: .expNoFringe)"])
+            .joined(separator: "\n")
         let count = fixture.components(separatedBy: "CoreErrorText.text(for:").count - 1
-        #expect(count == 3, "planted extra call site was not detected")
+        #expect(
+            count == Self.expectedShellCoreErrorTextSites.count + 1,
+            "planted extra call site was not detected")
     }
 
     @Test(

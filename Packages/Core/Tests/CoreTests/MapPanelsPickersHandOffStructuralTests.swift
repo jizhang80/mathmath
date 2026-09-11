@@ -49,6 +49,19 @@ struct MapPanelsPickersHandOffStructuralTests {
         return contents
     }
 
+    /// Strips `///`/`//` comment lines before a code-only scan, mirroring
+    /// `AppShellStructuralTests.codeOnlyLines(in:)`: a doc comment naming a retired call shape is not a call.
+    private static func codeOnlyLines(in source: String) -> String {
+        source.split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+    }
+
+    private static func matchCount(of pattern: String, in text: String) -> Int {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return -1 }
+        return regex.numberOfMatches(in: text, range: NSRange(text.startIndex..., in: text))
+    }
+
     // MARK: - Fixture presence (all six files exist)
 
     @Test("all six task-scope files exist under App/Sources/MapUI")
@@ -199,14 +212,25 @@ struct MapPanelsPickersHandOffStructuralTests {
             .filter { $0.hasPrefix("case ") }
     }
 
-    @Test("AC9: HandOffDestination has exactly three cases: .diagnosis, .unitExpedition, .included")
+    /// The exact `HandOffDestination` case texts after task 04.8 (§4.8). Task 04.9 replaces
+    /// `"diagnosis(event: DiagnosisEvent)"` with `"diagnosisStarted(DoorAStartOutcome)"` in this list.
+    private static let expectedHandOffCases = [
+        "diagnosis(event: DiagnosisEvent)", "doorBStarted(DoorBStartOutcome)", "included(map: MapState)",
+    ]
+
+    @Test("AC9 (03.11, re-scoped by 04.8 AC6): HandOffDestination has exactly the three expected cases")
     func handOffDestinationHasExactlyThreeCases() throws {
         let source = try Self.readReal("MapActionsView.swift")
         let cases = Self.handOffDestinationCaseLines(in: source)
-        #expect(cases.count == 3, "expected exactly 3 cases, found \(cases.count): \(cases)")
-        #expect(cases.contains { $0.contains("diagnosis(event: DiagnosisEvent)") })
-        #expect(cases.contains { $0.contains("unitExpedition(result: ComposeResult)") })
-        #expect(cases.contains { $0.contains("included(map: MapState)") })
+        let expected = Self.expectedHandOffCases
+        #expect(
+            cases.count == expected.count, "expected \(expected.count) cases, found \(cases.count): \(cases)")
+        for text in expected {
+            #expect(cases.contains("case \(text)"), "missing case \(text): \(cases)")
+        }
+        #expect(
+            !Self.codeOnlyLines(in: source).contains("ComposeResult"),
+            "03.11's retired ComposeResult payload must not reappear")
         #expect(
             source.contains("typealias HandOffHook = (HandOffDestination) -> Void"),
             "HandOffHook must be exactly this type alias")
@@ -217,62 +241,113 @@ struct MapPanelsPickersHandOffStructuralTests {
         let fixture = """
             enum HandOffDestination {
                 case diagnosis(event: DiagnosisEvent)
-                case unitExpedition(result: ComposeResult)
+                case doorBStarted(DoorBStartOutcome)
                 case included(map: MapState)
                 case somethingElse
             }
             """
         let cases = Self.handOffDestinationCaseLines(in: fixture)
-        #expect(cases.count == 4, "planted fourth case was not detected: \(cases)")
+        #expect(
+            cases.count == Self.expectedHandOffCases.count + 1,
+            "planted fourth case was not detected: \(cases)")
     }
 
-    // MARK: - AC2/AC3/AC4: exactly one façade call per action button, in MapActionsView.swift
+    // MARK: - AC2/AC3/AC4 (03.11, re-scoped by 04.8 AC6): one façade call and one success handOff per button
+
+    /// Every façade call in `MapActionsView.swift` after task 04.8 (§4.8), one per action button. Task 04.9
+    /// replaces `"MapFacade.checkHere("` with `"DoorFacade.checkHere("` in this list.
+    private static let expectedActionFacadeCalls = [
+        "MapFacade.checkHere(", "MapFacade.include(", "DoorFacade.startUnitExpedition(",
+        "DoorFacade.startExpedition(",
+    ]
+
+    /// Each success-path `handOff(` shape after task 04.8, as a regex (`\s*`: swift-format may wrap after
+    /// `handOff(`), with its site count. Task 04.9 replaces the `.diagnosis(event: event)` key with
+    /// `#"handOff\(\s*\.diagnosisStarted\(\s*DoorAStartOutcome\("#` (count 1).
+    private static let expectedHandOffCallPatterns: [String: Int] = [
+        #"handOff\(\s*\.diagnosis\(event: event\)\)"#: 1,
+        #"handOff\(\s*\.included\(map: newMap\)\)"#: 1,
+        #"handOff\(\s*\.doorBStarted\("#: 2,
+    ]
+
+    private static let facadeCallPattern = #"\b(MapFacade|DoorFacade)\.\w+\("#
 
     @Test(
-        "AC2/AC3/AC4: MapActionsView.swift calls MapFacade exactly three times, once per button, and handOff exactly once per action"
+        "AC2/AC3/AC4 (03.11, re-scoped by 04.8 AC6): MapActionsView.swift makes exactly one façade call and one success-path handOff per action button"
     )
-    func mapActionsViewCallsFacadeExactlyOncePerButton() throws {
-        let source = try Self.readReal("MapActionsView.swift")
-        let facadeCallCount = source.components(separatedBy: "MapFacade.").count - 1
-        #expect(facadeCallCount == 3, "expected exactly 3 MapFacade. call sites, found \(facadeCallCount)")
-        #expect(source.contains("MapFacade.checkHere("))
-        #expect(source.contains("MapFacade.include("))
-        #expect(source.contains("MapFacade.unitExpedition("))
-
-        // handOff is called exactly once per success path in each button; UnitExpeditionActionButton also
-        // calls it zero times on failure (no extra call inside the catch blocks).
-        let handOffCallCount = source.components(separatedBy: "handOff(").count - 1
+    func mapActionsViewCallsExactlyOneFacadeEntryPerButton() throws {
+        let code = Self.codeOnlyLines(in: try Self.readReal("MapActionsView.swift"))
+        let calls = Self.expectedActionFacadeCalls
+        let total = Self.matchCount(of: Self.facadeCallPattern, in: code)
+        #expect(total == calls.count, "expected \(calls.count) façade call sites, found \(total)")
+        for call in calls {
+            #expect(
+                code.components(separatedBy: call).count - 1 == 1, "expected exactly one \(call) call site")
+        }
         #expect(
-            handOffCallCount == 3, "expected exactly 3 handOff( call sites total, found \(handOffCallCount)")
-        #expect(source.contains("handOff(.diagnosis(event: event))"))
-        #expect(source.contains("handOff(.included(map: newMap))"))
-        #expect(source.contains("handOff(.unitExpedition(result: result))"))
+            !code.contains("MapFacade.unitExpedition("),
+            "Unit expedition must call DoorFacade.startUnitExpedition, never MapFacade.unitExpedition (04.8 AC6)"
+        )
+        let handOffTotal = code.components(separatedBy: "handOff(").count - 1
+        let expectedTotal = Self.expectedHandOffCallPatterns.values.reduce(0, +)
+        #expect(
+            handOffTotal == expectedTotal, "expected \(expectedTotal) handOff( sites, found \(handOffTotal)")
+        for (pattern, count) in Self.expectedHandOffCallPatterns {
+            #expect(
+                Self.matchCount(of: pattern, in: code) == count,
+                "expected \(count) handOff site(s) matching /\(pattern)/")
+        }
     }
 
-    @Test("negative control: a planted second MapFacade call in one button is caught by the count")
+    @Test("negative control: a planted second façade call in one button is caught by the count")
     func plantedSecondFacadeCallIsCaught() {
         let fixture = """
-            Button("x") {
-                let (event, _) = MapFacade.checkHere(nodeId: nodeId, mapState: mapState)
+            private func start() {
+                let (runState, screen, failure, _) = try DoorFacade.startExpedition(
+                    mapState: mapState, today: today)
                 _ = MapFacade.include(nodeId: nodeId, mapState: mapState)
-                handOff(.diagnosis(event: event))
+                handOff(.doorBStarted(DoorBStartOutcome(runState: runState, screen: screen, writeFailureCode: failure)))
             }
             """
-        let count = fixture.components(separatedBy: "MapFacade.").count - 1
-        #expect(count == 2, "planted extra façade call was not detected")
+        #expect(
+            Self.matchCount(of: Self.facadeCallPattern, in: fixture) == 2,
+            "planted extra façade call was not detected")
     }
 
     @Test(
-        "AC4: UnitExpeditionActionButton calls handOff zero times inside its catch blocks (only inside the try block)"
+        "negative control: a wrapped third .doorBStarted handOff is counted, so the per-shape count catches it"
     )
-    func unitExpeditionButtonCallsHandOffOnlyOnSuccess() throws {
+    func plantedWrappedExtraDoorBHandOffIsCaught() {
+        let fixture = """
+            handOff(.doorBStarted(DoorBStartOutcome(runState: a, screen: b, writeFailureCode: c)))
+            handOff(
+                .doorBStarted(DoorBStartOutcome(runState: a, screen: b, writeFailureCode: c)))
+            handOff(.doorBStarted(DoorBStartOutcome(runState: a, screen: b, writeFailureCode: c)))
+            """
+        #expect(Self.matchCount(of: #"handOff\(\s*\.doorBStarted\("#, in: fixture) == 3)
+    }
+
+    @Test(
+        "AC4 (03.11) + 04.8 AC6: every CoreError catch block in MapActionsView.swift sets errorText and calls handOff zero times"
+    )
+    func actionButtonsCallHandOffOnlyOnSuccess() throws {
         let source = try Self.readReal("MapActionsView.swift")
-        guard let catchBlock = Self.textBetween(source, "catch let error as CoreError {", "catch {") else {
-            Issue.record("could not isolate the CoreError catch block")
-            return
+        var blocks: [String] = []
+        var searchFrom = source.startIndex
+        while let startRange = source.range(
+            of: "catch let error as CoreError {", range: searchFrom..<source.endIndex),
+            let endRange = source.range(of: "catch {", range: startRange.upperBound..<source.endIndex)
+        {
+            blocks.append(String(source[startRange.upperBound..<endRange.lowerBound]))
+            searchFrom = endRange.upperBound
         }
-        #expect(!catchBlock.contains("handOff("), "the CoreError catch block must not call handOff")
-        #expect(catchBlock.contains("CoreErrorText.text(for: error)"))
+        #expect(
+            blocks.count == 2, "expected one CoreError catch block per throwing button, found \(blocks.count)"
+        )
+        for block in blocks {
+            #expect(!block.contains("handOff("), "a CoreError catch block must not call handOff")
+            #expect(block.contains("CoreErrorText.text(for: error)"))
+        }
     }
 
     @Test("negative control: a catch block that also calls handOff is caught")
@@ -280,7 +355,7 @@ struct MapPanelsPickersHandOffStructuralTests {
         let fixture = """
             catch let error as CoreError {
                 errorText = CoreErrorText.text(for: error)
-                handOff(.unitExpedition(result: fakeResult))
+                handOff(.doorBStarted(fakeOutcome))
             }
             catch {
             """
@@ -482,31 +557,44 @@ struct MapPanelsPickersHandOffStructuralTests {
         #expect(source.contains("Link(\"Source\", destination: url)"))
     }
 
-    // MARK: - I14: exactly one @State property across all six files; no @State holds a Core state type
+    // MARK: - I14 (03.11, re-scoped by 04.8 AC6): exactly two @State properties, one errorText per throwing button
 
     @Test(
-        "I14: exactly one @State property exists across all six files, and it is UnitExpeditionActionButton.errorText"
+        "I14 (re-scoped by 04.8 AC6): exactly two @State properties exist across all six files, each `@State private var errorText: String?` in MapActionsView.swift, one per Unit/Start button"
     )
-    func exactlyOneStatePropertyAcrossAllFiles() throws {
+    func exactlyTwoStatePropertiesAcrossAllFiles() throws {
         let contents = try Self.readAllReal()
         var stateLines: [String] = []
         for (name, source) in contents {
-            for line in source.split(separator: "\n") {
-                if line.contains("@State") { stateLines.append("\(name): \(line)") }
+            for line in source.split(separator: "\n") where line.contains("@State") {
+                stateLines.append("\(name): \(line.trimmingCharacters(in: .whitespaces))")
             }
         }
-        #expect(stateLines.count == 1, "expected exactly one @State property, found: \(stateLines)")
-        #expect(stateLines.first?.contains("errorText") == true)
-        #expect(stateLines.first?.contains("String?") == true)
+        #expect(stateLines.count == 2, "expected exactly two @State properties, found: \(stateLines)")
+        for line in stateLines {
+            #expect(
+                line == "MapActionsView.swift: @State private var errorText: String?",
+                "unexpected @State property: \(line)")
+        }
+        let actions = try Self.readReal("MapActionsView.swift")
+        for button in ["UnitExpeditionActionButton", "StartExpeditionActionButton"] {
+            let header = Self.textBetween(actions, "struct \(button): View {", "var body")
+            #expect(
+                header?.contains("@State private var errorText: String?") == true,
+                "\(button) must own its own errorText @State")
+        }
     }
 
-    @Test("I14 negative control: a second planted @State property is caught by the count")
-    func plantedSecondStatePropertyIsCaught() {
-        let fixtureA = "@State private var errorText: String?\n"
-        let fixtureB = "@State private var cachedMapState: MapState?\n"
-        let combined = fixtureA + fixtureB
-        let count = combined.split(separator: "\n").filter { $0.contains("@State") }.count
-        #expect(count == 2, "planted second @State property was not detected")
+    @Test("I14 negative control: a third planted @State property is caught by the count and the name check")
+    func plantedThirdStatePropertyIsCaught() {
+        let lines = [
+            "@State private var errorText: String?", "@State private var errorText: String?",
+            "@State private var cachedMapState: MapState?",
+        ]
+        #expect(lines.filter { $0.contains("@State") }.count == 3, "planted third @State was not detected")
+        #expect(
+            lines.contains { $0 != "@State private var errorText: String?" },
+            "planted foreign @State not detected")
     }
 
     @Test("I14: no @State property in any of the six files holds a MapState, StudentState or ContentBundle")
@@ -572,12 +660,25 @@ struct MapPanelsPickersHandOffStructuralTests {
         #expect(platformStateWriteFailed.surface == "internal")
         #expect(platformStateWriteFailed.userText == nil)
 
-        let source = try Self.readReal("MapActionsView.swift")
-        let coreErrorTextCallCount = source.components(separatedBy: "CoreErrorText.text(for:").count - 1
+        let code = Self.codeOnlyLines(in: try Self.readReal("MapActionsView.swift"))
+        let coreErrorTextCallCount = code.components(separatedBy: "CoreErrorText.text(for:").count - 1
         #expect(
-            coreErrorTextCallCount == 1,
-            "expected exactly one CoreErrorText.text(for:) call site across the six files, found \(coreErrorTextCallCount)"
+            coreErrorTextCallCount == 2,
+            "expected exactly two CoreErrorText.text(for:) sites (Unit, Start buttons), found \(coreErrorTextCallCount)"
         )
+        #expect(code.components(separatedBy: "CoreErrorText.text(for: error)").count - 1 == 2)
+    }
+
+    @Test(
+        "negative control: a third CoreErrorText.text(for:) site in MapActionsView.swift is caught by the count"
+    )
+    func plantedThirdMapActionsCoreErrorTextSiteIsCaught() {
+        let fixture = """
+            errorText = CoreErrorText.text(for: error)
+            errorText = CoreErrorText.text(for: error)
+            Text(CoreErrorText.text(for: .expTrailInvalid) ?? "")
+            """
+        #expect(fixture.components(separatedBy: "CoreErrorText.text(for:").count - 1 == 3)
     }
 
     @Test(
