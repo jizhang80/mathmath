@@ -16,8 +16,9 @@ model: sonnet
 > - `App/Sources/Doors/ExpeditionItemView.swift`, `ExpeditionAnswerCardView.swift`, `DoorBViewState.swift`
 >   exist exactly as `tasks/epic-04-task-08-app-expedition-screens.md` §4 describes (quoted verbatim §3
 >   below), and `App/Sources/MapUI/MapActionsView.swift` / `App/Sources/Shell/AppShell.swift` carry 04.8's own
->   edits on top of 03.11's / 03.12's originals (also quoted verbatim §3, from 04.8's own already-written
->   spec, since neither file exists yet on the tree used to write this spec).
+>   edits on top of 03.11's / 03.12's originals, and `Packages/Core/Tests/CoreTests/AppShellStructuralTests.swift`
+>   / `MapPanelsPickersHandOffStructuralTests.swift` carry 04.8's §4.14 re-scoped guards (also quoted verbatim §3,
+>   from 04.8's own already-written spec, since neither file exists yet on the tree used to write this spec).
 > - `Packages/Core/Sources/Core/Door/DiagnosisContent.swift` / `DiagnosisFlow.swift` (04.3) and the Door A
 >   half of `Packages/Core/Sources/Core/Platform/MapLaunch.swift`'s `DoorFacade` (04.5) exist exactly as
 >   `tasks/epic-04-task-03-core-door-a-diagnosis-flow.md` §4 and `tasks/epic-04-task-05-core-door-entries-
@@ -163,7 +164,8 @@ Acceptance criteria (each independently verifiable):
   04.5's Door A calls persisted), and dismisses the presentation (clears `doorHolder.current`).
 - AC9: The App builds green (gate 4, `scripts/gate.sh:22`) with every file in this task's scope compiled into
   the target via the synchronized `Sources` group (no `pbxproj` edit); the 03.9 `AppSourcesBoundary` scan
-  (`xcodebuild test -scheme Core-Package`) stays green over the complete `App/Sources` tree, with **no**
+  (`xcodebuild test -scheme Core-Package`) stays green over the complete `App/Sources` tree, every `CoreTests`
+  suite is green — including the two EPIC 03 structural suites as updated by §4.11 — with **no**
   widening of `AppSourcesBoundary.allowedImportModules`/`defaultRules`/`forbiddenCoreTypeNames` by this task
   (§6 default 3 — mirrors 04.8's own §6 default 4 exactly: every call this task's code makes is to
   `DoorFacade.*`, `CoreErrorText.*`, `AppShell.resolveToday()` or `MathView.*`, none of which is on 03.9's
@@ -197,10 +199,17 @@ In-scope (the implementer touches EXACTLY these; nothing else):
   `decideProbe(_:accept:current:)`, `answerProbeItem(_:submitted:current:)`,
   `continueDiagnosisTapped(_:current:)`, `decideFurtherLevel(_:accept:current:)`,
   `returnFromDiagnosis(outcome:current:)` functions.
+- `Packages/Core/Tests/CoreTests/AppShellStructuralTests.swift` — MODIFY (carrying 04.8's §4.14 edits).
+  Lockstep list/branch deltas for AC5's `.diagnosisStarted` routing and the `writeFailureBanner` `CoreErrorText`
+  site — exactly §4.11.1.
+- `Packages/Core/Tests/CoreTests/MapPanelsPickersHandOffStructuralTests.swift` — MODIFY (carrying 04.8's §4.14
+  edits). Lockstep list deltas for AC4's `.diagnosisStarted` case and `DoorFacade.checkHere` call — exactly
+  §4.11.2.
 
 Out-of-scope (do not touch even if tempted):
 
-- `Packages/Core/**`, `Packages/Rendering/**` — read-only; call only `DoorFacade`'s, `CoreErrorText`'s and
+- `Packages/Core/**` (except the two structural-suite test files listed in-scope above), `Packages/Rendering/**` — read-only;
+  call only `DoorFacade`'s, `CoreErrorText`'s and
   `MathView`'s public entry points, never a `Core`-internal flow type directly.
 - `App/Sources/Doors/ExpeditionItemView.swift`, `ExpeditionAnswerCardView.swift`, `DoorBViewState.swift`,
   `NumericKeypadView.swift`, `ChoiceButtonsView.swift`, `ExpeditionSummaryView.swift` — 04.8's files; this task
@@ -1040,6 +1049,62 @@ optional Tier-1 "what did you do?" line (EPIC 13) is out of this task's scope an
 gate 4) — must be green, with every file in this task's scope compiled into the target via the synchronized
 `Sources` group.
 
+### 4.11 Lockstep EPIC 03 structural-guard updates
+
+(from `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md` §5)
+
+In every expected-shape list's doc comment named below, replace the sentence that begins `Task 04.9 replaces`
+or `Task 04.9 appends` with `Updated by task 04.9.`
+
+#### 4.11.1 `AppShellStructuralTests.swift`
+
+(from `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md` §5.1)
+
+- **D1.** In `expectedHandOffCaseClausePrefixes`, change `"case .diagnosis:"` to `"case .diagnosisStarted("`, and
+  update its doc comment as above.
+- **D2.** In `handOffBranchesCallNoFurtherCoreFunction()`, replace the `.diagnosis` placeholder check with the
+  code below. The old code runs from `guard let placeholder = Self.caseBranch(startingWith: "case .diagnosis:", in: body)`
+  through its closing `#expect(!placeholder.contains("replace("), …)`. Also rename the test's display string to
+  `"I14 (04.8 AC7, 04.9 AC5): no handOff branch calls a façade or launch function; each door branch only replaces the door holder with its origin tag"`.
+
+  ```swift
+          #expect(doorB.contains("isStandaloneDiagnosis: false"), ".doorBStarted opens an expedition run (04.9 AC5)")
+          guard let doorA = Self.caseBranch(startingWith: "case .diagnosisStarted(", in: body) else {
+              Issue.record("could not isolate the .diagnosisStarted branch")
+              return
+          }
+          #expect(doorA.components(separatedBy: "doorHolder.replace(").count - 1 == 1)
+          #expect(doorA.contains("isStandaloneDiagnosis: true"), ".diagnosisStarted opens a standalone event (04.9 AC5)")
+  ```
+
+- **D3.** In both negative-control fixtures (`plantedExtraHandOffCaseIsCaught`, `plantedFacadeCallInHandOffBranchIsCaught`),
+  change each
+  `case .diagnosis:` / `break` pair to `case .diagnosisStarted(let outcome):` / `doorHolder.replace(with: snapshot(outcome))`.
+  Both controls stay count- and pattern-relative, so their assertions do not change.
+- **D4.** In `expectedShellCoreErrorTextSites`, append `"CoreErrorText.text(for: coreError)",` as the last entry, and
+  update its doc comment as above.
+
+#### 4.11.2 `MapPanelsPickersHandOffStructuralTests.swift`
+
+(from `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md` §5.2)
+
+- **D5.** In `expectedHandOffCases`, change `"diagnosis(event: DiagnosisEvent)"` to `"diagnosisStarted(DoorAStartOutcome)"`, and
+  update its doc comment as above. In the `plantedFourthCaseIsCaught` fixture, change
+  `case diagnosis(event: DiagnosisEvent)` to `case diagnosisStarted(DoorAStartOutcome)`.
+- **D6.** In `expectedActionFacadeCalls`, change `"MapFacade.checkHere("` to `"DoorFacade.checkHere("`, and update its doc
+  comment as above. In `mapActionsViewCallsExactlyOneFacadeEntryPerButton()`, add this directly after the
+  `MapFacade.unitExpedition(` `#expect`:
+  `#expect(!code.contains("MapFacade.checkHere("), "Check me here must call DoorFacade.checkHere (04.9 AC4)")`.
+- **D7.** In `expectedHandOffCallPatterns`, replace the key `#"handOff\(\s*\.diagnosis\(event: event\)\)"#` with
+  `#"handOff\(\s*\.diagnosisStarted\(\s*DoorAStartOutcome\("#`, and update its doc comment as above. Its value stays
+  `1`. 04.9 §4.5 wraps after `handOff(` and after `.diagnosisStarted(`, and `\s*` absorbs both.
+- **D8.** No `@State` change: 04.9 adds none in MapUI, so the count stays 2. No `CoreErrorText` change in MapUI:
+  `CheckHereActionButton` resolves no text, so the count stays 2.
+- **D9.** Update the display strings of `handOffDestinationHasExactlyThreeCases` and
+  `mapActionsViewCallsExactlyOneFacadeEntryPerButton` from `re-scoped by 04.8 AC6` to `re-scoped by 04.8 AC6 / 04.9 AC4`.
+
+`@Test(` counts after 04.9: AppShell 44, MapPanels 38. No test is added or removed.
+
 ## §5 Test plan (risk: seam — full plan)
 
 **C3 note (owner-verified, no agent claim of pixel-level or tap-level correctness).** `App/mathmath.xcodeproj`
@@ -1141,6 +1206,12 @@ report claims screenshot-level or tap-level correctness (D29).
     App/Sources/Shell/AppShell.swift` returns no match inside `returnFromDiagnosis` — the only field of
     `outcome` this task's code reads is the one `resumeAfterDiagnosis(outcome:)` parameter itself, never a
     branch on any of its sub-fields.
+  - EPIC 03 structural guards, re-scoped (§4.11):
+    - Assertions: the same eight guards as 04.8 §5 T5, now asserting `.diagnosisStarted` /
+      `DoorFacade.checkHere` / `isStandaloneDiagnosis: true|false` per branch and 5 Shell `CoreErrorText` sites.
+    - Instrument and exclusions: as 04.8 §5 T5.
+    - Negative controls: the list-relative ones inherited from 04.8.
+    - Test counts stay 44/38.
 - **T6 idempotency / no-leak:** `continueDiagnosisTapped` called twice on the same `Equatable`-equal
   `DoorAProbeAnswerAdvance` (via `DoorFacade.continueAfterProbeAnswer`'s own idempotency, 04.5 T6) returns
   `Equatable`-equal `DoorADiagnosisScreen` values, so this task's rendering re-derives the identical screen
@@ -1212,6 +1283,10 @@ report claims screenshot-level or tap-level correctness (D29).
   (`fullScreenCover` binds on `doorHolder.current != nil`; `@Observable` needs no conformance), and a hand-written
   `==` over `Core` state would put equality semantics in the render layer (I14). Per
   `tasks/arbitration/arbiter-04-doorrunstate-equatable.md`.
+- IF an EPIC 03 structural guard pins a shape this task's ACs change THEN this task updates it in its own
+  commit exactly per §4.11. It never deletes, `.disabled`s or leaves the guard red, and never edits a guard
+  §4.11 does not name. The tester may add guards but may not weaken §4.11's.
+  (`tasks/arbitration/arbiter-04-08-structural-suite-ownership.md`)
 
 Standing defaults: identifiers and timestamps are untouched by this task — every id/timestamp already on
 `DoorADiagnosisScreen`/`DoorATerminalContent`/`DoorRunState`/`MapState` passes through opaquely, and no file
@@ -1234,6 +1309,9 @@ The task is done when ALL gates pass:
 - the 03.9 `AppSourcesBoundary` scan (`xcodebuild test -scheme Core-Package`, gate 3) stays green with this
   task's files present in `App/Sources`, with no edit to `AppSourcesBoundaryTests.swift` or
   `AppSourcesBoundaryNegativeControlTests.swift` (§6 default 3).
+- the full `Core` test suite (gate 3) is green. This includes `AppShellStructuralTests.swift` and
+  `MapPanelsPickersHandOffStructuralTests.swift` as updated by §4.11. `MapCanvasViewStructuralTests`,
+  `AppSourcesBoundary*Tests`, `DoorFacade*Tests` and every other `CoreTests` file pass unmodified.
 - 03.12's simulator smoke (`scripts/sim-smoke.sh`, gate 4) stays green: this task adds no App launch-path code
   and no state-file interaction of its own beyond what 04.5's already-tested `DoorFacade` performs, so the
   fresh-install and seeded-relaunch scenarios (both scoped to launch/relaunch, before any Door A action) are
