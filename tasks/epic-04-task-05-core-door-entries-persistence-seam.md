@@ -580,11 +580,17 @@ through their public entry points — it adds no expedition, diagnosis, fringe o
 /// arbiter-03 § Q-F). `expedition` carries no `public` modifier: only `Core` code (this file, and this task's
 /// own tests) inspects or constructs it directly — the App holds it opaquely and passes it back unmodified,
 /// mirroring 04.3's/04.4's own "no field yields a screen" discipline applied here at the run-state level.
-public struct DoorRunState: Equatable {
+public struct DoorRunState {
     public let map: MapState
     let expedition: DoorBRunState?
 }
 ```
+
+`DoorRunState` declares no `Equatable`: its `map: MapState` field is not `Equatable`, because
+`ContentBundle` is not (`BundleIO.swift:8`), a deliberate EPIC 03 choice
+(`tasks/epic-03-task-07-map-actions-facade-launch.md` §4.1: "every test asserts on individual fields").
+Tests compare a `DoorRunState` field-wise (`map.state`, `map.viewModel`, `map.queuedNodeId`, `map.stateURL`,
+and `expedition` via `@testable import Core`) — `tasks/arbitration/arbiter-04-doorrunstate-equatable.md`.
 
 ### 4.2 Persistence helpers (private)
 
@@ -868,9 +874,18 @@ None. Every `DoorFacade` function is a pure sequencing wrapper over already-Tier
     proves the byte-unchanged claim is checkable, not merely asserted in prose; the real diff has zero lines
     changed in `CoreError.swift`/`CoreEvent.swift`.
 - **T6 idempotency / no-leak:**
-  - `continueAfterAnswer`/`continueAfterProbeAnswer` called twice on the same `Equatable`-equal pending value
-    return `Equatable`-equal results, and neither call's file bytes at `stateURL` differ from before either call
-    (no write, called twice).
+  - `continueAfterAnswer` called twice on the same `Equatable`-equal pending value and the same input
+    `DoorRunState` returns results whose `screen` values are `==` and whose `runState` values agree field by
+    field: `runState.map.state`, `runState.map.viewModel`, `runState.map.queuedNodeId`, `runState.map.stateURL`
+    and `runState.expedition` (reachable via `@testable import Core`) are each `==`. `DoorRunState` and `MapState`
+    are not `Equatable` (§4.1), so there is no whole-value `==`. `continueAfterProbeAnswer` called twice returns
+    `==` `DoorADiagnosisScreen` values. Neither function changes the file bytes at `stateURL` from before either
+    call (no write, called twice).
+    - Instrument: Swift Testing `#expect` in `DoorEntriesTests.swift` or `DoorFacadeSeamTests.swift`. It
+      excludes a physical device (D29).
+    - Negative control: the same five-field comparison, applied to one `continueAfterAnswer` result and the
+      `DoorRunState` returned by the *preceding* `answer` call, finds at least one differing field
+      (`runState.map.state` or `runState.expedition`). This proves the comparison can go red.
   - `DoorFacade.startAnother` called twice in immediate succession (each over the prior call's own resulting
     `mapState`) produces two independent, non-overlapping runs with byte-identical persistence behaviour to two
     separate `startExpedition` calls.
@@ -920,6 +935,10 @@ None. Every `DoorFacade` function is a pure sequencing wrapper over already-Tier
   always has `expedition == nil`) branch where a future caller nests a `checkHere`-opened event inside a run;
   threading `today` uniformly through every `DoorFacade` entry keeps the persistence helper's signature single
   and total, rather than partial over which entry points happen to need it today.
+- IF a test needs to compare two `DoorRunState` (or `MapState`) values THEN it compares them field-wise per
+  §4.1 — never by adding `Equatable` to `DoorRunState`, `MapState` or `ContentBundle`, in product code or via a
+  retroactive `extension … : Equatable` in a test file (per 03.7 §4.1's recorded choice;
+  `tasks/arbitration/arbiter-04-doorrunstate-equatable.md`).
 - Standing defaults: identifiers and timestamps are untouched beyond what `StudentStateStore`/`ExpeditionRun`/
   `DiagnosisRun` already produce; model calls do not exist anywhere in this task's code (I2 vacuous); telemetry
   is unaffected (`consentOn` passes through opaquely); no node's Ministry text is read or written by this task

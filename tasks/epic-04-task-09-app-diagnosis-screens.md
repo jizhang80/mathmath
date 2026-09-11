@@ -187,7 +187,7 @@ In-scope (the implementer touches EXACTLY these; nothing else):
   `.terminal` cases).
 - `App/Sources/MapUI/MapActionsView.swift` — MODIFY (03.11's file, carrying 04.8's own edits by the time this
   task runs, per this spec's Branch note; shape quoted §3). Replace `HandOffDestination.diagnosis(event:
-  DiagnosisEvent)` with `.diagnosisStarted(DoorAStartOutcome)` (a new `Equatable` struct added to this same
+  DiagnosisEvent)` with `.diagnosisStarted(DoorAStartOutcome)` (a new plain struct — not `Equatable`, it holds a `DoorRunState` (04.5 §4.1) — added to this same
   file); rewire `CheckHereActionButton` to call `DoorFacade.checkHere` instead of `MapFacade.checkHere`.
 - `App/Sources/Shell/AppShell.swift` — MODIFY (03.12's file, carrying 04.8's own edits by the time this task
   runs, per this spec's Branch note; shape quoted §3). Add `isStandaloneDiagnosis: Bool` to `DoorBRunSnapshot`; add
@@ -406,7 +406,7 @@ public struct WorkedExample: Codable, Equatable {
 ```swift
 // Packages/Core/Sources/Core/Platform/MapLaunch.swift (04.5's spec §4.1/§4.3/§4.4, re-read and byte-compared —
 // the six Door A `DoorFacade` entries this task calls; there is no separate "start"/"open" entry the App calls)
-public struct DoorRunState: Equatable {
+public struct DoorRunState {
     public let map: MapState
     let expedition: DoorBRunState?   // NOT public — Core-internal; the App holds DoorRunState opaquely
 }
@@ -476,7 +476,7 @@ enum DoorBPhase: Equatable {
     case answerCard(DoorBAnswerAdvance)
 }
 
-struct DoorBRunSnapshot: Equatable {
+struct DoorBRunSnapshot {
     let runState: DoorRunState
     let phase: DoorBPhase
     let writeFailureCode: String?
@@ -801,7 +801,7 @@ is authored for the case where `hint`/`remediation` is `nil` (both branches simp
 ### 4.5 `App/Sources/MapUI/MapActionsView.swift` — the "Check me here" rewire
 
 ```swift
-struct DoorAStartOutcome: Equatable {
+struct DoorAStartOutcome {
     let runState: DoorRunState
     let screen: DoorADiagnosisScreen
     let writeFailureCode: String?
@@ -841,7 +841,7 @@ stays untouched (§6 default 2).
 Extend `DoorBRunSnapshot`/`DoorBPhase` (04.8's types, this same file):
 
 ```swift
-struct DoorBRunSnapshot: Equatable {
+struct DoorBRunSnapshot {
     let runState: DoorRunState
     let phase: DoorBPhase
     let writeFailureCode: String?
@@ -1114,7 +1114,7 @@ report claims screenshot-level or tap-level correctness (D29).
       `submit`, `continueTapped`, `startAnother` — 04.8 §4.9 quoted §3; its `backToMap` constructs none),
       this task's `.diagnosisStarted`, the four Door A actions of §4.6 (`decideProbe`, `answerProbeItem`,
       `continueDiagnosisTapped`, `decideFurtherLevel`, each passing `current.isStandaloneDiagnosis`), and
-      `returnFromDiagnosis`'s non-standalone arm. The declaration `struct DoorBRunSnapshot:`, the parameter
+      `returnFromDiagnosis`'s non-standalone arm. The declaration `struct DoorBRunSnapshot {`, the parameter
       type `current: DoorBRunSnapshot)` and the optional `DoorBRunSnapshot?` never match (a), since none is
       followed by `(`; the declaration `let isStandaloneDiagnosis: Bool` never matches (b). Either command
       printing nothing (zero matches) = FAIL.
@@ -1207,6 +1207,11 @@ report claims screenshot-level or tap-level correctness (D29).
   count("isStandaloneDiagnosis: <literal | current.isStandaloneDiagnosis>")` plus exact single-line checks
   for the declaration, the one `true` site and the one conditional read (§5 T5,
   `tasks/arbitration/arbiter-04-09-standalone-count.md`).
+- IF an App-side struct or enum holding a `DoorRunState` or `MapState` (`DoorAStartOutcome`, `DoorBStartOutcome`, `DoorBRunSnapshot`) seems to want `Equatable` THEN it
+  does not declare it. `DoorRunState` is not `Equatable` (04.5 §4.1), nothing in this task compares these values
+  (`fullScreenCover` binds on `doorHolder.current != nil`; `@Observable` needs no conformance), and a hand-written
+  `==` over `Core` state would put equality semantics in the render layer (I14). Per
+  `tasks/arbitration/arbiter-04-doorrunstate-equatable.md`.
 
 Standing defaults: identifiers and timestamps are untouched by this task — every id/timestamp already on
 `DoorADiagnosisScreen`/`DoorATerminalContent`/`DoorRunState`/`MapState` passes through opaquely, and no file

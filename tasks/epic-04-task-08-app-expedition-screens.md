@@ -152,7 +152,7 @@ In-scope (the implementer touches EXACTLY these; nothing else):
   presentation-state struct: the in-progress keypad string and the "Start another" error text.
 - `App/Sources/MapUI/MapActionsView.swift` — MODIFY (03.11's file, confirmed present with the shape quoted §3).
   Replace `HandOffDestination.unitExpedition(result: ComposeResult)` with `.doorBStarted(DoorBStartOutcome)`
-  (a new `Equatable` struct added to this same file); add `StartExpeditionActionButton`; rewire
+  (a new plain struct added to this same file — not `Equatable`: it holds a `DoorRunState`, which is not `Equatable`, 04.5 §4.1); add `StartExpeditionActionButton`; rewire
   `UnitExpeditionActionButton` to call `DoorFacade.startUnitExpedition` instead of `MapFacade.unitExpedition`.
 - `App/Sources/Shell/AppShell.swift` — MODIFY (03.12's file, confirmed present with the shape quoted §3, and
   confirmed to have already deleted 03.9's SwiftMath exception per 03.12's own AC9). Add `DoorBPhase`,
@@ -335,7 +335,7 @@ public struct DoorBSummaryScreen: Equatable {
 // Packages/Core/Sources/Core/Platform/MapLaunch.swift (04.5's spec §4.1/§4.3/§4.4, re-read and byte-compared
 // — this is the corrected, byte-verified shape; the context bundle's §D paraphrase of `continueAfterAnswer`
 // and `startExpedition`/`startUnitExpedition` did not match this and is superseded by this quote)
-public struct DoorRunState: Equatable {
+public struct DoorRunState {
     public let map: MapState
     let expedition: DoorBRunState?   // not `public` — the App holds `DoorRunState` opaquely
 }
@@ -695,7 +695,7 @@ Replace `HandOffDestination.unitExpedition(result: ComposeResult)` with a single
 start buttons, and add `DoorBStartOutcome`:
 
 ```swift
-struct DoorBStartOutcome: Equatable {
+struct DoorBStartOutcome {
     let runState: DoorRunState
     let screen: DoorBScreen
     let writeFailureCode: String?
@@ -788,7 +788,7 @@ enum DoorBPhase: Equatable {
     case answerCard(DoorBAnswerAdvance)
 }
 
-struct DoorBRunSnapshot: Equatable {
+struct DoorBRunSnapshot {
     let runState: DoorRunState
     let phase: DoorBPhase
     let writeFailureCode: String?
@@ -1030,7 +1030,8 @@ establish for `App/Sources`-only code with no `Core` counterpart, restated per t
     proving the claim "04.8 needs no 03.9 widening" is checkable, not merely asserted in prose.
 - **T6 idempotency / no-leak:** `DoorBRunScreen.continueTapped` called twice on the same `Equatable`-equal
   `DoorBAnswerAdvance` (via `DoorFacade.continueAfterAnswer`'s own idempotency, 04.5 T6) returns
-  `Equatable`-equal results, so this task's rendering re-derives the identical screen either way; `rg -n
+  `==` `DoorBScreen` values (04.5 T6 compares the accompanying `DoorRunState` field-wise, since it is not
+  `Equatable`), so this task's rendering re-derives the identical screen either way; `rg -n
   "@State"` over `App/Sources/Doors` and the `DoorBRunScreen` addition to `AppShell.swift` shows exactly the
   two expected instances (`DoorBViewState` in `DoorBRunScreen`, `errorText` in each of the two action buttons
   in `MapActionsView.swift`) — no file holds a `Core` value across calls beyond the `DoorRunHolder`/
@@ -1098,6 +1099,11 @@ establish for `App/Sources`-only code with no `Core` counterpart, restated per t
   directs "Do not coin new *Session* identifiers"; this task's holder type is named `DoorBRunSnapshot` and its
   published property `DoorRunHolder.current`, matching the "current `Core` session value" *concept* named in
   arbiter-03's § Q-F quote (§3) without reusing the banned noun as an identifier.
+- IF an App-side struct or enum holding a `DoorRunState` or `MapState` (`DoorBStartOutcome`, `DoorBRunSnapshot`) seems to want `Equatable` THEN it
+  does not declare it. `DoorRunState` is not `Equatable` (04.5 §4.1), nothing in this task compares these values
+  (`fullScreenCover` binds on `doorHolder.current != nil`; `@Observable` needs no conformance), and a hand-written
+  `==` over `Core` state would put equality semantics in the render layer (I14). Per
+  `tasks/arbitration/arbiter-04-doorrunstate-equatable.md`.
 - Standing defaults: identifiers and timestamps are untouched by this task — every id/timestamp already on
   `DoorItemContent`/`DoorAnswerCardContent`/`DoorBSummaryScreen`/`MapState` passes through opaquely, and no
   file constructs one. Model calls do not exist anywhere in this task's code (I2 vacuous). Telemetry is
