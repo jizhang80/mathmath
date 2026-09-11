@@ -7,10 +7,13 @@ import Testing
 /// `AppSourcesBoundaryNegativeControlTests.swift`). Closes coverage gaps the implementer's own suite left
 /// open: most of `forbiddenCoreTypeNames` (§4.2) are never independently exercised by a negative control
 /// (only `MarkerTrail`, `MapViewModel.derive`, `Expedition`, `ExpeditionRun` are), the `URLRequest` half of
-/// the network rule's alternation is untested, the SwiftMath exception's exact-line scoping (not just
-/// exact-path scoping) is untested, only one non-Swift extension (`.json`) proves the extension filter, and
-/// no test independently proves the real `App/Sources` walk is non-vacuous beyond the helper's own internal
-/// `#expect(!files.isEmpty)` guard (I14, `docs/domains/map.md:131-132`).
+/// the network rule's alternation is untested, only one non-Swift extension (`.json`) proves the extension
+/// filter, and no test independently proves the real `App/Sources` walk is non-vacuous beyond the helper's
+/// own internal `#expect(!files.isEmpty)` guard (I14, `docs/domains/map.md:131-132`). Task 03.12
+/// (`tasks/epic-03-task-12-app-shell-launch-smoke.md`) has since deleted the time-boxed
+/// `ContentView.swift`/`SwiftMath` import carve-out this rule set once exempted — the "exact-line scoping"
+/// case below is kept as a guard against the carve-out (or an equivalent one) ever being silently
+/// reintroduced, not as coverage of a still-live exemption.
 @Suite("App/Sources boundary: tester audit (I14 / I5 / I1 / I10 / D24)")
 struct AppSourcesBoundaryAuditTests {
     private static var repoRoot: URL {
@@ -127,14 +130,17 @@ struct AppSourcesBoundaryAuditTests {
         #expect(violations.isEmpty, "Core network-code violations (URLSession/URLRequest): \(violations)")
     }
 
-    // MARK: - SwiftMath exception is exact-line-scoped, not just exact-path-scoped
+    // MARK: - No carve-out survives even a modified import line, post-03.12
 
-    /// The exception's skip block requires the trimmed line to equal exactly `"import SwiftMath"`. A
-    /// trailing comment or extra token on the same import line must NOT be silently exempted — proving the
-    /// carve-out is as narrow as §4.2 documents (a single exact line, not "any SwiftMath reference in
-    /// ContentView.swift").
-    @Test("a modified import SwiftMath line (trailing comment) in the exempt file is still caught")
-    func modifiedSwiftMathImportLineInContentViewIsNotExempt() throws {
+    /// Before task 03.12, the now-deleted exception's skip block required the trimmed line to equal exactly
+    /// `"import SwiftMath"`; a trailing comment or extra token on the same import line was never exempted by
+    /// it either. Now that the carve-out itself is gone (03.12, `AppSourcesBoundaryTests.swift`), this proves
+    /// the same shape — a modified `import SwiftMath` line inside `ContentView.swift` — is still reported,
+    /// so no equivalent carve-out (narrow or loose) has been silently reintroduced.
+    @Test(
+        "a modified import SwiftMath line (trailing comment) in ContentView.swift is caught, carve-out or not"
+    )
+    func modifiedSwiftMathImportLineInContentViewIsCaught() throws {
         let tempRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempRoot) }
@@ -151,7 +157,7 @@ struct AppSourcesBoundaryAuditTests {
             violations.contains {
                 $0.contains("ContentView.swift") && $0.contains("non-allow-listed import")
             },
-            "a modified import SwiftMath line was wrongly exempted by the exact-path carve-out: \(violations)"
+            "a modified import SwiftMath line in ContentView.swift was wrongly exempted: \(violations)"
         )
     }
 
