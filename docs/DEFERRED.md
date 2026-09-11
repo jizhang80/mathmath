@@ -156,3 +156,20 @@ describes a drag path.
 unit-list picker only, with no drag gesture.
 **Revisit trigger:** Demo observations (`DEMO-BRIEF.md` § 7 Acceptance).
 **Hypothesis (unverified):** none.
+
+### D-15 — Snapshot `sha256` verification at load
+
+**Observed:** `docs/plans/epic-01-task-plan.md` planner note 2 deferred "hash *verification at load*" to EPIC 03.
+EPIC 03 ruled that it belongs to the hosted-bundle fetch, not the embedded snapshot (arbiter ruling Q-H,
+`tasks/arbitration/arbiter-03-predispatch.md`). Three reasons:
+- `docs/domains/platform.md` § AssetVersion says the hash is "checked on fetch".
+- The snapshot ships inside the signed build.
+- A hash check in `Core` would need CryptoKit, which D33 forbids.
+
+EPIC 03 therefore enforces manifest completeness, the format major version and L0 at load, and verifies no
+hashes. Every `sha256` in `data/demo/manifest.json` is an all-zero placeholder of 66 hex characters, not the 64 of a
+SHA-256 digest. The EPIC 04 task 04.1b reviewer found this; it is recorded in `docs/audits/epic-02-acceptance.md` §6.
+**Configuration:** the Demo. The embedded snapshot is the only bundle, and there is no network.
+**Revisit trigger:** EPIC 10 hosted bundles (platform W2). The task that first writes real hashes into a manifest
+also corrects the placeholder length.
+**Hypothesis (unverified):** none.
