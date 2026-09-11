@@ -49,7 +49,7 @@ it) or *device — owner* — and a blank result cell.
 Tag: *simulator — agent*.
 Instrument: `scripts/gate.sh` gate 3 (`Core` build + `xcodebuild test -scheme Core-Package` on the iOS
 simulator), which runs `core-cli`'s L0 validation over `data/demo`.
-Result: —
+Result: PASS (simulator, agent), at `9a92440`, the final product tree. Gate 3 is green, and `core-cli validate data/demo` returns `passed: true` with all 10 L0 checks.
 
 ### 2. Builds and runs on a physical iPhone
 Tag: *device — owner*.
@@ -78,7 +78,7 @@ States, verbatim, the four exclusions this cannot claim (arbiter-04 § Q-C):
 4. that the sequence of screens a student sees matches the façade's screen values at runtime, rather than only
    in `CoreTests`.
 
-Result: —
+Result: PASS for what this line can evidence (simulator, agent), at `9a92440`, the final product tree. The evidence is: (i) the C1 façade tests on real `data/demo` in gate 3. `DoorFacadeSeamTests` AC13 runs a full expedition with a first miss and a retry, checking the write-ahead after every state-changing call and the event order. AC14 covers (a) expedition second miss, then capped, then resumed; (b) check-here declined, giving unconfirmed; and (c) check-here with both answers correct, giving refuted. `DoorFacadeConformanceTests` confirms by source scan that these tests reach `Core` only through `DoorFacade.*`. (ii) The one-entry-per-function source scan of the `App/Sources` Door files (04.10, `688b421` / `1401890`) passes over the real tree. Its limitation, that it does not trace a `Button` closure into its method, is recorded together with a negative control. (iii) The App build on the simulator (gate 4) is green. (iv) The `scripts/sim-smoke.sh` launch passes. The four exclusions stated above apply in full: this makes no tap, layout, runtime-trap or runtime screen-order claim.
 
 **3b. *device — owner***
 
@@ -90,21 +90,24 @@ Result: —
 Tag: *simulator — agent*.
 Instrument: `scripts/gate.sh` gate 4 (App build on simulator) together with EPIC 03's `scripts/sim-smoke.sh`
 relaunch scenario (seeded state migrates and survives relaunch byte-identical).
-Result: —
+Result: PASS (simulator, agent), at `9a92440`, the final product tree. Gate 4 `scripts/sim-smoke.sh` scenario 2 passed: seeded v1 state migrates to v2, validates against `student-state.schema.json`, and survives terminate + relaunch byte-identical.
 
 ### 5. Layout deterministic across launches
 
 Tag: *simulator — agent*.
 Instrument: `scripts/gate.sh` gate 3 (`xcodebuild test -scheme Core-Package`), which includes the layout
 determinism test (same data → same positions across reloads).
-Result: —
+Result: PASS (simulator, agent), at `9a92440`, the final product tree. Gate 3 `LayoutTests` "layout is deterministic for the same seed" and `LayoutRegressionTests` passed.
 
 ### 6. Landmark `source_url` resolves
 
 Tag: *simulator — agent*.
-Instrument: `scripts/gate.sh` gate 3 (`Core` tests): a static validation test of `data/demo`'s landmark
-entries asserts every entry has a resolvable `source_url`, per I15.
-Result: —
+Instrument (corrected at the 04b wrap): `scripts/gate.sh` gate 3 checks presence and https well-formedness only.
+L0-10 does no network resolution in `Core` (`L0CheckerContractTests.swift:290`), and
+`BundleLoaderConformanceTests.swift:108` refuses a landmark missing `source_url` (I15). Live resolution is gate 4:
+`pipeline/tests/test_demo_bundle.py::test_landmark_source_url_resolves`, a real HTTPS fetch asserting that the page contains
+the landmark's `source_title`; it skips only on `TransportInconclusive`.
+Result: PASS (simulator, agent), at `9a92440`, the final product tree. A live fetch of `https://laws-lois.justice.gc.ca/eng/acts/I-15/` (landmark `canadian-mortgage-compounding`) returned a page containing "Interest Act": the test passed and was not skipped at `787f23b` on 2026-09-11. Final wrap gate: passed again in the final full gate at `9a92440` (pytest 190 passed, 0 skipped).
 
 ## Wrap responsibility
 
