@@ -39,7 +39,7 @@ desktop web at **M5**.
 - **ProbeRun** — 2 `ProbeItem`s on the candidate, ~60 s [SOURCED: brief §2, §7], numeric or
   multiple-choice (I10), checked in code (I1); pass/fail; declinable (Q2).
 - **Remediation** — the minimal piece for a confirmed gap: one `Explanation` or `WorkedExample` from
-  **learning-objects**, then return.
+  **learning-objects** — or, when the node carries neither, its `paraphrase` plus, when one resolves, one tier-1 hint (DEMO-BRIEF §3.6) — then return.
 - **Outcome record** — written into `StudentState` (**expedition**): the event, hypotheses and fates, probe
   results, nodes marked `blocked`. There is no separate record page (v2.5 §3).
 
@@ -66,8 +66,8 @@ show the origin's hint and return (W5). **Post:** a `Diagnosis`, never a verdict
 `diagnosis.hypothesis_formed`.
 
 ### W3 — Probe the candidate
-**Pre:** a `Diagnosis`; two items available. **Steps:** 1. State the cost up front ("two quick questions,
-about a minute") and let the student decline (Q2). 2. Draw 2 `ProbeItem`s (learning-objects W3); fewer →
+**Pre:** a `Diagnosis`; two items available. **Steps:** 1. State the cost up front ("two quick checks, about a
+minute") and let the student decline (Q2). 2. Draw 2 `ProbeItem`s (learning-objects W3); fewer →
 `DIAG_PROBE_UNAVAILABLE`, outcome `unconfirmed`, hint and return. 3. Check in code (I1); show each answer
 with its why (D5). 4. Pass → `refuted`: "Not the issue — back to where you were", W5 with a tier-1 hint on
 the origin. Fail → `confirmed`, W4. **Post:** `diagnosis.probe_completed` → expedition (state), telemetry
@@ -105,7 +105,7 @@ trust*: the system owns the refutation and returns at once.
 ## UI surfaces
 
 Native: **Hypothesis card** (W1–W2, a sheet over the expedition or map); **Probe** (W3, two items in the
-expedition item view); **Remediation** (W4, one explanation or worked example); return is implicit (W5).
+expedition item view); **Remediation** (W4, one explanation or worked example, else the paraphrase and, when one resolves, one tier-1 hint); return is implicit (W5).
 Confirmed by the Demo.
 
 ## Notifications produced

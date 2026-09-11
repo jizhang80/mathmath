@@ -1,6 +1,6 @@
 # Contract: Domain glossary (LOCK-FIRST)
 
-**Contract version:** v1.0.0 · Source: `docs/domains/*.md`, `docs/idea.md` (D1–D49)
+**Contract version:** v1.0.1 · Source: `docs/domains/*.md`, `docs/idea.md` (D1–D49); v1.0.1 clarifies Remediation for nodes without an Explanation and the two none-of-these tokens (arbiter-04 Q-B; arbiter-04-hint-fallback-reconciliation)
 
 > One agreed term per concept. Every EPIC, type, JSON key, screen label and doc uses the same word. Code
 > identifiers are the term in `PascalCase` (types) / `camelCase` (Swift members) / `snake_case` (JSON,
@@ -40,9 +40,9 @@
 - **Diagnosis event** — one Door A occurrence, from an expedition second miss or "Check me here". *Banned:* "tutoring session", "attempt".
 - **Hypothesis** — "this may be blocked by X" (a `Diagnosis`); never a verdict (D11). **Candidate** — the upstream node X.
 - **Probe** — two items on the candidate, ~60 s; outcome **pass / fail / declined** → diagnosis outcome **refuted / confirmed / unconfirmed / capped**.
-- **Remediation** — one Explanation or WorkedExample for a confirmed candidate. **Backtrack level** — distance from the origin node (≤ 2, I4).
+- **Remediation** — one Explanation or WorkedExample for a confirmed candidate; when the node carries neither, its `paraphrase` plus, when one resolves, one tier-1 hint (DEMO-BRIEF §3.6). **Backtrack level** — distance from the origin node (≤ 2, I4).
 - **Blocked** — the mastery state set on a candidate that failed its probe, or beyond the cap. The map is the record (v2.5 §3). *Banned:* "deeper gap recorded", "record page".
-- **Error type** (`ErrorType`) — a member of a node's closed catalogue, incl. `none_of_these`. **Distractor tag** — the error type an `mc` distractor or anticipated wrong numeric answer carries (diagnosis Q1). **Hint tier** — one of three levels of a `HintTree` branch.
+- **Error type** (`ErrorType`) — a member of a node's closed catalogue, incl. the none-of-these member, whose catalogue id is `none-of-these`; `classify` reports abstention as the outcome token `none_of_these`, which is never a catalogue id or a `hint_tree` key. **Distractor tag** — the error type an `mc` distractor or anticipated wrong numeric answer carries (diagnosis Q1). **Hint tier** — one of three levels of a `HintTree` branch.
 - **Homework mode** — the M5 desktop web variant with structured input and CAS verification (`verification` domain). *Banned:* "Door A web", "tutor".
 
 ## Content and pipeline

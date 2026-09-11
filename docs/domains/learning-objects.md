@@ -39,12 +39,13 @@ sequence, each step CAS-checked by the pipeline (D41); displayed via SwiftMath, 
 homework-mode input path (D9).
 
 **ErrorType** — a member of the node's closed catalogue (brief §5 `error_catalogue[]`): per-node, with
-exactly one terminal `none_of_these`. Canonical example, the M4′ node *logarithmic equation solving*, six
+exactly one terminal member `none-of-these` (catalogue id; `classify`'s abstention outcome is the token
+`none_of_these`). Canonical example, the M4′ node *logarithmic equation solving*, six
 members verbatim from brief §8 — missed domain restriction; log-combination rule misapplied;
 exponent–log inverse relationship not internalised; quadratic solved incorrectly; arithmetic slip; none of
 these. Each has a stable id, a student-facing phrasing, a `probe_target`, and `implies_prerequisite`:
 `null`, or an upstream Node id — **the implies-prerequisite mapping**. Above, the exponent–log type points
-at the exponential-functions node of the D14 chain, "arithmetic slip" nowhere, and `none_of_these` is
+at the exponential-functions node of the D14 chain, "arithmetic slip" nowhere, and `none-of-these` is
 always `null`: abstention, not diagnosis.
 
 **HintTree** — per node, ErrorType → ordered tiers: tier 1 nudges at what to look at, tier 2 targets that
@@ -72,10 +73,9 @@ placed by map. A landmark that cannot be sourced is dropped, never invented.
 GenerationRuns against the **Generation model** (offline Claude API), intersected there. Validation is
 Tier 0.
 **Steps:** 1. **Coverage** — one LearningObject per Node, none naming an unknown node, else
-`LO_INCOMPLETE_BUNDLE`. 2. **Enum closure** — each enum non-empty, exactly one `none_of_these`.
+`LO_INCOMPLETE_BUNDLE`. 2. **Enum closure** — each enum non-empty, exactly one `none-of-these`.
 3. **Mapping validity** — every non-null `implies_prerequisite` is an upstream neighbour (relies on I8),
-else `LO_BAD_PREREQ_MAPPING`. 4. **Hint coverage** — every ErrorType but `none_of_these` has a full tier
-list, else `LO_HINT_TIER_MISSING`. 5. **Probe checkability** — every ProbeItem answer re-derived by SymPy in the pipeline and every
+else `LO_BAD_PREREQ_MAPPING`. 4. **Hint coverage** — every ErrorType but `none-of-these` has a full tier list (a `none-of-these` entry is optional; when present it is the node's generic hint), else `LO_HINT_TIER_MISSING`. 5. **Probe checkability** — every ProbeItem answer re-derived by SymPy in the pipeline and every
 WorkedExample step CAS-checked there (D41), else `LO_PROBE_UNCHECKABLE`; every `mc` item has ≥ 1
 distractor tag and every tag names a member of the node's enum, else `LO_BAD_DISTRACTOR_TAG`.
 5b. **Renderability** — every prompt, hint and explanation renders in SwiftMath, or is flagged for the
@@ -89,8 +89,9 @@ bundle whole.
 ### W2 — Serve a hint (runtime)
 
 **Pre:** diagnosis holds a node id and a classified ErrorType; bundle loaded.
-**Steps:** 1. Resolve `(node, error_type) → tiers`; a miss raises `LO_HINT_NOT_FOUND` and the diagnosis event
-falls back to the node's generic tier-1 hint. 2. Tiers issue one at a time on request. 3. Tier 1 may
+**Steps:** 1. Resolve `(node, error_type) → tiers`; a miss raises `LO_HINT_NOT_FOUND` (internal data) and the
+diagnosis event falls back to the node's generic tier-1 hint, `hint_tree["none-of-these"][0]`, else the
+node's `paraphrase`; never another ErrorType's hint (I2). 2. Tiers issue one at a time on request. 3. Tier 1 may
 re-word; below threshold or on adapter failure the stored wording is used (Tier 0 fallback, I2).
 **Post:** the served tier index returns to the diagnosis event; the tier list is finite, so it ends.
 
@@ -172,3 +173,4 @@ ends with a located error and no explanation, but a fallback hypothesis would be
 | 2026-09-08 | Phase 3b consistency fixes (event consumers aligned with telemetry's four event kinds). |
 | 2026-09-08 | Open questions ratified by owner (all defaults; see docs/plans/phase3b-open-questions.md). |
 | 2026-09-09 | v2 re-cut: ProbeItem typed `numeric | mc` with distractor `ErrorType` tags, `why`, SymPy verification in the pipeline (D41) and SwiftMath renderability; Landmark entity and validation (D22, I15); consumers renamed (expedition, diagnosis, map); milestone M6 → M5. Q2 carries a v2 note; no new open questions. |
+| 2026-09-10 | Catalogue id spelled `none-of-these`; W2 generic hint defined (arbiter-04-hint-fallback-reconciliation). |
