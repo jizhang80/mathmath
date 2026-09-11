@@ -190,8 +190,8 @@ struct AppSourcesBoundaryNegativeControlTests {
             violations.contains { $0.contains("MathView.swift") && $0.contains("non-allow-listed import") })
     }
 
-    // AC7 (b): the exception is path-scoped, not file-name-scoped — a nested ContentView.swift is NOT exempt.
-    // Empty=FAIL for both assertions.
+    // Once 03.12 removed the exception, a nested ContentView.swift is caught (never was exempt), and — since
+    // no carve-out survives anywhere — a top-level ContentView.swift now next to it is caught too.
     @Test("catches import SwiftMath planted in a nested Views/ContentView.swift")
     func catchesSwiftMathImportInNestedContentView() throws {
         let tempRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -210,30 +210,31 @@ struct AppSourcesBoundaryNegativeControlTests {
             nestedOnly.filter { $0 == "ContentView.swift: non-allow-listed import" }.count == 1,
             "nested Views/ContentView.swift was wrongly exempted: \(nestedOnly)")
 
-        // Add the exempt top-level ContentView.swift beside it: still exactly one report — the nested one.
+        // Add a top-level ContentView.swift beside it: now both are reported — no carve-out remains anywhere.
         try body.write(
             to: tempRoot.appendingPathComponent("ContentView.swift"), atomically: true, encoding: .utf8)
         let both = try AppSourcesBoundary.violations(in: tempRoot)
         #expect(
-            both.filter { $0 == "ContentView.swift: non-allow-listed import" }.count == 1,
-            "expected exactly one SwiftMath report (the nested file), got: \(both)")
+            both.filter { $0 == "ContentView.swift: non-allow-listed import" }.count == 2,
+            "expected both the nested and top-level SwiftMath imports to be reported, got: \(both)")
     }
 
-    // AC7 (c): positive case — the exact top-level path is exempt. Empty=PASS.
-    @Test("does not flag import SwiftMath inside the top-level ContentView.swift of the scanned root")
-    func exemptsSwiftMathInsideTopLevelContentView() throws {
+    // 03.12 removed the time-boxed exception once ContentView.swift no longer imports SwiftMath. This test
+    // proves the removal actually re-enables detection at the exact path the exception used to cover.
+    @Test("catches import SwiftMath now that the top-level ContentView.swift exception is gone")
+    func catchesSwiftMathImportInTopLevelContentView() throws {
         let tempRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempRoot, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempRoot) }
 
-        try
+        let body =
             "import SwiftMath\nimport SwiftUI\nstruct ContentView: View { var body: some View { Text(\"\") } }\n"
-            .write(
-                to: tempRoot.appendingPathComponent("ContentView.swift"), atomically: true, encoding: .utf8)
+        try body.write(
+            to: tempRoot.appendingPathComponent("ContentView.swift"), atomically: true, encoding: .utf8)
 
         let violations = try AppSourcesBoundary.violations(in: tempRoot)
         #expect(
-            violations.isEmpty,
-            "the top-level ContentView.swift SwiftMath exception did not apply: \(violations)")
+            violations.contains { $0 == "ContentView.swift: non-allow-listed import" },
+            "the top-level ContentView.swift exception should be gone after 03.12 — got: \(violations)")
     }
 }

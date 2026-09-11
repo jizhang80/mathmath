@@ -34,7 +34,12 @@ jobs:
         working-directory: Packages/Rendering
         run: xcodebuild test -quiet -scheme Rendering -destination "${{ steps.sim.outputs.dest }}" CODE_SIGNING_ALLOWED=NO
       - name: App build on the simulator
-        run: xcodebuild build -quiet -workspace App/mathmath.xcworkspace -scheme mathmath -destination "${{ steps.sim.outputs.dest }}" CODE_SIGNING_ALLOWED=NO
+        run: xcodebuild build -quiet -workspace App/mathmath.xcworkspace -scheme mathmath -destination "${{ steps.sim.outputs.dest }}" -configuration Debug -derivedDataPath .build/DerivedData CODE_SIGNING_ALLOWED=NO
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.12"
+      - name: Simulator smoke (fresh install + v1→v2 migration, arbiter-03 § Q-G)
+        run: scripts/sim-smoke.sh
 
   python:
     name: Python pipeline

@@ -24,23 +24,6 @@ enum AppSourcesBoundary {
     /// `App/Sources` is not `Packages/Rendering`. `Rendering` is listed for the package 04.7 lands.
     static let allowedImportModules: [String] = ["SwiftUI", "Foundation", "Core", "Rendering"]
 
-    /// TIME-BOXED EXCEPTION (03.9 → deleted by 03.12). The Phase-5 placeholder `App/Sources/ContentView.swift`
-    /// imports `SwiftMath` directly (confirmed by reading the file this session, line 2). Until 03.12 replaces
-    /// that file (`docs/plans/epic-03-plan.md` § 03.12: "replaces the placeholder `ContentView`"), the
-    /// "non-allow-listed import" rule below skips exactly this one line in exactly this one file.
-    /// `contentViewSwiftMathExceptionFile` is a path RELATIVE TO THE SCANNED ROOT, not a file name: the skip
-    /// applies only when the scanned file's standardized, symlink-resolved absolute path equals
-    /// `root.appendingPathComponent(contentViewSwiftMathExceptionFile)` standardized and symlink-resolved the
-    /// same way — i.e. the top-level `ContentView.swift` only. A `ContentView.swift` in any subdirectory
-    /// (e.g. `Views/ContentView.swift`) gets no exception. It does not widen `allowedImportModules`, so every
-    /// other file's `import SwiftMath` is still caught (AC7). 03.12 MUST delete
-    /// `contentViewSwiftMathExceptionFile`, `contentViewSwiftMathExceptionImport` and the `continue`-skip
-    /// block in `violations(in:rules:)` that reads them, in the same change that removes
-    /// `ContentView.swift`'s `import SwiftMath` line. After that deletion this scan enforces the tech-stack
-    /// rule with no carve-out anywhere in `App/Sources`.
-    static let contentViewSwiftMathExceptionFile = "ContentView.swift"
-    static let contentViewSwiftMathExceptionImport = "SwiftMath"
-
     /// Names of Core-internal types the App must never call directly — every state-changing or state-
     /// deriving path other than `MapLaunch.open` and `MapFacade`'s eight entry points (§3). Matched as whole
     /// words, so `unitExpedition`/`ExpeditionRun` do not false-positive against a bare `Expedition` rule.
@@ -101,15 +84,6 @@ enum AppSourcesBoundary {
             for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
                 let lineText = String(line)
                 for rule in rules where rule.violates(lineText) {
-                    if rule.name == "non-allow-listed import",
-                        file.resolvingSymlinksInPath().standardizedFileURL.path
-                            == root.appendingPathComponent(contentViewSwiftMathExceptionFile)
-                            .resolvingSymlinksInPath().standardizedFileURL.path,
-                        lineText.trimmingCharacters(in: .whitespaces)
-                            == "import \(contentViewSwiftMathExceptionImport)"
-                    {
-                        continue  // TIME-BOXED EXCEPTION — deleted by 03.12, see the doc comment above.
-                    }
                     violations.append("\(file.lastPathComponent): \(rule.name)")
                 }
             }

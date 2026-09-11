@@ -19,7 +19,8 @@ echo "== 3/4 Core: build + test on the iOS simulator (D29) =="
 ( cd "$ROOT/Packages/Rendering" && xcodebuild test -quiet -scheme Rendering -destination "$SIM" CODE_SIGNING_ALLOWED=NO )
 
 echo "== 4/4 App build on the simulator + pipeline tests =="
-xcodebuild build -quiet -workspace "$ROOT/App/mathmath.xcworkspace" -scheme mathmath -destination "$SIM" CODE_SIGNING_ALLOWED=NO
+xcodebuild build -quiet -workspace "$ROOT/App/mathmath.xcworkspace" -scheme mathmath -destination "$SIM" -configuration Debug -derivedDataPath "$ROOT/.build/DerivedData" CODE_SIGNING_ALLOWED=NO
+"$ROOT/scripts/sim-smoke.sh"
 ( cd "$ROOT/pipeline" && uv run pytest -q )
 
 echo "gates green"
