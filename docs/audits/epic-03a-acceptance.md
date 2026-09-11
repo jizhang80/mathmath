@@ -19,7 +19,7 @@ carried over from EPIC 02 brief §7.10, and this wrap (03.8). **03b** (03.9–03
 | (e1) commit messages | PASS | the `conventional-pre-commit` hook ran on every commit | — |
 | (e2) CI | PASS required before merge | the ruleset on `main` blocks the merge until both checks are green; the run is linked from the PR | — |
 | (f) I14 | PASS | `grep -rh "^import " Packages/Core/Sources/Core` returns 36 lines, all `import Foundation` | transitive imports |
-| (f) hygiene | PASS, empty=PASS | `print(`, `TODO\|FIXME\|XXX`, `try!\|as!`, `Date()` and `URLSession\|URLRequest` under `Packages/Core/Sources` each return 0 | — |
+| (f) hygiene | PASS, empty=PASS | `print(`, `TODO\|FIXME\|XXX`, `try!\|as!`, `Date()` and `URLSession\|URLRequest` under `Packages/Core/Sources/Core` each return 0. The `CoreCLI` target's one `print(` (`CoreCLI/main.swift:10`) is its stdout contract. Scope corrected at the 03b wrap. | — |
 | (f) glossary | PASS | No identifier uses a banned term, and a case-sensitive `Session` scan is clean. The two word hits are doc comments explaining a ban: `MapLaunch.swift:4` and `Expedition.swift:4`. | — |
 | (f) I5 | PASS | the new Core types carry no identifier; `IdentifierBlocklistParityTests` green | — |
 | (f) I6 / I15 | PASS | panels carry `paraphrase`, expectation codes paired with `official_url`, and landmark `source_url` only, never Ministry prose (03.7 tests); `data/demo` unchanged | — |
