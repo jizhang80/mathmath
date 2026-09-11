@@ -154,7 +154,7 @@ struct DiagnosisMachineTests {
         let event = DiagnosisRun.open(
             originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let advance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: bundle)
         guard case .returned(let outcome) = advance.step else {
             Issue.record("expected .returned")
@@ -179,7 +179,7 @@ struct DiagnosisMachineTests {
         let event = DiagnosisRun.open(
             originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
@@ -203,7 +203,7 @@ struct DiagnosisMachineTests {
         #expect(
             advance.probeResult
                 == DiagnosisProbeResult(
-                    outcome: .declined, results: [], incorrectAttempts: [], code: nil))
+                    outcome: .declined, results: [], misses: [], code: nil))
         #expect(advance.events == [.diagnosisProbeCompleted, .diagnosisReturned])
         #expect(
             outcome.events == [
@@ -219,7 +219,7 @@ struct DiagnosisMachineTests {
         let event = DiagnosisRun.open(
             originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
@@ -252,7 +252,7 @@ struct DiagnosisMachineTests {
         let event = DiagnosisRun.open(
             originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return
@@ -299,7 +299,7 @@ struct DiagnosisMachineTests {
         let event = DiagnosisRun.open(
             originNodeId: "polynomials", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState,
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState,
             bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
@@ -343,7 +343,7 @@ struct DiagnosisMachineTests {
         // exhausted after the first probed level.
         for accept in [false, true] {
             let driverOutcome = DiagnosisRun.run(
-                trigger: .mapCheckHere, originNodeId: "polynomials", failedAttempts: [], levelBudget: 1,
+                trigger: .mapCheckHere, originNodeId: "polynomials", misses: [], levelBudget: 1,
                 decisions: [
                     DiagnosisLevelDecision(
                         declineProbe: false, submittedAnswers: ["wrong", "wrong"],
@@ -362,7 +362,7 @@ struct DiagnosisMachineTests {
         let event = DiagnosisRun.open(
             originNodeId: "polynomials", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState,
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState,
             bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
@@ -414,7 +414,7 @@ struct DiagnosisMachineTests {
         let inputState = Self.state(nodes: ["solving-linear-equations": Self.clearedNode()])
         let event = DiagnosisRun.open(originNodeId: "polynomials", trigger: .mapCheckHere, levelBudget: 2)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return
@@ -470,7 +470,7 @@ struct DiagnosisMachineTests {
         let inputState = Self.state(nodes: ["solving-linear-equations": Self.clearedNode()])
         let event = DiagnosisRun.open(originNodeId: "polynomials", trigger: .mapCheckHere, levelBudget: 2)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
         guard case .probeOffer(let offer1) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return
@@ -544,7 +544,7 @@ struct DiagnosisMachineTests {
         let event = DiagnosisRun.open(
             originNodeId: "exponent-laws", trigger: .mapCheckHere, levelBudget: 2)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return
@@ -581,7 +581,7 @@ struct DiagnosisMachineTests {
         let bundle = Self.chain2(base: base)
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 2)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
@@ -626,7 +626,7 @@ struct DiagnosisMachineTests {
         for submission in ["", "not-a-number", "abc/0"] {
             let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
             let startAdvance = DiagnosisRun.start(
-                event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+                event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
                 bundle: bundle)
             guard case .probeOffer(let offer) = startAdvance.step else {
                 Issue.record("expected .probeOffer")
@@ -650,7 +650,7 @@ struct DiagnosisMachineTests {
         let base = try Self.loadDemoBundle()
         let bundle = Self.chain2(base: base)
         let outcome = DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: "origin", failedAttempts: [], levelBudget: 1,
+            trigger: .mapCheckHere, originNodeId: "origin", misses: [], levelBudget: 1,
             decisions: [
                 DiagnosisLevelDecision(
                     declineProbe: false, submittedAnswers: ["1"], acceptFurtherLevel: false)
@@ -664,7 +664,7 @@ struct DiagnosisMachineTests {
         let base = try Self.loadDemoBundle()
         let bundle = Self.chain2(base: base)
         let outcome = DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: "origin", failedAttempts: [], levelBudget: 2,
+            trigger: .mapCheckHere, originNodeId: "origin", misses: [], levelBudget: 2,
             decisions: [], shownItemIdsInRun: [], state: Self.state(), bundle: bundle,
             today: Self.today())
         #expect(outcome.terminal == .unconfirmed)
@@ -687,7 +687,7 @@ struct DiagnosisMachineTests {
         let bundle = Self.chainNoPrereq(base: base)
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let advance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: bundle)
         guard case .returned(let outcome) = advance.step else {
             Issue.record("expected .returned")
@@ -703,7 +703,7 @@ struct DiagnosisMachineTests {
         let chain2Bundle = Self.chain2(base: base)
         let event1 = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let start1 = DiagnosisRun.start(
-            event: event1, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event1, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: chain2Bundle)
         guard case .probeOffer(let offer1) = start1.step else {
             Issue.record("expected .probeOffer")
@@ -719,7 +719,7 @@ struct DiagnosisMachineTests {
 
         let unavailableBundle = Self.chain2FewItems(base: base)
         let start2 = DiagnosisRun.start(
-            event: event1, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event1, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: unavailableBundle)
         guard case .probeOffer(let offer2) = start2.step else {
             Issue.record("expected .probeOffer")
@@ -740,7 +740,7 @@ struct DiagnosisMachineTests {
         let d = "solving-linear-equations"
         let inputState = Self.state(nodes: [d: Self.clearedNode()])
         let outcome = DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: "polynomials", failedAttempts: [], levelBudget: 1,
+            trigger: .mapCheckHere, originNodeId: "polynomials", misses: [], levelBudget: 1,
             decisions: [
                 DiagnosisLevelDecision(
                     declineProbe: false, submittedAnswers: ["wrong", "wrong"], acceptFurtherLevel: false)
@@ -759,10 +759,10 @@ struct DiagnosisMachineTests {
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
 
         let resolvingAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: resolvingBundle)
         let nonResolvingAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: nonResolvingBundle)
         guard case .returned(let resolvingOutcome) = resolvingAdvance.step,
             case .returned(let nonResolvingOutcome) = nonResolvingAdvance.step
@@ -784,7 +784,7 @@ struct DiagnosisMachineTests {
         let bundle = Self.chain2(base: base)
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
@@ -807,7 +807,7 @@ struct DiagnosisMachineTests {
         let bundle = try Self.loadDemoBundle()
         let d = "solving-linear-equations"
         let outcome = DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: "polynomials", failedAttempts: [], levelBudget: 1,
+            trigger: .mapCheckHere, originNodeId: "polynomials", misses: [], levelBudget: 1,
             decisions: [
                 DiagnosisLevelDecision(
                     declineProbe: false, submittedAnswers: ["wrong", "wrong"], acceptFurtherLevel: false)
@@ -829,10 +829,10 @@ struct DiagnosisMachineTests {
         let bundle = Self.chain2(base: base)
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let first = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: bundle)
         let second = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: bundle)
         #expect(first == second)
     }
@@ -844,7 +844,7 @@ struct DiagnosisMachineTests {
         let inputState = Self.state()
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return
@@ -880,7 +880,7 @@ struct DiagnosisMachineTests {
     ) -> DiagnosisOutcome {
         let decisions = PropertyGen.diagnosisLevelDecisions(&gen, count: 3)
         return DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: originId, failedAttempts: [], levelBudget: levelBudget,
+            trigger: .mapCheckHere, originNodeId: originId, misses: [], levelBudget: levelBudget,
             decisions: decisions, shownItemIdsInRun: [], state: state, bundle: bundle, today: today)
     }
 
@@ -893,7 +893,7 @@ struct DiagnosisMachineTests {
         let event = DiagnosisRun.open(
             originNodeId: originId, trigger: .mapCheckHere, levelBudget: levelBudget)
         var advance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: state, bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: state, bundle: bundle)
         let fallback = DiagnosisLevelDecision(
             declineProbe: true, submittedAnswers: [], acceptFurtherLevel: false)
         var offerIndex = -1
@@ -1002,7 +1002,7 @@ struct DiagnosisMachineTests {
             let levelBudget = PropertyGen.element(&gen, from: [1, 2])
             let decisions = PropertyGen.diagnosisLevelDecisions(&gen, count: 3)
             let driverOutcome = DiagnosisRun.run(
-                trigger: .mapCheckHere, originNodeId: graph.originId, failedAttempts: [],
+                trigger: .mapCheckHere, originNodeId: graph.originId, misses: [],
                 levelBudget: levelBudget, decisions: decisions, shownItemIdsInRun: [],
                 state: Self.state(), bundle: bundle, today: Self.today())
             let handStepped = Self.driveWithDecisions(
@@ -1025,7 +1025,7 @@ struct DiagnosisMachineTests {
         let inputState = Self.state(nodes: ["d": Self.clearedNode()])
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 2)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
         guard case .probeOffer(let offer1) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return

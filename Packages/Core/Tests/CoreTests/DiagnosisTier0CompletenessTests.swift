@@ -58,7 +58,7 @@ struct DiagnosisTier0CompletenessTests {
         // `integer-operations` is never the `to` of any real edge (it is the graph's own root).
         #expect(!bundle.edges.edges.contains { $0.to == "integer-operations" })
         let outcome = DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: "integer-operations", failedAttempts: [],
+            trigger: .mapCheckHere, originNodeId: "integer-operations", misses: [],
             levelBudget: 1, decisions: [], shownItemIdsInRun: [], state: Self.state(nodes: [:]),
             bundle: bundle, today: Self.today())
         #expect(outcome.terminal == .noPrerequisite)
@@ -69,7 +69,7 @@ struct DiagnosisTier0CompletenessTests {
     func refutedReachedOnRealDemo() throws {
         let bundle = try Self.loadDemoBundle()
         let outcome = DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: "polynomials", failedAttempts: [], levelBudget: 1,
+            trigger: .mapCheckHere, originNodeId: "polynomials", misses: [], levelBudget: 1,
             decisions: [
                 DiagnosisLevelDecision(
                     declineProbe: false, submittedAnswers: ["6", "a"], acceptFurtherLevel: false)
@@ -84,7 +84,7 @@ struct DiagnosisTier0CompletenessTests {
         let bundle = try Self.loadDemoBundle()
         let inputState = Self.state(nodes: ["solving-linear-equations": Self.clearedNode()])
         let outcome = DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: "polynomials", failedAttempts: [], levelBudget: 1,
+            trigger: .mapCheckHere, originNodeId: "polynomials", misses: [], levelBudget: 1,
             decisions: [
                 DiagnosisLevelDecision(
                     declineProbe: false, submittedAnswers: ["wrong", "wrong"], acceptFurtherLevel: false)
@@ -97,7 +97,7 @@ struct DiagnosisTier0CompletenessTests {
     func cappedReachedOnRealDemo() throws {
         let bundle = try Self.loadDemoBundle()
         let outcome = DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: "polynomials", failedAttempts: [], levelBudget: 1,
+            trigger: .mapCheckHere, originNodeId: "polynomials", misses: [], levelBudget: 1,
             decisions: [
                 DiagnosisLevelDecision(
                     declineProbe: false, submittedAnswers: ["wrong", "wrong"], acceptFurtherLevel: false)
@@ -111,7 +111,7 @@ struct DiagnosisTier0CompletenessTests {
     func unconfirmedDeclinedReachedOnRealDemo() throws {
         let bundle = try Self.loadDemoBundle()
         let outcome = DiagnosisRun.run(
-            trigger: .mapCheckHere, originNodeId: "polynomials", failedAttempts: [], levelBudget: 1,
+            trigger: .mapCheckHere, originNodeId: "polynomials", misses: [], levelBudget: 1,
             decisions: [
                 DiagnosisLevelDecision(declineProbe: true, submittedAnswers: [], acceptFurtherLevel: false)
             ], shownItemIdsInRun: [], state: Self.state(nodes: [:]), bundle: bundle,
@@ -166,7 +166,7 @@ struct DiagnosisTier0CompletenessTests {
         let event = DiagnosisRun.open(
             originNodeId: "polynomials", trigger: .expeditionSecondMiss, levelBudget: 1)
         let advance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: polyMiss2.run.shownItemIds,
+            event: event, misses: [], shownItemIdsInRun: polyMiss2.run.shownItemIds,
             state: polyMiss2.state, bundle: bundle)
         guard case .probeOffer(let offer) = advance.step else {
             Issue.record("expected .probeOffer")

@@ -30,7 +30,7 @@ public enum ProbeOutcome: Equatable { case refuted, confirmed, declined, unavail
 public struct DiagnosisProbeResult: Equatable {
     public let outcome: ProbeOutcome
     public let results: [ItemResult]
-    public let incorrectAttempts: [FailedProbeAttempt]
+    public let misses: [ItemMiss]
     public let code: CoreError?
 }
 
@@ -72,7 +72,7 @@ public struct ProbeInProgress: Equatable {
     public let candidateId: String
     public let items: [ProbeItem]
     public let levelResults: [ItemResult]
-    let incorrectAttempts: [FailedProbeAttempt]
+    let misses: [ItemMiss]
     public var currentItem: ProbeItem { items[levelResults.count] }
 }
 
@@ -80,7 +80,7 @@ public struct ProbeInProgress: Equatable {
 public struct FurtherLevelOffer: Equatable {
     public let context: DiagnosisContext
     public let candidateId: String
-    let incorrectAttempts: [FailedProbeAttempt]
+    let misses: [ItemMiss]
 }
 
 public enum DiagnosisStep: Equatable {
@@ -131,14 +131,14 @@ public enum DiagnosisRun {
         DiagnosisEvent(originNodeId: originNodeId, trigger: trigger, levelBudget: levelBudget)
     }
 
-    /// W1 + W2 at the first level. `originErrorTypeId = classify(failedAttempts)`; for `map_check_here`
-    /// the caller passes `failedAttempts: []` (so `originErrorTypeId == "none_of_these"`) and
+    /// W1 + W2 at the first level. `originErrorTypeId = classify(misses)`; for `map_check_here`
+    /// the caller passes `misses: []` (so `originErrorTypeId == "none_of_these"`) and
     /// `shownItemIdsInRun: []`.
     public static func start(
-        event: DiagnosisEvent, failedAttempts: [FailedProbeAttempt], shownItemIdsInRun: Set<String>,
+        event: DiagnosisEvent, misses: [ItemMiss], shownItemIdsInRun: Set<String>,
         state: StudentState, bundle: ContentBundle
     ) -> DiagnosisAdvance {
-        let originErrorTypeId = classify(failedAttempts)
+        let originErrorTypeId = classify(misses)
         let context = DiagnosisContext(
             event: event, level: 0, depthReached: 0, originErrorTypeId: originErrorTypeId,
             shownItemIdsInRun: shownItemIdsInRun, blockedNodeIds: [], probeResults: [],
@@ -157,7 +157,7 @@ public enum DiagnosisRun {
     ) -> DiagnosisAdvance {
         guard accept else {
             let probeResult = DiagnosisProbeResult(
-                outcome: .declined, results: [], incorrectAttempts: [], code: nil)
+                outcome: .declined, results: [], misses: [], code: nil)
             let finalContext = updatedContext(
                 offer.context, appendingEvents: [.diagnosisProbeCompleted, .diagnosisReturned])
             let outcome = terminal(
@@ -177,7 +177,7 @@ public enum DiagnosisRun {
                 shownItemIdsInRun: offer.context.shownItemIdsInRun, probeLog: state.probeLog)
         else {
             let probeResult = DiagnosisProbeResult(
-                outcome: .unavailable, results: [], incorrectAttempts: [], code: .diagProbeUnavailable)
+                outcome: .unavailable, results: [], misses: [], code: .diagProbeUnavailable)
             let finalContext = updatedContext(offer.context, appendingEvents: [.diagnosisReturned])
             let outcome = terminal(
                 .unconfirmed, code: .diagProbeUnavailable, hint: true, context: finalContext,
@@ -188,7 +188,7 @@ public enum DiagnosisRun {
         }
         let probe = ProbeInProgress(
             context: offer.context, candidateId: offer.candidateId, items: items, levelResults: [],
-            incorrectAttempts: [])
+            misses: [])
         return DiagnosisAdvance(
             step: .probeItem(probe), state: state, events: [], itemResult: nil, probeResult: nil)
     }
@@ -204,24 +204,24 @@ public enum DiagnosisRun {
             nodeId: probe.candidateId, itemId: item.id, correct: correct,
             correctAnswerDisplay: ItemChecker.correctAnswerDisplay(for: item), why: item.why,
             isRetry: false)
-        var incorrectAttempts = probe.incorrectAttempts
+        var misses = probe.misses
         if !correct {
-            incorrectAttempts.append(FailedProbeAttempt(item: item, submittedValue: submitted))
+            misses.append(ItemMiss(item: item, submittedValue: submitted))
         }
         let levelResults = probe.levelResults + [result]
 
         guard levelResults.count == 2 else {
             let updated = ProbeInProgress(
                 context: probe.context, candidateId: probe.candidateId, items: probe.items,
-                levelResults: levelResults, incorrectAttempts: incorrectAttempts)
+                levelResults: levelResults, misses: misses)
             return DiagnosisAdvance(
                 step: .probeItem(updated), state: state, events: [], itemResult: result,
                 probeResult: nil)
         }
 
-        guard !incorrectAttempts.isEmpty else {
+        guard !misses.isEmpty else {
             let probeResult = DiagnosisProbeResult(
-                outcome: .refuted, results: levelResults, incorrectAttempts: [], code: nil)
+                outcome: .refuted, results: levelResults, misses: [], code: nil)
             let finalContext = updatedContext(
                 probe.context, depthReached: probe.context.level,
                 probeResults: probe.context.probeResults + levelResults,
@@ -236,7 +236,7 @@ public enum DiagnosisRun {
 
         // W4: fail — candidate blocked, one remediation piece, `remediated = true`.
         let probeResult = DiagnosisProbeResult(
-            outcome: .confirmed, results: levelResults, incorrectAttempts: incorrectAttempts, code: nil)
+            outcome: .confirmed, results: levelResults, misses: misses, code: nil)
         let fogDefault = NodeState(
             mastery: .fog, correctCount: 0, lastProbe: nil, nextDue: nil, ladderRung: 0, remediated: nil)
         var nodes = state.nodes
@@ -264,7 +264,7 @@ public enum DiagnosisRun {
         if offered(levelReached: probe.context.level, levelBudget: probe.context.event.levelBudget) {
             let furtherOffer = FurtherLevelOffer(
                 context: contextAfterRemediation, candidateId: probe.candidateId,
-                incorrectAttempts: incorrectAttempts)
+                misses: misses)
             return DiagnosisAdvance(
                 step: .furtherLevelOffer(furtherOffer), state: stateAfterRemediation,
                 events: [.diagnosisProbeCompleted, .diagnosisNodeBlocked, .diagnosisRemediationShown],
@@ -273,7 +273,7 @@ public enum DiagnosisRun {
 
         // W6: budget exhausted — one query, singular deeper candidate, no probe, no remediation.
         let deeper = hypothesise(
-            originId: probe.candidateId, biasErrorTypeId: classify(incorrectAttempts),
+            originId: probe.candidateId, biasErrorTypeId: classify(misses),
             state: stateAfterRemediation, bundle: bundle, levelBudget: 1)
         let contextAfterQuery = updatedContext(
             contextAfterRemediation, appendingEvents: [.graphPrerequisiteReturned])
@@ -327,7 +327,7 @@ public enum DiagnosisRun {
                 probeResult: nil)
         }
         return formHypothesis(
-            queryOriginId: offer.candidateId, biasErrorTypeId: classify(offer.incorrectAttempts),
+            queryOriginId: offer.candidateId, biasErrorTypeId: classify(offer.misses),
             context: offer.context, state: state, bundle: bundle)
     }
 
@@ -335,13 +335,13 @@ public enum DiagnosisRun {
     /// own. `decisions.count <= k` at the k-th `ProbeOffer` uses the §6 fallback (decline, no answers, no
     /// further level) — the safest Tier-0 reading.
     public static func run(
-        trigger: DiagnosisTrigger, originNodeId: String, failedAttempts: [FailedProbeAttempt],
+        trigger: DiagnosisTrigger, originNodeId: String, misses: [ItemMiss],
         levelBudget: Int, decisions: [DiagnosisLevelDecision], shownItemIdsInRun: Set<String>,
         state: StudentState, bundle: ContentBundle, today: CalendarDay
     ) -> DiagnosisOutcome {
         let event = open(originNodeId: originNodeId, trigger: trigger, levelBudget: levelBudget)
         var advance = start(
-            event: event, failedAttempts: failedAttempts, shownItemIdsInRun: shownItemIdsInRun,
+            event: event, misses: misses, shownItemIdsInRun: shownItemIdsInRun,
             state: state, bundle: bundle)
         let fallback = DiagnosisLevelDecision(
             declineProbe: true, submittedAnswers: [], acceptFurtherLevel: false)
@@ -374,8 +374,8 @@ public enum DiagnosisRun {
 
     // MARK: - Internal helpers (unit-tested via @testable import Core; never public)
 
-    static func classify(_ attempts: [FailedProbeAttempt]) -> String {
-        Classify.classify(attempts)
+    static func classify(_ misses: [ItemMiss]) -> String {
+        Classify.classify(misses)
     }
 
     static func hypothesise(

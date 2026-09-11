@@ -82,20 +82,20 @@ struct ExpeditionDiagnosisSeamTests {
         let originNodeId = try #require(miss2.run.suspendedForDiagnosisNodeId)
         #expect(originNodeId == "exponent-laws")
 
-        // Real, step-wise DiagnosisRun calls (none stubbed): the missed items become FailedProbeAttempts
+        // Real, step-wise DiagnosisRun calls (none stubbed): the missed items become ItemMisses
         // (§6 decision default).
-        let missedAttempts = [
-            FailedProbeAttempt(
+        let misses = [
+            ItemMiss(
                 item: try Self.probeItem(bundle: bundle, nodeId: "exponent-laws", itemId: "exponent-laws-1"),
                 submittedValue: "0"),
-            FailedProbeAttempt(
+            ItemMiss(
                 item: try Self.probeItem(bundle: bundle, nodeId: "exponent-laws", itemId: "exponent-laws-2"),
                 submittedValue: "0"),
         ]
         let event = DiagnosisRun.open(
             originNodeId: originNodeId, trigger: .expeditionSecondMiss, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: missedAttempts, shownItemIdsInRun: miss2.run.shownItemIds,
+            event: event, misses: misses, shownItemIdsInRun: miss2.run.shownItemIds,
             state: miss2.state, bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")

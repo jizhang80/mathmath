@@ -128,15 +128,32 @@ together with the default marker (`MarkerTrail.reconcileMarker`, EPIC 02 task 02
 `user_text` in `contracts/error-codes.json` says the marker stays where it was, but on this path the marker
 moves.
 **Configuration:** `contracts/error-codes.json` v1.0.0; `Core` returns the code as data and shows no UI text.
-**Revisit trigger:** EPIC 03, when the App first surfaces this code to the student.
-**Hypothesis (unverified):** either suppress the message on the load path or register a separate code; this is
-the UI-text owner's call.
+**Resolved (EPIC 03):** arbiter ruling Q-A (`tasks/arbitration/arbiter-03-predispatch.md`), option (a):
+- No student text on the load path. `Core` computes the message list, which is empty for this code on this
+  path; the App shows what `Core` hands it and never branches on a code.
+- When no course in `syllabi[]` resolves, the outcome is "course selection needed", again with no text.
+- Loading never writes the state file.
+- The registered `user_text` belongs to the marker-drag path, which the Demo does not build (D-14). The
+  registry is unchanged.
+
+Verified by `Packages/Core/Tests/CoreTests/MapLaunchTests.swift`: the W7 `MCR3U.u9` fallback with empty
+messages (AC4), and the `MHF4U` variant returning `courseSelectionNeeded`. The App side is checked by
+`AppShellStructuralTests` (EPIC 03 task 03.12): it never names `MAP_MARKER_OFF_TRAIL`.
+**Revisit trigger:** EPIC 10, when a content refresh can change unit ids and the load path becomes reachable in
+practice.
+**Hypothesis (unverified):** none.
 
 ### D-13 — Untracked SwiftPM artefact under the Xcode project's embedded workspace
 
 **Observed:** after EPIC 02 simulator builds, `App/mathmath.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/`
 appears untracked. `.gitignore` covers `xcuserdata/` there, not `xcshareddata/swiftpm/`. It is neither
-committed nor deleted.
+committed nor deleted. Re-measured at the EPIC 03b wrap:
+- The directory is still present and untracked. It holds `Package.resolved` (390 bytes) and an empty
+  `configuration/`.
+- `git check-ignore` reports that it is not ignored.
+- Its single pin is `swiftmath` 1.7.3.
+- It differs from both tracked `Package.resolved` files (`App/mathmath.xcworkspace/xcshareddata/swiftpm/` and
+  `Packages/Rendering/`) only in `originHash`; the pins are identical.
 **Configuration:** `xcodebuild` runs from `scripts/gate.sh` on the iOS simulator; the App builds through
 `App/mathmath.xcworkspace`.
 **Revisit trigger:** the next tooling or `.gitignore` change, or when the directory is first found staged by
@@ -172,4 +189,16 @@ SHA-256 digest. The EPIC 04 task 04.1b reviewer found this; it is recorded in `d
 **Configuration:** the Demo. The embedded snapshot is the only bundle, and there is no network.
 **Revisit trigger:** EPIC 10 hosted bundles (platform W2). The task that first writes real hashes into a manifest
 also corrects the placeholder length.
+**Hypothesis (unverified):** none.
+
+### D-16 — Region and landmark panels have no tap trigger in the Demo
+
+**Observed:** EPIC 03 task 03.11 ships `RegionPanelView` and `LandmarkPanelView` (`App/Sources/MapUI/`). Task
+03.10's `MapCanvasView` resolves node taps only: its single callback is `onNodeTap` (03.10 §6 decision default).
+Task 03.12 §4.2 records that neither panel can be opened in the Demo, and calls this "a known, intentionally
+deferred gap, not a Q5".
+**Configuration:** the Demo map screen (`App/Sources/Shell/AppShell.swift`, task 03.12) presents `NodePanelView`
+from `onNodeTap` and the unit-list picker from the toolbar. Nothing presents the region or landmark panel.
+**Revisit trigger:** the owner's Demo review (`DEMO-BRIEF.md` § 7 Acceptance), or the first task that adds region
+or landmark tap resolution to `MapCanvasView`.
 **Hypothesis (unverified):** none.

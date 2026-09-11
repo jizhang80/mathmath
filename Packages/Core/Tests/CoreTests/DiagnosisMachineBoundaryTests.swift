@@ -164,7 +164,7 @@ struct DiagnosisMachineBoundaryTests {
         let bundle = Self.chain2(base: base)
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(), bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(), bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return
@@ -218,7 +218,7 @@ struct DiagnosisMachineBoundaryTests {
         let inputState = Self.state(expeditionLog: existingLog)
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return
@@ -260,7 +260,7 @@ struct DiagnosisMachineBoundaryTests {
         let event = DiagnosisRun.open(
             originNodeId: "polynomials", trigger: .expeditionSecondMiss, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return
@@ -297,7 +297,7 @@ struct DiagnosisMachineBoundaryTests {
         let bundle = Self.chain2(base: base)
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(), bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(), bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return
@@ -369,7 +369,7 @@ struct DiagnosisMachineBoundaryTests {
             ])
         let event = DiagnosisRun.open(originNodeId: "origin", trigger: .mapCheckHere, levelBudget: 1)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: Self.state(),
+            event: event, misses: [], shownItemIdsInRun: [], state: Self.state(),
             bundle: tieBundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
@@ -386,7 +386,7 @@ struct DiagnosisMachineBoundaryTests {
         let inputState = Self.state(nodes: ["solving-linear-equations": Self.clearedNode()])
         let event = DiagnosisRun.open(originNodeId: "polynomials", trigger: .mapCheckHere, levelBudget: 2)
         let startAdvance = DiagnosisRun.start(
-            event: event, failedAttempts: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
+            event: event, misses: [], shownItemIdsInRun: [], state: inputState, bundle: bundle)
         guard case .probeOffer(let offer) = startAdvance.step else {
             Issue.record("expected .probeOffer")
             return

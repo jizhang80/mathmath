@@ -89,10 +89,10 @@ bundle whole.
 ### W2 — Serve a hint (runtime)
 
 **Pre:** diagnosis holds a node id and a classified ErrorType; bundle loaded.
-**Steps:** 1. Resolve `(node, error_type) → tiers`; a miss raises `LO_HINT_NOT_FOUND` and the session
+**Steps:** 1. Resolve `(node, error_type) → tiers`; a miss raises `LO_HINT_NOT_FOUND` and the diagnosis event
 falls back to the node's generic tier-1 hint. 2. Tiers issue one at a time on request. 3. Tier 1 may
 re-word; below threshold or on adapter failure the stored wording is used (Tier 0 fallback, I2).
-**Post:** the served tier index returns for the Attempt record; the tier list is finite, so it ends.
+**Post:** the served tier index returns to the diagnosis event; the tier list is finite, so it ends.
 
 ### W3 — Draw a probe
 

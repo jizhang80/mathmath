@@ -38,16 +38,16 @@ struct ClassifyTests {
                     for wrongAnswer in item.wrongAnswers ?? [] {
                         checkedAtLeastOne = true
                         #expect(wrongAnswer.errorTypeId != "none-of-these")
-                        let attempt = FailedProbeAttempt(item: item, submittedValue: wrongAnswer.value)
-                        #expect(Classify.classify([attempt]) == wrongAnswer.errorTypeId)
+                        let miss = ItemMiss(item: item, submittedValue: wrongAnswer.value)
+                        #expect(Classify.classify([miss]) == wrongAnswer.errorTypeId)
                     }
                 case .mc:
                     for choice in item.choices ?? [] {
                         guard let errorTypeId = choice.errorTypeId else { continue }
                         checkedAtLeastOne = true
                         #expect(errorTypeId != "none-of-these")
-                        let attempt = FailedProbeAttempt(item: item, submittedValue: choice.id)
-                        #expect(Classify.classify([attempt]) == errorTypeId)
+                        let miss = ItemMiss(item: item, submittedValue: choice.id)
+                        #expect(Classify.classify([miss]) == errorTypeId)
                     }
                 }
             }
@@ -62,14 +62,14 @@ struct ClassifyTests {
         let bundle = try Self.loadDemoBundle()
         let node = try #require(bundle.nodes.nodes.first { $0.id == "exponent-laws" })
         let item = try #require(node.probeItems.first)
-        let attempt = FailedProbeAttempt(item: item, submittedValue: "definitely-not-a-real-answer")
-        #expect(Classify.classify([attempt]) == "none_of_these")
+        let miss = ItemMiss(item: item, submittedValue: "definitely-not-a-real-answer")
+        #expect(Classify.classify([miss]) == "none_of_these")
     }
 
     // MARK: - T5 negative controls
 
     @Test("Classify.classify([]) returns exactly \"none_of_these\" (underscore, not hyphen)")
-    func emptyAttemptsReturnsUnderscoreSentinel() {
+    func emptyMissesReturnsUnderscoreSentinel() {
         #expect(Classify.classify([]) == "none_of_these")
         #expect(Classify.classify([]) != "none-of-these")
     }
@@ -81,7 +81,7 @@ struct ClassifyTests {
         let bundle = try Self.loadDemoBundle()
         let node = try #require(bundle.nodes.nodes.first { $0.id == "exponent-laws" })
         let item = try #require(node.probeItems.first)
-        let attempt = FailedProbeAttempt(item: item, submittedValue: "definitely-not-a-real-answer")
-        #expect(Classify.classify([attempt]) == Classify.classify([attempt]))
+        let miss = ItemMiss(item: item, submittedValue: "definitely-not-a-real-answer")
+        #expect(Classify.classify([miss]) == Classify.classify([miss]))
     }
 }
