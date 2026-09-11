@@ -16,7 +16,7 @@ follows on `epic-04b-door-app`, and calls only the `DoorFacade` entry points thi
 | (a) typecheck | PASS (0 errors) | `pyright` strict over `pipeline/` | Swift type checking, which (d) covers |
 | (b) lint | PASS | `swift-format lint --strict`; `ruff check pipeline` | — |
 | (c) format | PASS | `ruff format --check pipeline` | — |
-| (d) tests | PASS | `scripts/gate.sh` green at the final product tree `07ef532` (run by the 04.5 T6 tester): `Core-Package` 687 tests in 68 suites; `Rendering` green; App build green; `sim-smoke` scenarios 1 and 2 PASS, embedded snapshot byte-identical; `pytest` 190 passed. The commit after it is docs only. | `scripts/gate.sh`: `core-cli` release build; `Core-Package` and `Rendering` tests on the simulator; App build; `scripts/sim-smoke.sh`; `pytest` | physical device (D29) |
+| (d) tests | PASS | `scripts/gate.sh` (`core-cli` release build; `Core-Package` and `Rendering` tests on the simulator; App build; `scripts/sim-smoke.sh`; `pytest`), green at the final product tree `07ef532` (run by the 04.5 T6 tester): `Core-Package` 687 tests in 68 suites; `Rendering` green; App build green; `sim-smoke` scenarios 1 and 2 PASS, embedded snapshot byte-identical; `pytest` 190 passed. The commit after it is docs only. | physical device (D29) |
 | (e1) commit messages | PASS | the `conventional-pre-commit` hook ran on every commit | — |
 | (e2) CI | must pass before merge | the ruleset on `main` blocks the merge until both checks are green | — |
 | (f) I14 | PASS | `grep -rh "^import " Packages/Core/Sources/Core` gives 41 × `import Foundation` (the 5 new `Door/*` files included) | transitive imports |
