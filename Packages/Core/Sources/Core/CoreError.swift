@@ -28,4 +28,5 @@ public enum CoreError: String, Error, CaseIterable {
     case platformStateUnreadable = "PLATFORM_STATE_UNREADABLE"
     case platformStateWriteFailed = "PLATFORM_STATE_WRITE_FAILED"
     case platformSnapshotRefused = "PLATFORM_SNAPSHOT_REFUSED"
+    case loHintNotFound = "LO_HINT_NOT_FOUND"
 }
