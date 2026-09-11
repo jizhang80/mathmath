@@ -28,6 +28,24 @@ marker/trail, fringe/compose, item checker + expedition run) and **02b — Door 
 merge rule, prerequisite query + classify, diagnosis machine, state merge). Each is wrapped and merged on its
 own. Plan: `docs/plans/epic-02-plan.md`.
 
+**EPIC 03 split (planner, 2026-09-10; scope unchanged):** over the 8-task cap (11 work tasks + 2 wraps). Split at
+the brief's §8 seam, the map-actions façade and launch entry point (03.7):
+- **03a (map core):** 03.1–03.8. The interaction-contract v0.9.2 bump, the `PLATFORM_SNAPSHOT_REFUSED` registration,
+  the Core error-text mirror, the bundle loader and embedded snapshot, the student-state store, `MapViewModel`, the
+  map-actions façade and launch, and the wrap.
+- **03b (map app):** 03.9–03.13. The App/Sources I14 scan, the `Canvas` map, the panels, pickers and hand-off, the app
+  shell and simulator launch smoke, and the wrap.
+
+Task **03.0**, a `fix(pipeline)` for the live-landmark test flake, is carried over from EPIC 02 brief §7.10 and runs
+first on the 03a branch. Plan: `docs/plans/epic-03-plan.md`.
+
+**EPIC 04 split (planner, 2026-09-10; scope unchanged):** over the cap (12 work tasks + 2 wraps, counting the data task
+04.1b). Split at the Door-façade seam (04.5):
+- **04a (door core):** 04.1–04.6, including 04.1b.
+- **04b (door app):** 04.7–04.13.
+
+Plan: `docs/plans/epic-04-plan.md`.
+
 Demo wrap = owner installs on the two testers' devices (D35) and records the seven observations; that
 record decides whether the map form proceeds to M3 or is revised (DEMO-BRIEF §7) — a Q5 checkpoint by
 design, not a stop.

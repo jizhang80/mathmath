@@ -25,4 +25,7 @@ public enum CoreError: String, Error, CaseIterable {
     case diagStateWriteFailed = "DIAG_STATE_WRITE_FAILED"
     case graphNoPrerequisite = "GRAPH_NO_PREREQUISITE"
     case mapMarkerOffTrail = "MAP_MARKER_OFF_TRAIL"
+    case platformStateUnreadable = "PLATFORM_STATE_UNREADABLE"
+    case platformStateWriteFailed = "PLATFORM_STATE_WRITE_FAILED"
+    case platformSnapshotRefused = "PLATFORM_SNAPSHOT_REFUSED"
 }

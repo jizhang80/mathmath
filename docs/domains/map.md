@@ -87,9 +87,8 @@ cleared (Q2), and the trails that cross it. A `horizon` region is not tappable. 
 
 ### W5 — Set the course-progress marker
 **Pre:** a course trail segment is selected. **Steps:** 1. Show the course's **unit list** (curriculum-spine
-`Unit`s, D45) with the current one highlighted; the student picks "we are here in class". Dragging the
-marker along the trail is the same action: it snaps to the nearest unit boundary, else
-`MAP_MARKER_OFF_TRAIL` and stays. 2. Hand the unit id to **expedition** (`map.marker_moved`), which owns the
+`Unit`s, D45) with the current one highlighted; the student picks "we are here in class". The marker is set
+from this list only; there is no drag (interaction-contract v0.9.2 § 3). 2. Hand the unit id to **expedition** (`map.marker_moved`), which owns the
 change, regenerates the trail (D47 — past the last unit the trail extends, drawn dashed) and recomputes the
 fringe (D45/D48). 3. Re-derive fog: nodes upstream of the marker are fog with an "upstream of your class"
 note, never cleared. **Post:** marker persisted by expedition; `map.marker_moved` emitted (a D40 event).
@@ -123,7 +122,7 @@ B and C).
 |---|---|---|---|
 | `MAP_LAYOUT_MISSING` | A node in the bundle has no coordinates | Internal; bundle refused at load (platform) | Yes — re-run the pipeline build step (D33) |
 | `MAP_REGION_UNKNOWN` | A node names a region absent from the bundle | Internal; bundle refused (I8) | Yes — pipeline |
-| `MAP_MARKER_OFF_TRAIL` | Marker dropped outside a unit boundary of the selected course | Marker snaps back | Yes |
+| `MAP_MARKER_OFF_TRAIL` | A stored marker names a course not in `syllabi[]` or a unit absent from the bundle (load, expedition W7) | Nothing on the load path — the map opens at the default marker (arbiter-03 Q-A) | Yes |
 | `MAP_LANDMARK_UNSOURCED` | A landmark lacks `source_url` | Internal; bundle refused (I15) | Yes — pipeline |
 
 ## Invariants enforced here

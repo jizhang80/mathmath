@@ -122,7 +122,7 @@ public enum Expedition {
     /// A node is resident in course `X` iff its `expectationCodes` array (may be `nil`) contains ≥ 1
     /// entry whose `courseCode == X`. A second, independent implementation of the same rule 02.5's own
     /// (private, hence not importable) `MarkerTrailGeneration.swift` helper uses.
-    private static func residentNodeIds(course: Course, index: GraphIndex) -> Set<String> {
+    static func residentNodeIds(course: Course, index: GraphIndex) -> Set<String> {
         Set(
             index.nodesById.values
                 .filter { node in
@@ -134,7 +134,7 @@ public enum Expedition {
     /// A node's unit index within course `X` is the 0-based index into `course.units` of the unit named
     /// by the node's lowest-ordered expectation code for `X` (`contracts/graph-constraints.md` v1.1.0
     /// L0-T).
-    private static func unitIndex(nodeId: String, course: Course, index: GraphIndex) -> Int? {
+    static func unitIndex(nodeId: String, course: Course, index: GraphIndex) -> Int? {
         guard let node = index.nodesById[nodeId] else { return nil }
         let entries = (node.expectationCodes ?? []).filter { $0.courseCode == course.courseCode }
         let ordinals: [Int] = entries.compactMap { entry in
@@ -149,7 +149,7 @@ public enum Expedition {
     /// The three readings of "`marker.unit ∪ next(marker.unit)`, or the requested unit only" (compose
     /// bullet), in priority order — unit expedition first, then past-last-unit (Q-F), then the ordinary
     /// current+next-unit window.
-    private static func scopeWindow(
+    static func scopeWindow(
         marker: Marker, trail: Trail, index: GraphIndex, unitExpeditionUnitId: String?
     ) -> Set<String> {
         if let requestedUnit = unitExpeditionUnitId {
@@ -199,7 +199,7 @@ public enum Expedition {
     /// itself as `blocked`"). A `blocked` node outside every trail segment (no course, or a course not in
     /// `syllabi[]`) is still fringe-eligible — the union has no course/trail restriction on the `blocked`
     /// term.
-    private static func fringeNodeIds(
+    static func fringeNodeIds(
         state: StudentState, bundle: ContentBundle, index: GraphIndex, edgesByTo: [String: [Edge]],
         marker: Marker, trail: Trail, unitExpeditionUnitId: String?
     ) -> Set<String> {

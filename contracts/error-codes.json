@@ -47,6 +47,7 @@
 
     {"code": "PLATFORM_BUNDLE_FETCH_FAILED", "recoverable": true, "surface": "student", "user_text": "Could not refresh content; still using the installed version."},
     {"code": "PLATFORM_BUNDLE_INTEGRITY_FAILED", "recoverable": true, "surface": "student", "user_text": "Could not refresh content; still using the installed version."},
+    {"code": "PLATFORM_SNAPSHOT_REFUSED", "recoverable": false, "surface": "student", "user_text": "The map could not be loaded from this copy of the app; reinstall the app to fix it."},
     {"code": "PLATFORM_STATE_WRITE_FAILED", "recoverable": true, "surface": "internal", "user_text": null},
     {"code": "PLATFORM_STATE_UNREADABLE", "recoverable": true, "surface": "student", "user_text": "Earlier progress could not be read; it has been kept."},
     {"code": "PLATFORM_SYNC_UNAVAILABLE", "recoverable": true, "surface": "internal", "user_text": null},

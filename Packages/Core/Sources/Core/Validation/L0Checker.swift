@@ -9,10 +9,16 @@ public enum L0Checker {
     /// `validate(bundle:)`.
     public static func validate(bundleDir: URL) throws -> L0Report {
         let bundle = try BundleIO.read(from: bundleDir)
+        guard formatMajorMatches(bundle) else { throw CoreError.platformBundleIntegrityFailed }
+        return validate(bundle: bundle)
+    }
+
+    /// The `format_version` major-version check (`contracts/data-model.md` § Versioning). Exists once
+    /// here so `BundleLoader` reuses it rather than reimplementing it (I14/D42).
+    static func formatMajorMatches(_ bundle: ContentBundle) -> Bool {
         let bundleMajor = bundle.manifest.formatVersion.split(separator: ".").first
         let coreMajor = CoreInfo.dataFormatVersion.split(separator: ".").first
-        guard bundleMajor == coreMajor else { throw CoreError.platformBundleIntegrityFailed }
-        return validate(bundle: bundle)
+        return bundleMajor == coreMajor
     }
 
     /// Runs every L0 rule over an already-decoded bundle. Never throws — a failing rule is a
