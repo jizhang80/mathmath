@@ -372,8 +372,24 @@ struct DoorFacadeConformanceTests {
 
     // MARK: - T6 idempotency: continue calls are pure and repeatable; no write occurs on either call
 
+    /// The field-wise comparison mandated by arbiter ruling `arbiter-04-doorrunstate-equatable.md` §5.1 E2:
+    /// `DoorRunState`/`MapState` are deliberately not `Equatable` (04.5 §4.1), so a whole-value `==` does not
+    /// compile. This compares the five named fields — `map.state`, `map.viewModel`, `map.queuedNodeId`,
+    /// `map.stateURL` and `expedition` (internal, reached via `@testable import Core`) — and returns the names
+    /// of any that disagree, so both the positive assertion (empty list) and the negative control (non-empty
+    /// list) can use the same instrument.
+    private static func differingRunStateFields(_ a: DoorRunState, _ b: DoorRunState) -> [String] {
+        var differing: [String] = []
+        if a.map.state != b.map.state { differing.append("map.state") }
+        if a.map.viewModel != b.map.viewModel { differing.append("map.viewModel") }
+        if a.map.queuedNodeId != b.map.queuedNodeId { differing.append("map.queuedNodeId") }
+        if a.map.stateURL != b.map.stateURL { differing.append("map.stateURL") }
+        if a.expedition != b.expedition { differing.append("expedition") }
+        return differing
+    }
+
     @Test(
-        "T6: continueAfterAnswer called twice on the same pending value returns component-equal results; neither call writes"
+        "T6: continueAfterAnswer called twice on the same pending value and input DoorRunState returns == screen and field-wise agreeing runState; neither call writes"
     )
     func continueAfterAnswerCalledTwiceIsIdempotentAndNeverWrites() throws {
         let bundle = try Self.loadDemoBundle()
@@ -397,8 +413,89 @@ struct DoorFacadeConformanceTests {
         #expect(before == afterFirst, "continueAfterAnswer must not write")
         #expect(before == afterSecond, "a repeated continueAfterAnswer call must not write either")
         #expect(first.screen == second.screen)
-        #expect(first.runState.map.state == second.runState.map.state)
-        #expect(first.runState.expedition == second.runState.expedition)
+        #expect(
+            Self.differingRunStateFields(first.runState, second.runState).isEmpty,
+            "the two continueAfterAnswer calls must agree on every field")
+    }
+
+    // MARK: - T6 negative control: the field-wise comparison can go red
+
+    @Test(
+        "T6 negative control: comparing a continueAfterAnswer result against the preceding answer's DoorRunState finds a differing field, proving the helper is load-bearing"
+    )
+    func differingRunStateFieldsHelperCanGoRed() throws {
+        let bundle = try Self.loadDemoBundle()
+        let today = try Self.today()
+        let (built, _) = try Self.mapState(bundle: bundle, today: today)
+        let start = try DoorFacade.startExpedition(mapState: built, today: today)
+        var runState = start.runState
+        var screen = start.screen
+        var lastAnswerAdvance: DoorBAnswerAdvance?
+        var lastAnswerRunState: DoorRunState?
+
+        // Drive the run to its natural end: the run's last `answer` call resolves `pendingEnd`, so its
+        // `runState.map.state` (the write-ahead value) differs from the value `continueAfterAnswer` returns
+        // (the run's final `abandoned: false` entry) — the same distinction T5's negative control exercises.
+        while case .item(let content) = screen {
+            let item = Self.item(nodeId: content.nodeId, isRetry: content.isRetry, bundle: bundle)
+            let answer = DoorFacade.answer(
+                runState, submitted: Self.correctSubmission(for: item), today: today)
+            lastAnswerAdvance = answer.advance
+            lastAnswerRunState = answer.runState
+            let cont = DoorFacade.continueAfterAnswer(answer.advance, runState: answer.runState)
+            runState = cont.runState
+            screen = cont.screen
+        }
+        guard case .summary = screen else {
+            Issue.record("fixture sanity: expected the run to reach .summary")
+            return
+        }
+        let finalAdvance = try #require(lastAnswerAdvance)
+        let precedingAnswerRunState = try #require(lastAnswerRunState)
+        #expect(
+            finalAdvance.pendingEnd != nil, "fixture sanity: the last answer call must have ended the run")
+        let cont = DoorFacade.continueAfterAnswer(finalAdvance, runState: precedingAnswerRunState)
+
+        let offenders = Self.differingRunStateFields(cont.runState, precedingAnswerRunState)
+        #expect(
+            !offenders.isEmpty,
+            "the comparison never differs between the pre-answer and post-continue run states — the helper cannot go red"
+        )
+        for field in offenders {
+            #expect(
+                field == "map.state" || field == "expedition",
+                "unexpected differing field '\(field)' (arbiter ruling names only map.state or expedition)")
+        }
+    }
+
+    // MARK: - T6: continueAfterProbeAnswer called twice returns == DoorADiagnosisScreen values
+
+    @Test(
+        "T6: continueAfterProbeAnswer called twice on the same pending value returns == DoorADiagnosisScreen values"
+    )
+    func continueAfterProbeAnswerCalledTwiceReturnsEqualScreens() throws {
+        let bundle = try Self.loadDemoBundle()
+        let today = try Self.today()
+        let (built, _) = try Self.mapState(bundle: bundle, today: today)
+
+        let opened = DoorFacade.checkHere(nodeId: "polynomials", mapState: built, today: today)
+        guard case .hypothesis(_, let offer) = opened.screen else {
+            Issue.record("expected .hypothesis")
+            return
+        }
+        let probeAdvance = DoorFacade.decideProbe(
+            offer, accept: true, runState: opened.runState, today: today)
+        guard case .probeItem(_, let probe) = probeAdvance.advance.screen else {
+            Issue.record("expected .probeItem")
+            return
+        }
+        let ans = DoorFacade.answerProbeItem(
+            probe, submitted: Self.correctSubmission(for: probe.currentItem),
+            runState: probeAdvance.runState, today: today)
+
+        let first = DoorFacade.continueAfterProbeAnswer(ans.advance, runState: ans.runState)
+        let second = DoorFacade.continueAfterProbeAnswer(ans.advance, runState: ans.runState)
+        #expect(first == second, "continueAfterProbeAnswer must be idempotent across repeated calls")
     }
 
     // MARK: - T6 idempotency / determinism: two independently-constructed calls produce byte-identical files
