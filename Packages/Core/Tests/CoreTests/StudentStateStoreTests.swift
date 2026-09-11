@@ -332,6 +332,75 @@ struct StudentStateStoreTests {
         #expect(writtenKeys == requiredKeys)
     }
 
+    // MARK: - AC4d: closed key set table matches the schema (no drift)
+
+    @Test(
+        "StudentStateStore.ClosedKeys mirrors every additionalProperties: false object schema in student-state.schema.json exactly"
+    )
+    func closedKeysTableMatchesSchema() throws {
+        guard
+            let schema = try JSONSerialization.jsonObject(with: Data(contentsOf: Self.schemaURL))
+                as? [String: Any],
+            let properties = schema["properties"] as? [String: Any]
+        else {
+            Issue.record("expected the schema's top-level object with a properties map")
+            return
+        }
+
+        func propertyKeys(_ object: [String: Any]) -> Set<String> {
+            Set((object["properties"] as? [String: Any] ?? [:]).keys)
+        }
+
+        let topLevelKeys = Set(properties.keys)
+        #expect(!topLevelKeys.isEmpty, "empty read of the schema's top-level properties is a FAIL")
+        #expect(StudentStateStore.ClosedKeys.topLevel == topLevelKeys)
+
+        guard let markerSchema = properties["marker"] as? [String: Any] else {
+            Issue.record("expected the schema's marker property")
+            return
+        }
+        #expect(StudentStateStore.ClosedKeys.marker == propertyKeys(markerSchema))
+
+        guard let nodesSchema = properties["nodes"] as? [String: Any],
+            let nodeEntrySchema = nodesSchema["additionalProperties"] as? [String: Any]
+        else {
+            Issue.record("expected the schema's nodes.additionalProperties entry schema")
+            return
+        }
+        #expect(StudentStateStore.ClosedKeys.nodeEntry == propertyKeys(nodeEntrySchema))
+
+        guard let trailSchema = properties["trail"] as? [String: Any] else {
+            Issue.record("expected the schema's trail property")
+            return
+        }
+        #expect(StudentStateStore.ClosedKeys.trail == propertyKeys(trailSchema))
+
+        guard let segmentsSchema = trailSchema["properties"] as? [String: Any],
+            let segmentsArraySchema = segmentsSchema["segments"] as? [String: Any],
+            let segmentItemSchema = segmentsArraySchema["items"] as? [String: Any]
+        else {
+            Issue.record("expected the schema's trail.segments item schema")
+            return
+        }
+        #expect(StudentStateStore.ClosedKeys.trailSegment == propertyKeys(segmentItemSchema))
+
+        guard let expeditionLogSchema = properties["expedition_log"] as? [String: Any],
+            let expeditionLogItemSchema = expeditionLogSchema["items"] as? [String: Any]
+        else {
+            Issue.record("expected the schema's expedition_log item schema")
+            return
+        }
+        #expect(StudentStateStore.ClosedKeys.expeditionLogEntry == propertyKeys(expeditionLogItemSchema))
+
+        guard let probeLogSchema = properties["probe_log"] as? [String: Any],
+            let probeLogItemSchema = probeLogSchema["items"] as? [String: Any]
+        else {
+            Issue.record("expected the schema's probe_log item schema")
+            return
+        }
+        #expect(StudentStateStore.ClosedKeys.probeLogEntry == propertyKeys(probeLogItemSchema))
+    }
+
     // MARK: - T4: I14 local regression guard
 
     @Test("StudentStateStore.swift constructs no JSONDecoder/JSONEncoder directly (I14)")

@@ -8,6 +8,69 @@ public enum StudentStateStore {
     /// "`schema_version` is **2**"). A file naming a higher version is refused (AC4c), never guessed at.
     private static let currentSchemaVersion = 2
 
+    /// Every closed (`additionalProperties: false`) key set `contracts/schemas/student-state.schema.json`
+    /// declares, mirrored here so `read(at:)` can reject a document carrying a key outside the closed
+    /// schema even though `StudentState`'s synthesized `Decodable` conformance silently ignores unknown
+    /// keys (`contracts/data-model.md:41-43`: "Every object schema sets `additionalProperties: false` —
+    /// a new field is a versioned change"). `StudentStateStoreTests` asserts this table is byte-derived
+    /// equal to the schema's own property sets so the two cannot drift.
+    enum ClosedKeys {
+        static let topLevel: Set<String> = [
+            "schema_version", "format_version_seen", "syllabi", "marker", "nodes", "trail",
+            "expedition_log", "probe_log", "install_day", "consent_on",
+        ]
+        static let marker: Set<String> = ["course_code", "unit_id", "past_last_unit"]
+        static let nodeEntry: Set<String> = [
+            "mastery", "correct_count", "last_probe", "next_due", "ladder_rung", "remediated",
+        ]
+        static let trail: Set<String> = ["segments"]
+        static let trailSegment: Set<String> = ["kind", "course_code", "node_ids"]
+        static let expeditionLogEntry: Set<String> = [
+            "day", "item_count", "cleared", "blocked", "abandoned", "diagnosis_events",
+        ]
+        static let probeLogEntry: Set<String> = ["day", "node_id", "item_id", "correct", "retry"]
+    }
+
+    /// `true` iff `data` parses as a JSON object whose own keys, and every nested closed-schema
+    /// object's keys (`marker`, each `nodes` entry, `trail`, each `trail.segments` entry, each
+    /// `expedition_log`/`probe_log` entry), are each a subset of `ClosedKeys`' matching set. `false` for
+    /// anything else, including non-object top-level JSON (decode already rejects malformed shapes;
+    /// this only adds the "extra key" case decode alone does not catch).
+    private static func hasOnlyClosedKeys(_ data: Data) -> Bool {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return false
+        }
+        guard Set(object.keys).isSubset(of: ClosedKeys.topLevel) else { return false }
+
+        if let marker = object["marker"] as? [String: Any] {
+            guard Set(marker.keys).isSubset(of: ClosedKeys.marker) else { return false }
+        }
+        if let nodes = object["nodes"] as? [String: Any] {
+            for case let node as [String: Any] in nodes.values {
+                guard Set(node.keys).isSubset(of: ClosedKeys.nodeEntry) else { return false }
+            }
+        }
+        if let trail = object["trail"] as? [String: Any] {
+            guard Set(trail.keys).isSubset(of: ClosedKeys.trail) else { return false }
+            if let segments = trail["segments"] as? [[String: Any]] {
+                for segment in segments {
+                    guard Set(segment.keys).isSubset(of: ClosedKeys.trailSegment) else { return false }
+                }
+            }
+        }
+        if let expeditionLog = object["expedition_log"] as? [[String: Any]] {
+            for entry in expeditionLog {
+                guard Set(entry.keys).isSubset(of: ClosedKeys.expeditionLogEntry) else { return false }
+            }
+        }
+        if let probeLog = object["probe_log"] as? [[String: Any]] {
+            for entry in probeLog {
+                guard Set(entry.keys).isSubset(of: ClosedKeys.probeLogEntry) else { return false }
+            }
+        }
+        return true
+    }
+
     public enum ReadResult: Equatable {
         case absent
         case loaded(StudentState, migratedFrom: Int?)
@@ -29,6 +92,10 @@ public enum StudentStateStore {
         do {
             originalData = try Data(contentsOf: url)
         } catch {
+            throw CoreError.platformStateUnreadable
+        }
+
+        guard hasOnlyClosedKeys(originalData) else {
             throw CoreError.platformStateUnreadable
         }
 
