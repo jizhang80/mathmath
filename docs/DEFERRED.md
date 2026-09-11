@@ -184,11 +184,12 @@ EPIC 03 ruled that it belongs to the hosted-bundle fetch, not the embedded snaps
 - A hash check in `Core` would need CryptoKit, which D33 forbids.
 
 EPIC 03 therefore enforces manifest completeness, the format major version and L0 at load, and verifies no
-hashes. Every `sha256` in `data/demo/manifest.json` is an all-zero placeholder of 66 hex characters, not the 64 of a
-SHA-256 digest. The EPIC 04 task 04.1b reviewer found this; it is recorded in `docs/audits/epic-02-acceptance.md` §6.
+hashes. Every `sha256` in `data/demo/manifest.json` is an all-zero placeholder of 64 hex characters, which is the length of a
+SHA-256 digest (re-measured 2026-09-11 at the EPIC 04a start). An earlier report of 66 characters was a measurement
+error. It appeared in `docs/audits/epic-02-acceptance.md` §6 and in this entry as first written. Its likely source is
+a 62-zero literal mis-quoted in the 04.1b spec, which has since been corrected.
 **Configuration:** the Demo. The embedded snapshot is the only bundle, and there is no network.
-**Revisit trigger:** EPIC 10 hosted bundles (platform W2). The task that first writes real hashes into a manifest
-also corrects the placeholder length.
+**Revisit trigger:** EPIC 10 hosted bundles (platform W2).
 **Hypothesis (unverified):** none.
 
 ### D-16 — Region and landmark panels have no tap trigger in the Demo
@@ -201,4 +202,19 @@ deferred gap, not a Q5".
 from `onNodeTap` and the unit-list picker from the toolbar. Nothing presents the region or landmark panel.
 **Revisit trigger:** the owner's Demo review (`DEMO-BRIEF.md` § 7 Acceptance), or the first task that adds region
 or landmark tap resolution to `MapCanvasView`.
+**Hypothesis (unverified):** none.
+
+### D-17 — Region tint deltas on the expedition summary
+**Observed:** interaction-contract v0.9.3 § 2 resolves the summary to nodes cleared, fog lifted, blocked marked,
+"Start another" / "Back to the map", with no region tint delta (arbiter-04 Q-A). A per-region fraction on a
+student surface would conflict with content-policy § Voice ("no scores or percentages on student surfaces").
+**Configuration:** Demo (`data/demo`); the map re-tints on return (map W6).
+**Revisit trigger:** Demo observations (DEMO-BRIEF §7 items 2 and 3).
+**Hypothesis (unverified):** none.
+
+### D-18 — Hint tiers 2–3 ("ask for the next hint") on Door A screens
+**Observed:** EPIC 04 shows only tier 1 of the resolved hint (arbiter-04 Q-F, per DEMO-BRIEF §3.6 "one
+level"); `data/demo` carries three tiers per `hint_tree` entry (schema minItems/maxItems 3).
+**Configuration:** Demo, Tier 0, iOS app.
+**Revisit trigger:** Demo observations, or EPIC 12 (M3 screens on real data).
 **Hypothesis (unverified):** none.

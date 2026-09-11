@@ -1,11 +1,13 @@
 # Contract: Interaction contract — three doors over one base
 
-**Contract version:** v0.9.2 (discovery zone — finalized just-in-time by the Demo EPIC) · Source: brief v2
+**Contract version:** v0.9.3 (discovery zone — finalized just-in-time by the Demo EPIC) · Source: brief v2
 §7, D23, D27, D44–D48, v2.7 §3; `map.md`, `expedition.md`, `diagnosis.md`; v0.9.1 adds the numeric
 normalisation rule (expedition Q4), the `remediated(p)` predicate and its two ripples (arbiter Q-A,
 `tasks/arbitration/arbiter-02-predispatch.md`), the `past_last_unit` marker text (arbiter Q-F), and the
 probe "available" definition (arbiter Q-G); v0.9.2 resolves the marker-drag finalization item (arbiter Q-B,
-`tasks/arbitration/arbiter-03-predispatch.md`)
+`tasks/arbitration/arbiter-03-predispatch.md`); v0.9.3 resolves the answer-card timing and summary-tint
+finalization items and records the in-run abandoned log entry (arbiter Q-A, Q-G,
+`tasks/arbitration/arbiter-04-predispatch.md`)
 
 > The three doors as state machines with named states, events and guards, so `Core` implements them as
 > pure transition functions and `CoreTests` proves the properties. Screens are in the domain docs; this
@@ -38,6 +40,10 @@ States: `idle → composing → item → (retry | diagnosing | item) → summary
   `remediated(p)` ≡ `nodes[p].remediated == true` (`data-model.md` § StudentState; absent = false).
 - `answer(item)`: deterministic check (expedition Q4: normalised exact match, per-item tolerance; `mc` by
   choice id); always show correct answer + `why` (I3); log `probe_log`; emit `item_answered`.
+- **Answer card (timing):** after every checked item — expedition item, retry or probe item — the answer card
+  (correct/incorrect, the correct answer, `why`) stays on screen until the student taps an explicit continue
+  control. There is no timer and no auto-advance. No next item, probe item, hypothesis card, remediation,
+  terminal line or summary is reachable before that tap (I3).
 - **Numeric normalisation (expedition Q4):** a submitted numeric answer and the item's `answer.value`
   (`data-model.md` § ProbeItem) are each parsed under the same grammar before comparison: an optional
   leading sign (`+` or `-`; absent = positive), one or more digits, an optional `.` followed by one or
@@ -55,6 +61,13 @@ States: `idle → composing → item → (retry | diagnosing | item) → summary
   miss → if `diagnosis_used == false` → `diagnosing` (set `diagnosis_used = true`), else mark the node
   `blocked` (expedition Q5: "We'll come back to this one") and continue. **At most one diagnosis per run.**
 - `end`: summary; log entry; a run left mid-way is `abandoned` (expedition Q6), never resumed item-by-item.
+- **Summary content:** the summary lists the nodes cleared this run, the fog lifted, the nodes marked
+  `blocked`, and offers "Start another" and "Back to the map". It shows no region tint delta and no fraction;
+  the re-derived map shows the tint on return (map W6).
+- **In-run log entry (expedition Q6):** while a run is in progress, the persisted `StudentState` carries that
+  run's `expedition_log` entry exactly as `end` with `abandoned = true` would write it at that moment; `end`
+  replaces it with the final entry. A run the OS terminates is therefore logged as abandoned and never
+  resumed. No field is added.
 
 **Properties (CoreTests):** never draws a new-learning item off the fringe or upstream of the marker unless
 the node is `blocked`; never more than one diagnosis event per run; never more than 2 review slots; every
@@ -119,5 +132,6 @@ learning_objects.hint_tier_served · graph.prerequisite_returned`
 Payloads are ids, enums, booleans and small integers only (I5).
 
 ## Finalization owed by the Demo EPIC
-The timing of the answer card; whether the summary shows region tint deltas. Bump to v1.0.0 on wrap.
-(Resolved in v0.9.2: the marker is set from the unit list only — § 3; no drag.)
+Nothing remains owed. Resolved in v0.9.2: the marker is set from the unit list only — § 3; no drag. Resolved
+in v0.9.3: the answer card stays until the student continues, and the summary shows no region tint deltas —
+§ 2. Bump to v1.0.0 on wrap.

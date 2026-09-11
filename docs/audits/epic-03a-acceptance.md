@@ -28,7 +28,7 @@ carried over from EPIC 02 brief §7.10, and this wrap (03.8). **03b** (03.9–03
 | (f) I11 | PASS | `no-time-estimates` hook green on every commit | — |
 | (g) cross-EPIC audit | due at the EPIC 03 wrap (after 03b) | every 3 EPICs | — |
 | (h) contract bumps | PASS | §4 | — |
-| (i) DEFERRED | PASS | D-14 (marker drag, 03.1) and D-15 (snapshot hash verification; the placeholder length) | — |
+| (i) DEFERRED | PASS | D-14 (marker drag, 03.1) and D-15 (snapshot hash verification). **Erratum (EPIC 04a start):** D-15's "66-character placeholder" claim was a measurement error. The placeholders are 64 hex characters, and D-15 is corrected. | — |
 | (j) C1 seam | PASS | §5 | — |
 | (k) C4 artifacts | PASS | §3 | — |
 
@@ -75,7 +75,8 @@ carried over from EPIC 02 brief §7.10, and this wrap (03.8). **03b** (03.9–03
 
 - **D-14** (03.1): marker drag with unit-boundary snap. Trigger: Demo observations.
 - **D-15** (this wrap): snapshot `sha256` verification at load moves to EPIC 10's download path (arbiter Q-H). This
-  also records the missing EPIC 01 deferral and the 66-character placeholder hashes.
+  also records the missing EPIC 01 deferral. **Erratum:** the entry as first written also claimed the placeholder hashes
+  were 66 characters long; they are 64 (SHA-256 length), and D-15 is corrected.
 - **D-12** stays open. 03.13 (03b) closes it.
 
 ## 7. Process incidents

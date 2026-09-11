@@ -285,3 +285,231 @@ public enum MapFacade {
         return (event, [.mapCheckHereRequested])
     }
 }
+
+// MARK: - Door entry points (task 04.5): the only surface 04b's screens call for Door B/A actions.
+
+/// The App's one handle onto a live Door B expedition or Door A diagnosis, layered over `MapState`. Replaced
+/// wholesale by the App's `@Observable` holder after every `DoorFacade` call (same discipline as `MapState`,
+/// arbiter-03 § Q-F). `expedition` carries no `public` modifier: only `Core` code (this file, and this task's
+/// own tests) inspects or constructs it directly — the App holds it opaquely and passes it back unmodified,
+/// mirroring 04.3's/04.4's own "no field yields a screen" discipline applied here at the run-state level.
+public struct DoorRunState {
+    public let map: MapState
+    let expedition: DoorBRunState?
+}
+
+public enum DoorFacade {
+    // MARK: Persistence helpers (private)
+
+    private static func persistExpeditionWrite(_ state: StudentState, to url: URL) -> String? {
+        do {
+            _ = try StudentStateStore.write(state, to: url)
+            return nil
+        } catch {
+            return CoreError.expStateWriteFailed.rawValue
+        }
+    }
+
+    private static func persistDiagnosisWrite(_ state: StudentState, to url: URL) -> String? {
+        do {
+            _ = try StudentStateStore.write(state, to: url)
+            return nil
+        } catch {
+            return CoreError.diagStateWriteFailed.rawValue
+        }
+    }
+
+    /// Q-G branch: write-ahead when a `DoorBRunState` is active, plain otherwise (`map_check_here` outside a
+    /// run).
+    private static func persistDoorA(
+        _ state: StudentState, expedition: DoorBRunState?, url: URL, today: CalendarDay
+    ) -> String? {
+        let toWrite =
+            expedition.map {
+                DoorBWriteAhead.provisionalAbandonedState(runState: $0, state: state, today: today)
+            } ?? state
+        return persistDiagnosisWrite(toWrite, to: url)
+    }
+
+    private static func rebuiltMap(_ map: MapState, state: StudentState, today: CalendarDay) -> MapState {
+        MapState(
+            bundle: map.bundle, stateURL: map.stateURL, state: state,
+            viewModel: MapViewModel.derive(bundle: map.bundle, state: state, today: today),
+            queuedNodeId: map.queuedNodeId)
+    }
+
+    // MARK: Door B (expedition) entries
+
+    /// AC1. Consumes and empties the Include queue.
+    public static func startExpedition(mapState: MapState, today: CalendarDay) throws
+        -> (runState: DoorRunState, screen: DoorBScreen, writeFailureCode: String?, events: [CoreEvent])
+    {
+        let compose = try Expedition.compose(
+            state: mapState.state, bundle: mapState.bundle, trail: mapState.state.trail,
+            marker: mapState.state.marker, today: today, queuedNodeId: mapState.queuedNodeId,
+            unitExpeditionUnitId: nil)
+        let advance = DoorBExpeditionFlow.start(compose: compose)
+        let ahead = DoorBWriteAhead.provisionalAbandonedState(
+            runState: advance.runState, state: mapState.state, today: today)
+        let failure = persistExpeditionWrite(ahead, to: mapState.stateURL)
+        let newMap = MapState(
+            bundle: mapState.bundle, stateURL: mapState.stateURL, state: mapState.state,
+            viewModel: mapState.viewModel, queuedNodeId: nil)
+        let events = failure == nil ? [advance.event, .platformStateWritten] : [advance.event]
+        return (
+            DoorRunState(map: newMap, expedition: advance.runState), advance.screen, failure, events
+        )
+    }
+
+    /// AC2. Delegates fringe scoping verbatim to `MapFacade.unitExpedition`; never touches `queuedNodeId`.
+    public static func startUnitExpedition(unitId: String, mapState: MapState, today: CalendarDay) throws
+        -> (runState: DoorRunState, screen: DoorBScreen, writeFailureCode: String?, events: [CoreEvent])
+    {
+        let (compose, composeEvents) = try MapFacade.unitExpedition(
+            unitId: unitId, mapState: mapState, today: today)
+        let advance = DoorBExpeditionFlow.start(compose: compose)
+        let ahead = DoorBWriteAhead.provisionalAbandonedState(
+            runState: advance.runState, state: mapState.state, today: today)
+        let failure = persistExpeditionWrite(ahead, to: mapState.stateURL)
+        let events =
+            composeEvents + (failure == nil ? [advance.event, .platformStateWritten] : [advance.event])
+        return (DoorRunState(map: mapState, expedition: advance.runState), advance.screen, failure, events)
+    }
+
+    /// AC4. Persists the final entry when the run naturally ends in this call, else the write-ahead value.
+    public static func answer(_ runState: DoorRunState, submitted: String, today: CalendarDay)
+        -> (advance: DoorBAnswerAdvance, runState: DoorRunState, writeFailureCode: String?)
+    {
+        guard let expedition = runState.expedition else {
+            preconditionFailure("DoorFacade.answer called with no active expedition")
+        }
+        let advance = DoorBExpeditionFlow.answer(
+            expedition, submitted: submitted, state: runState.map.state, bundle: runState.map.bundle,
+            today: today)
+        let toWrite =
+            advance.pendingEnd?.state
+            ?? DoorBWriteAhead.provisionalAbandonedState(
+                runState: advance.runState, state: advance.state, today: today)
+        let failure = persistExpeditionWrite(toWrite, to: runState.map.stateURL)
+        let newMap = rebuiltMap(runState.map, state: advance.state, today: today)
+        return (advance, DoorRunState(map: newMap, expedition: advance.runState), failure)
+    }
+
+    /// AC4/AC5. No write — arbiter-04 § Q-A.
+    public static func continueAfterAnswer(_ pending: DoorBAnswerAdvance, runState: DoorRunState)
+        -> (screen: DoorBScreen, runState: DoorRunState)
+    {
+        let advance = DoorBExpeditionFlow.continueAfterAnswer(pending, bundle: runState.map.bundle)
+        let newMap = MapState(
+            bundle: runState.map.bundle, stateURL: runState.map.stateURL, state: advance.state,
+            viewModel: runState.map.viewModel, queuedNodeId: runState.map.queuedNodeId)
+        return (advance.screen, DoorRunState(map: newMap, expedition: advance.runState))
+    }
+
+    /// AC7. `resumeAfterDiagnosis` requires an in-run `DoorRunState` — never called for `map_check_here`.
+    public static func resumeAfterDiagnosis(
+        _ runState: DoorRunState, outcome: DiagnosisOutcome, today: CalendarDay
+    ) -> (advance: DoorBResumeAdvance, runState: DoorRunState, writeFailureCode: String?) {
+        guard let expedition = runState.expedition else {
+            preconditionFailure("DoorFacade.resumeAfterDiagnosis called with no active expedition")
+        }
+        let advance = DoorBExpeditionFlow.resumeAfterDiagnosis(
+            expedition, outcome: outcome, bundle: runState.map.bundle, today: today)
+        let toWrite: StudentState
+        if case .summary = advance.screen {
+            toWrite = advance.state  // already final (abandoned: false), computed inside resumeAfterDiagnosis
+        } else {
+            toWrite = DoorBWriteAhead.provisionalAbandonedState(
+                runState: advance.runState, state: advance.state, today: today)
+        }
+        let failure = persistExpeditionWrite(toWrite, to: runState.map.stateURL)
+        let newMap = rebuiltMap(runState.map, state: advance.state, today: today)
+        return (advance, DoorRunState(map: newMap, expedition: advance.runState), failure)
+    }
+
+    /// AC9. Identical to `startExpedition`, applied to the post-run `mapState` (§6).
+    public static func startAnother(mapState: MapState, today: CalendarDay) throws
+        -> (runState: DoorRunState, screen: DoorBScreen, writeFailureCode: String?, events: [CoreEvent])
+    {
+        try startExpedition(mapState: mapState, today: today)
+    }
+
+    /// AC10. Persists the final `abandoned: true` entry; ends the Door B run.
+    public static func backToMap(_ runState: DoorRunState, today: CalendarDay)
+        -> (mapState: MapState, writeFailureCode: String?)
+    {
+        guard let expedition = runState.expedition else { return (runState.map, nil) }
+        let end = ExpeditionRun.end(
+            run: expedition.run, state: runState.map.state, today: today, abandoned: true)
+        let failure = persistExpeditionWrite(end.state, to: runState.map.stateURL)
+        return (rebuiltMap(runState.map, state: end.state, today: today), failure)
+    }
+}
+
+// MARK: - Door A (diagnosis) entries
+
+extension DoorFacade {
+    /// AC8. Opens a standalone diagnosis event (no expedition run). `runState.expedition` stays `nil` for this
+    /// event's whole life. `today` is used only by `persistDoorA` (§4.2) — `MapFacade.checkHere` itself takes
+    /// no `today` parameter.
+    public static func checkHere(nodeId: String, mapState: MapState, today: CalendarDay)
+        -> (
+            runState: DoorRunState, screen: DoorADiagnosisScreen, writeFailureCode: String?,
+            events: [CoreEvent]
+        )
+    {
+        let (event, mapEvents) = MapFacade.checkHere(nodeId: nodeId, mapState: mapState)
+        let advance = DoorADiagnosisFlow.start(
+            event: event, misses: [], shownItemIdsInRun: [], state: mapState.state, bundle: mapState.bundle)
+        let failure = persistDoorA(advance.state, expedition: nil, url: mapState.stateURL, today: today)
+        let newMap = MapState(
+            bundle: mapState.bundle, stateURL: mapState.stateURL, state: advance.state,
+            viewModel: mapState.viewModel, queuedNodeId: mapState.queuedNodeId)
+        return (
+            DoorRunState(map: newMap, expedition: nil), advance.screen, failure, mapEvents + advance.events
+        )
+    }
+
+    /// AC6. Write-ahead-wrapped when in-run, plain otherwise.
+    public static func decideProbe(
+        _ offer: ProbeOffer, accept: Bool, runState: DoorRunState, today: CalendarDay
+    )
+        -> (advance: DoorADiagnosisAdvance, runState: DoorRunState, writeFailureCode: String?)
+    {
+        let advance = DoorADiagnosisFlow.decideProbe(
+            offer, accept: accept, state: runState.map.state, bundle: runState.map.bundle)
+        let failure = persistDoorA(
+            advance.state, expedition: runState.expedition, url: runState.map.stateURL, today: today)
+        let newMap = rebuiltMap(runState.map, state: advance.state, today: today)
+        return (advance, DoorRunState(map: newMap, expedition: runState.expedition), failure)
+    }
+
+    public static func answerProbeItem(
+        _ probe: ProbeInProgress, submitted: String, runState: DoorRunState, today: CalendarDay
+    ) -> (advance: DoorAProbeAnswerAdvance, runState: DoorRunState, writeFailureCode: String?) {
+        let advance = DoorADiagnosisFlow.answerProbeItem(
+            probe, submitted: submitted, state: runState.map.state, bundle: runState.map.bundle, today: today)
+        let failure = persistDoorA(
+            advance.state, expedition: runState.expedition, url: runState.map.stateURL, today: today)
+        let newMap = rebuiltMap(runState.map, state: advance.state, today: today)
+        return (advance, DoorRunState(map: newMap, expedition: runState.expedition), failure)
+    }
+
+    /// No write — mirrors `continueAfterAnswer` (04.3 AC3: "changes no `StudentState`").
+    public static func continueAfterProbeAnswer(_ pending: DoorAProbeAnswerAdvance, runState: DoorRunState)
+        -> DoorADiagnosisScreen
+    {
+        DoorADiagnosisFlow.continueAfterProbeAnswer(pending, bundle: runState.map.bundle)
+    }
+
+    public static func decideFurtherLevel(
+        _ offer: FurtherLevelOffer, accept: Bool, runState: DoorRunState, today: CalendarDay
+    ) -> (advance: DoorADiagnosisAdvance, runState: DoorRunState, writeFailureCode: String?) {
+        let advance = DoorADiagnosisFlow.decideFurtherLevel(
+            offer, accept: accept, state: runState.map.state, bundle: runState.map.bundle)
+        let failure = persistDoorA(
+            advance.state, expedition: runState.expedition, url: runState.map.stateURL, today: today)
+        let newMap = rebuiltMap(runState.map, state: advance.state, today: today)
+        return (advance, DoorRunState(map: newMap, expedition: runState.expedition), failure)
+    }
+}

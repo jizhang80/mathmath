@@ -1,0 +1,107 @@
+{
+  "ruling": "tasks/arbitration/arbiter-04-01b-generic-hint-i2.md",
+  "applies_to": "data/demo/nodes.json hint_tree[\"none-of-these\"] (and its byte-identical copy App/Sources/DemoSnapshot/nodes.json)",
+  "note": "Every node is listed: 13 violating + 7 borderline-violating, 0 clean. Arrays marked with a kept tier reuse the committed 04.1b string at that index unchanged. Each array has exactly 3 non-empty plain-text strings.",
+  "none_of_these": {
+    "integer-operations": [
+      "Reread the expression and work through it one operation at a time.",
+      "Check each operation on its own against the rules for integers.",
+      "Redo the calculation one operation at a time, then compare the result with a rough estimate."
+    ],
+    "order-of-operations": [
+      "Reread the expression and list the operations it contains.",
+      "Check each step against the order of operations for this expression.",
+      "Redo the expression from the start, following the order of operations."
+    ],
+    "rational-numbers": [
+      "Reread the calculation and name each operation it asks for.",
+      "Check the result with a rough decimal estimate of each rational number.",
+      "Redo the calculation step by step and compare the result with that estimate."
+    ],
+    "exponent-laws": [
+      "Look again at which exponent rule applies here.",
+      "Check the result on a simpler case, with small exponents written out.",
+      "Redo the simplification, applying the matching exponent law one step at a time."
+    ],
+    "scientific-notation": [
+      "Look again at how the conversion between forms was done.",
+      "Estimate the size of the original quantity and compare it with the answer.",
+      "Redo the conversion from the start, then convert the answer back to check it."
+    ],
+    "linear-relations": [
+      "Reread what is being asked about the line and its equation.",
+      "Check the answer against the graph by plotting two points from the equation.",
+      "Redo the work from the equation, then confirm the answer with a point on the line."
+    ],
+    "solving-linear-equations": [
+      "Reread the equation from the start before changing anything.",
+      "Check the answer by substituting it into the original equation.",
+      "Solve the equation again from the start, one step at a time."
+    ],
+    "solving-systems-of-equations": [
+      "Reread both equations and what the system asks for.",
+      "Check the answer by putting both values into each original equation.",
+      "Solve the system again from the start, one step at a time."
+    ],
+    "simplifying-expressions": [
+      "Reread the original expression before simplifying it again.",
+      "Check the answer by putting a small number in for x in both expressions.",
+      "Redo the simplification one step at a time, then repeat that check."
+    ],
+    "polynomials": [
+      "Reread which operation, addition or subtraction, is being asked for.",
+      "Check the answer by putting a small value for x into both the original polynomials and the result.",
+      "Redo the addition or subtraction one step at a time, then repeat that check."
+    ],
+    "factoring": [
+      "Reread the trinomial and what form the factored answer takes.",
+      "Check the factored form by expanding it back into a trinomial.",
+      "Redo the factoring from the start, then expand again to confirm the result."
+    ],
+    "solving-quadratics": [
+      "Look again at how the equation was solved.",
+      "Check each solution by substituting it into the original equation.",
+      "Redo the solving process from the original equation, one step at a time."
+    ],
+    "rational-expressions": [
+      "Look again at how the expression was simplified.",
+      "Check the answer by putting a simple value for x into the original expression and the result.",
+      "Redo the simplification from the start, then repeat that check with a second value."
+    ],
+    "quadratic-functions": [
+      "Look again at the equation in vertex form before answering.",
+      "Check the vertex by putting its x-value into the equation and comparing the result.",
+      "Redo the identification of the vertex directly from the equation."
+    ],
+    "function-concept": [
+      "Reread the function and the point where it is to be evaluated.",
+      "Work the evaluation out one operation at a time, writing each line down.",
+      "Redo the evaluation from the start, then check the result with a rough estimate."
+    ],
+    "function-transformations": [
+      "Reread the transformed function and compare it with the original function.",
+      "Check the answer by picking one point on the original function and transforming it.",
+      "Redo the transformation from the start, then test a second point the same way."
+    ],
+    "function-notation": [
+      "Look again at the function notation before evaluating it.",
+      "Check the answer by working the evaluation out one operation at a time.",
+      "Redo the evaluation from the start, then check the result with a rough estimate."
+    ],
+    "domain-and-range": [
+      "Reread the function before stating its domain again.",
+      "Recheck which values would make the expression undefined.",
+      "Redo the domain from the start, then test one value inside it and one outside it."
+    ],
+    "exponential-functions": [
+      "Reread the exponential function and the value it is evaluated at.",
+      "Check the answer against a rough estimate of how fast the function grows.",
+      "Redo the evaluation from the start, writing out every step, and compare the result with that estimate."
+    ],
+    "logarithms": [
+      "Reread the logarithm carefully before evaluating it again.",
+      "Check the answer on a simpler logarithm whose value is already clear.",
+      "Redo the evaluation from the start, then test the answer against the definition of a logarithm."
+    ]
+  }
+}

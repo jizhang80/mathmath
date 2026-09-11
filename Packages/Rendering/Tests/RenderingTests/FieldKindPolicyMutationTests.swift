@@ -177,7 +177,7 @@ struct FieldKindPolicyMutationTests {
         }
     }
 
-    /// `hint_tree` tier strings are 63/143 of the real scan and all parse clean — this fixture is the only
+    /// `hint_tree` tier strings are 123/203 of the real scan and all parse clean — this fixture is the only
     /// proof the parse-failure path for this field kind is exercised at all.
     @Test("mutation proof: an unrenderable hint_tree tier is reported unresolved with the right itemId")
     func mutationProofHintTree() throws {
