@@ -99,9 +99,9 @@ struct OutcomeRecordAndImportBoundaryTests {
             | `prompt_latex` | 999 | 0 |
             | `choices[].latex` | 40 | 0 |
             | `worked_examples[].steps_latex[]` | 0 | 0 |
-            | `hint_tree` tier strings | 63 | 0 |
+            | `hint_tree` tier strings | 123 | 0 |
             | `explanation` | 0 | 0 |
-            | **Total** | **143** | **0** |
+            | **Total** | **203** | **0** |
             """
         let recorded = Self.extractScannedCounts(from: staleText)
         let fresh = try Self.freshScanCounts()

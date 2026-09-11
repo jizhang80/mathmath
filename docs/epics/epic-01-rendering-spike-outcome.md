@@ -15,9 +15,9 @@ Per-field-kind breakdown `[SOURCED: RenderCheckReport.scanning over data/demo/no
 | `prompt_latex` | 40 | 0 |
 | `choices[].latex` | 40 | 0 |
 | `worked_examples[].steps_latex[]` | 0 | 0 |
-| `hint_tree` tier strings | 63 | 0 |
+| `hint_tree` tier strings | 123 | 0 |
 | `explanation` | 0 | 0 |
-| **Total** | **143** | **0** |
+| **Total** | **203** | **0** |
 
 ## Affected items
 
