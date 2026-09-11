@@ -7,8 +7,12 @@ without `expectation_codes` carries a `source_ref` whose locator resolves at bui
 
 from __future__ import annotations
 
+import http.client
+import ssl
+import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -17,6 +21,9 @@ SPINE_SOURCE_REF_UNRESOLVED = "SPINE_SOURCE_REF_UNRESOLVED"
 
 _USER_AGENT = "mathmath-pipeline/1.0 (+content verification)"
 _TIMEOUT_SECONDS = 10
+
+MAX_TRANSPORT_ATTEMPTS = 3  # [ESTIMATE: bounded retry count for a transport blip, not a measured flake rate]
+TRANSPORT_RETRY_BACKOFF_SECONDS = 0.5  # [ESTIMATE: fixed backoff between attempts, kept short]
 
 
 class ResolutionFailure(Exception):
@@ -28,21 +35,63 @@ class ResolutionFailure(Exception):
         self.url = url
 
 
-def fetch_page_text(url: str) -> str:
-    """Issue a real GET request and return the decoded page text; raise on a non-2xx status.
+class TransportInconclusive(Exception):
+    """A transport-level failure (connection reset, timeout, DNS/TLS error) persisted across every retry.
 
-    `urllib.error.URLError` (DNS/connection failure) propagates unmodified — never caught to produce a
-    passing result (I15).
+    The source's liveness is unknown, not confirmed dead. Never carries `LO_LANDMARK_UNSOURCED` or
+    `SPINE_SOURCE_REF_UNRESOLVED` — those codes mean a confirmed non-2xx response, which this is not.
     """
+
+    def __init__(self, url: str, attempts: int, detail: str) -> None:
+        super().__init__(f"transport inconclusive after {attempts} attempt(s): {url}: {detail}")
+        self.url = url
+        self.attempts = attempts
+
+
+_TRANSPORT_ERRORS: tuple[type[BaseException], ...] = (
+    urllib.error.URLError,
+    ConnectionResetError,
+    TimeoutError,
+    ssl.SSLError,
+    http.client.IncompleteRead,
+)
+
+
+def _default_opener(request: urllib.request.Request) -> Any:  # noqa: ANN401
+    return urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS)  # noqa: S310
+
+
+def _fetch_once(url: str, opener: Callable[[urllib.request.Request], Any]) -> str:
     request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-    try:
-        with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS) as response:  # noqa: S310
-            status = response.status
-            if not 200 <= status < 300:
-                raise ResolutionFailure(LO_LANDMARK_UNSOURCED, url, f"HTTP {status}, expected 2xx")
-            return response.read().decode("utf-8", errors="replace")
-    except urllib.error.HTTPError as exc:
-        raise ResolutionFailure(LO_LANDMARK_UNSOURCED, url, f"HTTP {exc.code}, expected 2xx") from exc
+    with opener(request) as response:
+        status = response.status
+        if not 200 <= status < 300:
+            raise ResolutionFailure(LO_LANDMARK_UNSOURCED, url, f"HTTP {status}, expected 2xx")
+        return response.read().decode("utf-8", errors="replace")
+
+
+def fetch_page_text(url: str, *, opener: Callable[[urllib.request.Request], Any] = _default_opener) -> str:
+    """Issue a real GET request and return the decoded page text.
+
+    A confirmed non-2xx status (`urllib.error.HTTPError`, a subclass of `urllib.error.URLError`) raises
+    `ResolutionFailure(LO_LANDMARK_UNSOURCED, ...)` immediately, with no retry (I15: a confirmed non-2xx
+    status is a genuine dead source). A transport-level failure — `urllib.error.URLError` (DNS/connect
+    failure), `ConnectionResetError`, `TimeoutError`, `ssl.SSLError`, or `http.client.IncompleteRead` — is
+    retried up to `MAX_TRANSPORT_ATTEMPTS` times with a `TRANSPORT_RETRY_BACKOFF_SECONDS` pause between
+    attempts; if it persists across every attempt, raises `TransportInconclusive` — never caught to
+    produce a passing result and never mapped to `LO_LANDMARK_UNSOURCED` (I15).
+    """
+    last_exc: BaseException = RuntimeError("unreachable")
+    for attempt in range(1, MAX_TRANSPORT_ATTEMPTS + 1):
+        try:
+            return _fetch_once(url, opener)
+        except urllib.error.HTTPError as exc:
+            raise ResolutionFailure(LO_LANDMARK_UNSOURCED, url, f"HTTP {exc.code}, expected 2xx") from exc
+        except _TRANSPORT_ERRORS as exc:
+            last_exc = exc
+            if attempt < MAX_TRANSPORT_ATTEMPTS:
+                time.sleep(TRANSPORT_RETRY_BACKOFF_SECONDS)
+    raise TransportInconclusive(url, MAX_TRANSPORT_ATTEMPTS, str(last_exc)) from last_exc
 
 
 def page_contains(page_text: str, needle: str) -> bool:
@@ -70,21 +119,35 @@ def scan_source_refs(nodes_file: dict[str, Any]) -> list[SourceRefEntry]:
     return entries
 
 
-def resolve_source_ref(entry: SourceRefEntry, sources_file: dict[str, Any]) -> None:
-    """Resolve `entry`'s registered source `url` (HTTP 2xx); raise `SPINE_SOURCE_REF_UNRESOLVED` otherwise.
+def resolve_source_ref(
+    entry: SourceRefEntry,
+    sources_file: dict[str, Any],
+    *,
+    opener: Callable[[urllib.request.Request], Any] = _default_opener,
+) -> None:
+    """Resolve `entry`'s registered source `url` (HTTP 2xx); raise `SPINE_SOURCE_REF_UNRESOLVED` on a
+    confirmed non-2xx status, or propagate `TransportInconclusive` (carrying `entry`'s node/locator
+    context) on a persisted transport-level failure — never mapped to `SPINE_SOURCE_REF_UNRESOLVED`, since
+    a transport blip is not a confirmed dead source (I15).
 
     No contract defines a URL-join convention between a source's `url` and a `source_ref.locator`, so this
-    resolves the source's own `url` directly and carries `locator` in the failure detail for diagnosis only
-    (untested by `data/demo`, whose scan count is `0`).
+    resolves the source's own `url` directly and carries `locator` in the failure detail for diagnosis
+    only (untested by `data/demo`, whose scan count is `0`).
     """
     for source in sources_file["sources"]:
         if source["source"] == entry.source:
             try:
-                fetch_page_text(source["url"])
+                fetch_page_text(source["url"], opener=opener)
             except ResolutionFailure as exc:
                 raise ResolutionFailure(
                     SPINE_SOURCE_REF_UNRESOLVED,
                     source["url"],
+                    f"locator {entry.locator!r} on node {entry.node_id!r}: {exc}",
+                ) from exc
+            except TransportInconclusive as exc:
+                raise TransportInconclusive(
+                    source["url"],
+                    exc.attempts,
                     f"locator {entry.locator!r} on node {entry.node_id!r}: {exc}",
                 ) from exc
             return

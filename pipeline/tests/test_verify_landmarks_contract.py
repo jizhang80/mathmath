@@ -17,9 +17,11 @@ import pytest
 from mathmath_pipeline import REPO_ROOT
 from mathmath_pipeline.verify.landmarks import (
     LO_LANDMARK_UNSOURCED,
+    MAX_TRANSPORT_ATTEMPTS,
     SPINE_SOURCE_REF_UNRESOLVED,
     ResolutionFailure,
     SourceRefEntry,
+    TransportInconclusive,
     fetch_page_text,
     page_contains,
     resolve_source_ref,
@@ -135,9 +137,14 @@ def test_landmark_source_title_field_is_present_and_nonempty() -> None:
 def test_landmark_source_url_resolution_uses_source_title_not_name_as_needle() -> None:
     """Re-derive the AC5 assertion independently of the implementer's own test, using the real live fetch,
     confirming the needle used is `source_title` and that a (deliberately wrong) needle of `name` would NOT
-    be expected to match reliably — `name` is the project's own descriptive claim, not sourced text."""
+    be expected to match reliably — `name` is the project's own descriptive claim, not sourced text. A
+    transport-inconclusive outcome is skipped, not failed, so a network blip does not red the gate; a
+    confirmed non-2xx still fails (I15 is not weakened — see the 404 tests below and the hermetic suite)."""
     landmark = _landmark()
-    text = fetch_page_text(landmark["source_url"])
+    try:
+        text = fetch_page_text(landmark["source_url"])
+    except TransportInconclusive as exc:
+        pytest.skip(f"transport blip, not a confirmed dead source (I15): {exc}")
     assert page_contains(text, landmark["source_title"])
 
 
@@ -148,14 +155,15 @@ def test_landmark_source_url_resolution_uses_source_title_not_name_as_needle() -
 
 
 @pytest.mark.network
-def test_fetch_page_text_raises_on_a_nonexistent_host() -> None:
-    """A DNS-resolution failure (a host that cannot exist) must propagate as a real network error, never be
-    caught to produce a passing result (I15, §4 step 4: "lets `urllib.error.URLError` ... propagate
-    unmodified")."""
-    import urllib.error
-
-    with pytest.raises(urllib.error.URLError):
+def test_fetch_page_text_raises_transport_inconclusive_on_a_nonexistent_host() -> None:
+    """A DNS-resolution failure (a host that cannot exist) is a transport-level failure: retried up to
+    MAX_TRANSPORT_ATTEMPTS times, then raised as TransportInconclusive — never silently caught to
+    produce a passing result (I15), and never mapped to LO_LANDMARK_UNSOURCED, since it is the host's
+    reachability, not the landmark's, that is unknown here. This host can never resolve, so this
+    outcome is genuinely expected and deterministic: asserted, not skipped."""
+    with pytest.raises(TransportInconclusive) as exc_info:
         fetch_page_text("https://this-host-cannot-possibly-resolve.mathmath-test-fixture.invalid/")
+    assert exc_info.value.attempts == MAX_TRANSPORT_ATTEMPTS
 
 
 # ---------------------------------------------------------------------------
@@ -216,23 +224,32 @@ def test_resolve_source_ref_raises_spine_source_ref_unresolved_when_source_not_r
 def test_resolve_source_ref_raises_spine_source_ref_unresolved_when_registered_url_404s() -> None:
     """The `source` is registered but its `url` does not resolve — a live fetch against a guaranteed-404
     path, proving `SPINE_SOURCE_REF_UNRESOLVED` (not `LO_LANDMARK_UNSOURCED`) is the code this path raises,
-    even though the underlying fetch failure is the same shape as the landmark check's."""
+    even though the underlying fetch failure is the same shape as the landmark check's. The
+    ConnectionResetError this test flaked on in CI run 34528761105 is now a transport-inconclusive outcome:
+    skipped, not failed. The assertion below still runs, and still fails, on a confirmed 404."""
     entry = SourceRefEntry(node_id="some-node", source="broken-source", locator="p. 7")
     sources_file: dict[str, Any] = {
         "sources": [{"source": "broken-source", "url": LANDMARK_URL + "this-path-cannot-exist-source-ref"}]
     }
-    with pytest.raises(ResolutionFailure) as exc_info:
-        resolve_source_ref(entry, sources_file)
+    try:
+        with pytest.raises(ResolutionFailure) as exc_info:
+            resolve_source_ref(entry, sources_file)
+    except TransportInconclusive as exc:
+        pytest.skip(f"transport blip, not a confirmed dead source (I15): {exc}")
     assert exc_info.value.code == SPINE_SOURCE_REF_UNRESOLVED
     assert exc_info.value.code != LO_LANDMARK_UNSOURCED
 
 
 @pytest.mark.network
 def test_resolve_source_ref_succeeds_silently_when_registered_url_resolves() -> None:
-    """The positive control: a registered source whose `url` genuinely resolves raises nothing."""
+    """The positive control: a registered source whose `url` genuinely resolves raises nothing. A
+    transport-inconclusive outcome is skipped, not failed."""
     entry = SourceRefEntry(node_id="some-node", source="real-source", locator="p. 1")
     sources_file: dict[str, Any] = {"sources": [{"source": "real-source", "url": LANDMARK_URL}]}
-    resolve_source_ref(entry, sources_file)  # must not raise
+    try:
+        resolve_source_ref(entry, sources_file)  # must not raise
+    except TransportInconclusive as exc:
+        pytest.skip(f"transport blip, not a confirmed dead source (I15): {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -253,3 +270,25 @@ def test_resolution_failure_carries_the_failing_url() -> None:
     with pytest.raises(ResolutionFailure) as exc_info:
         resolve_source_ref(entry, {"sources": []})
     assert exc_info.value.url == "missing"
+
+
+def test_transport_inconclusive_is_never_a_registered_error_code() -> None:
+    """TransportInconclusive is an internal pipeline exception, not a registry error code (§6 decision
+    default): it must never appear in contracts/error-codes.json."""
+    registry = json.loads((REPO_ROOT / "contracts" / "error-codes.json").read_text())
+    codes = {entry["code"] for entry in registry["codes"]}
+    assert "TransportInconclusive" not in codes
+    assert "TRANSPORT_INCONCLUSIVE" not in codes
+
+
+def test_pytest_skip_calls_in_this_file_are_only_reached_via_except_transportinconclusive() -> None:
+    """A future edit must not add a blanket skip to paper over a genuine failure (I15) — every
+    `pytest.skip(` call in this file must be inside an `except TransportInconclusive:` handler."""
+    text = Path(__file__).read_text()
+    skip_count = text.count("pytest.skip(")
+    except_count = text.count("except TransportInconclusive")
+    assert skip_count > 0, "anti-vacuity: expected at least one transport-inconclusive skip in this file"
+    assert skip_count == except_count, (
+        f"{skip_count} pytest.skip( call(s) but {except_count} 'except TransportInconclusive' "
+        "handler(s) — every skip in this file must be gated on a transport-inconclusive outcome"
+    )

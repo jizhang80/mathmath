@@ -20,6 +20,7 @@ from mathmath_pipeline.verify import (
     LO_PROBE_UNCHECKABLE,
     SPINE_SOURCE_REF_UNRESOLVED,
     ResolutionFailure,
+    TransportInconclusive,
     derive_from_check,
     fetch_page_text,
     find_bad_distractor_tags,
@@ -104,7 +105,10 @@ def test_landmark_source_url_resolves() -> None:
     landmarks = _load("landmarks")["landmarks"]
     landmark = landmarks[0]
     assert landmark["source_title"] == "Interest Act"
-    text = fetch_page_text(landmark["source_url"])
+    try:
+        text = fetch_page_text(landmark["source_url"])
+    except TransportInconclusive as exc:
+        pytest.skip(f"transport blip, not a confirmed dead source (I15): {exc}")
     assert page_contains(text, landmark["source_title"])
 
 
@@ -116,8 +120,11 @@ def test_landmark_source_url_resolves() -> None:
 @pytest.mark.network
 def test_landmark_resolution_failure_path_is_real() -> None:
     broken_url = LANDMARK_URL + "this-path-cannot-exist-mathmath-test"
-    with pytest.raises(ResolutionFailure) as exc_info:
-        fetch_page_text(broken_url)
+    try:
+        with pytest.raises(ResolutionFailure) as exc_info:
+            fetch_page_text(broken_url)
+    except TransportInconclusive as exc:
+        pytest.skip(f"transport blip, not a confirmed dead source (I15): {exc}")
     assert exc_info.value.code == LO_LANDMARK_UNSOURCED
 
 
@@ -242,3 +249,16 @@ def test_map_landmark_unsourced_code_not_present_in_verify_package() -> None:
 def test_derive_from_check_takes_only_the_check_object() -> None:
     parameters = inspect.signature(derive_from_check).parameters
     assert list(parameters) == ["check"]
+
+
+def test_pytest_skip_calls_in_this_file_are_only_reached_via_except_transportinconclusive() -> None:
+    """A future edit must not add a blanket skip to paper over a genuine failure (I15) — every
+    `pytest.skip(` call in this file must be inside an `except TransportInconclusive:` handler."""
+    text = Path(__file__).read_text()
+    skip_count = text.count("pytest.skip(")
+    except_count = text.count("except TransportInconclusive")
+    assert skip_count > 0, "anti-vacuity: expected at least one transport-inconclusive skip in this file"
+    assert skip_count == except_count, (
+        f"{skip_count} pytest.skip( call(s) but {except_count} 'except TransportInconclusive' "
+        "handler(s) — every skip in this file must be gated on a transport-inconclusive outcome"
+    )
