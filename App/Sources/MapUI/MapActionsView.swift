@@ -1,11 +1,9 @@
 import Core
 import SwiftUI
 
-/// EPIC 04 task 04.9 replaces the `.diagnosis` destination this enum stands in for
-/// (`docs/epics/epic-03-app-map-shell.md` § 2). Each case carries exactly the value its façade call
-/// already returns — nothing this task invents.
+/// Each case carries exactly the value its façade call already returns — nothing this task invents.
 enum HandOffDestination {
-    case diagnosis(event: DiagnosisEvent)
+    case diagnosisStarted(DoorAStartOutcome)
     case doorBStarted(DoorBStartOutcome)
     case included(map: MapState)
 }
@@ -21,6 +19,15 @@ struct DoorBStartOutcome {
     let writeFailureCode: String?
 }
 
+/// The payload `.diagnosisStarted` carries — `DoorFacade.checkHere`'s result, unchanged, for `AppShell` to
+/// hand to its `DoorRunHolder`. Not `Equatable`: it holds a `DoorRunState`, which is not `Equatable`
+/// (04.5 §4.1, `tasks/arbitration/arbiter-04-doorrunstate-equatable.md`).
+struct DoorAStartOutcome {
+    let runState: DoorRunState
+    let screen: DoorADiagnosisScreen
+    let writeFailureCode: String?
+}
+
 /// Map W2 step 2, the `blocked`/upstream branch: opens diagnosis (D28) on this node.
 struct CheckHereActionButton: View {
     let nodeId: String
@@ -29,8 +36,11 @@ struct CheckHereActionButton: View {
 
     var body: some View {
         Button("Check me here") {
-            let (event, _) = MapFacade.checkHere(nodeId: nodeId, mapState: mapState)
-            handOff(.diagnosis(event: event))
+            let (runState, screen, failure, _) = DoorFacade.checkHere(
+                nodeId: nodeId, mapState: mapState, today: AppShell.resolveToday())
+            handOff(
+                .diagnosisStarted(
+                    DoorAStartOutcome(runState: runState, screen: screen, writeFailureCode: failure)))
         }
     }
 }

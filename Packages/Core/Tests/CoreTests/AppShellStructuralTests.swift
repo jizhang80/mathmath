@@ -127,10 +127,9 @@ struct AppShellStructuralTests {
     // MARK: - AC7 (03.12) as re-scoped by 04.8 AC7: one clause per HandOffDestination case; no branch calls Core
 
     /// The case-clause prefixes `AppShell.handOff`'s switch carries after task 04.8
-    /// (`tasks/epic-04-task-08-app-expedition-screens.md` §4.9). Task 04.9 replaces `"case .diagnosis:"` with
-    /// `"case .diagnosisStarted("` in this list.
+    /// (`tasks/epic-04-task-08-app-expedition-screens.md` §4.9). Updated by task 04.9.
     private static let expectedHandOffCaseClausePrefixes = [
-        "case .included(", "case .doorBStarted(", "case .diagnosis:",
+        "case .included(", "case .doorBStarted(", "case .diagnosisStarted(",
     ]
 
     private static let coreCallPattern = #"\b(MapFacade|DoorFacade|MapLaunch)\.\w+\("#
@@ -181,8 +180,8 @@ struct AppShellStructuralTests {
                 holder.replace(with: map)
             case .doorBStarted(let outcome):
                 doorHolder.replace(with: snapshot(outcome))
-            case .diagnosis:
-                break
+            case .diagnosisStarted(let outcome):
+                doorHolder.replace(with: snapshot(outcome))
             case .somethingElse:
                 break
             }
@@ -198,7 +197,7 @@ struct AppShellStructuralTests {
     }
 
     @Test(
-        "I14 (04.8 AC7): no handOff branch calls a façade or launch function; .doorBStarted only replaces the door holder; the .diagnosis placeholder touches no holder"
+        "I14 (04.8 AC7, 04.9 AC5): no handOff branch calls a façade or launch function; each door branch only replaces the door holder with its origin tag"
     )
     func handOffBranchesCallNoFurtherCoreFunction() throws {
         let source = try Self.readShell("AppShell.swift")
@@ -215,11 +214,17 @@ struct AppShellStructuralTests {
             return
         }
         #expect(doorB.components(separatedBy: "doorHolder.replace(").count - 1 == 1)
-        guard let placeholder = Self.caseBranch(startingWith: "case .diagnosis:", in: body) else {
-            Issue.record("could not isolate the .diagnosis placeholder branch")
+        #expect(
+            doorB.contains("isStandaloneDiagnosis: false"), ".doorBStarted opens an expedition run (04.9 AC5)"
+        )
+        guard let doorA = Self.caseBranch(startingWith: "case .diagnosisStarted(", in: body) else {
+            Issue.record("could not isolate the .diagnosisStarted branch")
             return
         }
-        #expect(!placeholder.contains("replace("), "the .diagnosis placeholder must not touch either holder")
+        #expect(doorA.components(separatedBy: "doorHolder.replace(").count - 1 == 1)
+        #expect(
+            doorA.contains("isStandaloneDiagnosis: true"),
+            ".diagnosisStarted opens a standalone event (04.9 AC5)")
     }
 
     @Test("negative control: a planted DoorFacade call inside a handOff branch is caught")
@@ -230,8 +235,8 @@ struct AppShellStructuralTests {
                 holder.replace(with: map)
             case .doorBStarted(let outcome):
                 _ = DoorFacade.backToMap(outcome.runState, today: today)
-            case .diagnosis:
-                break
+            case .diagnosisStarted(let outcome):
+                doorHolder.replace(with: snapshot(outcome))
             }
             """
         guard let body = Self.balancedBraceBlock(after: "switch destination {", in: fixture) else {
@@ -383,13 +388,14 @@ struct AppShellStructuralTests {
     // MARK: - AC3 / arbiter-03 § Q-A (re-scoped by 04.8 §4.9): CoreErrorText is the only source of student text
 
     /// Every `CoreErrorText.text(for:` call site in `App/Sources/Shell` after task 04.8 (§4.9): 03.12's two,
-    /// plus 04.8's summary write-failure resolution and `DoorBRunScreen.startAnother`'s error text. Task 04.9
-    /// appends `"CoreErrorText.text(for: coreError)"` (its `writeFailureBanner`) and nothing else.
+    /// plus 04.8's summary write-failure resolution and `DoorBRunScreen.startAnother`'s error text. Updated by
+    /// task 04.9.
     private static let expectedShellCoreErrorTextSites = [
         "CoreErrorText.text(for: refusal.studentCode)",
         "CoreErrorText.text(for: .platformStateUnreadable)",
         "flatMap(CoreErrorText.text(for:))",
         "CoreErrorText.text(for: error)",
+        "CoreErrorText.text(for: coreError)",
     ]
 
     @Test(

@@ -3,9 +3,10 @@ import Testing
 
 @testable import Core
 
-/// Comprehensive structural (source-text) guards for task 04.8 (`tasks/epic-04-task-08-app-expedition-screens.md`):
-/// the six `App/Sources/Doors/*.swift` files, plus the parts of `App/Sources/MapUI/MapActionsView.swift` and
-/// `App/Sources/Shell/AppShell.swift` this task adds. This is a NEW file — per
+/// Comprehensive structural (source-text) guards for task 04.8 (`tasks/epic-04-task-08-app-expedition-screens.md`),
+/// as updated in lockstep by task 04.9 (`tasks/arbitration/arbiter-04-09-doors-structural-suite-addendum.md`):
+/// every `App/Sources/Doors/*.swift` file (`doorFileNames`), plus the parts of `App/Sources/MapUI/MapActionsView.swift`
+/// and `App/Sources/Shell/AppShell.swift` 04.8 and 04.9 add. This is a NEW file — per
 /// `tasks/arbitration/arbiter-04-08-structural-suite-ownership.md`, the pre-existing
 /// `AppShellStructuralTests.swift` / `MapPanelsPickersHandOffStructuralTests.swift` guards are owned by the
 /// implementer's own commit and are not edited here.
@@ -32,9 +33,13 @@ struct DoorExpeditionScreensStructuralTests {
     private static var mapUIRoot: URL { repoRoot.appendingPathComponent("App/Sources/MapUI") }
     private static var shellRoot: URL { repoRoot.appendingPathComponent("App/Sources/Shell") }
 
+    /// Every `.swift` file in `App/Sources/Doors` after task 04.9 (§4.2–§4.4). Every Doors-wide scan in this suite
+    /// reads exactly this list, and `allDoorFilesExistAndListIsExhaustive` fails when the directory and the list
+    /// differ, so a later task that adds a Doors file adds one entry here.
     private static let doorFileNames = [
         "ExpeditionItemView.swift", "ExpeditionAnswerCardView.swift", "ExpeditionSummaryView.swift",
         "NumericKeypadView.swift", "ChoiceButtonsView.swift", "DoorBViewState.swift",
+        "HypothesisCardView.swift", "RemediationView.swift", "DiagnosisReturnView.swift",
     ]
 
     private static func readDoor(_ name: String) throws -> String {
@@ -114,15 +119,28 @@ struct DoorExpeditionScreensStructuralTests {
 
     private static let doorFacadeCallPattern = #"\bDoorFacade\.\w+\("#
 
-    // MARK: - Fixture presence (all six Doors files exist)
+    // MARK: - Fixture presence (every App/Sources/Doors file is listed, and every listed file exists)
 
-    @Test("all six App/Sources/Doors files exist")
-    func allDoorFilesExist() {
+    @Test("every listed App/Sources/Doors file exists, and the list names every .swift file in the directory")
+    func allDoorFilesExistAndListIsExhaustive() throws {
         for name in Self.doorFileNames {
             #expect(
                 FileManager.default.fileExists(atPath: Self.doorsRoot.appendingPathComponent(name).path),
                 "missing file: \(name)")
         }
+        let onDisk = try FileManager.default.contentsOfDirectory(atPath: Self.doorsRoot.path)
+            .filter { $0.hasSuffix(".swift") }
+        #expect(!onDisk.isEmpty, "App/Sources/Doors holds no .swift file (empty = FAIL)")
+        #expect(
+            Set(onDisk) == Set(Self.doorFileNames),
+            "Doors inventory drift — unlisted: \(Set(onDisk).subtracting(Self.doorFileNames)), missing: \(Set(Self.doorFileNames).subtracting(onDisk))"
+        )
+    }
+
+    @Test("negative control: a Doors file absent from doorFileNames is caught by the inventory comparison")
+    func plantedUnlistedDoorsFileIsCaught() {
+        let onDisk = Self.doorFileNames + ["ProbeView.swift"]
+        #expect(Set(onDisk) != Set(Self.doorFileNames), "planted unlisted Doors file was not detected")
     }
 
     // MARK: - I10: no free-text entry anywhere in App/Sources/Doors; the numeric keypad is DoorKeypad-only
@@ -328,8 +346,14 @@ struct DoorExpeditionScreensStructuralTests {
 
     // MARK: - I3: the answer card is a distinct phase; only continueTapped ever leaves it
 
-    @Test("I3: DoorBPhase declares exactly the two expected cases, .screen and .answerCard")
-    func doorBPhaseHasExactlyTwoCases() throws {
+    /// The exact `DoorBPhase` case prefixes after task 04.9 (§4.6). Each phase is a distinct, explicit render
+    /// state that only its own continue control leaves (I3); a later task that adds a phase edits this list only.
+    private static let expectedDoorBPhaseCasePrefixes = [
+        "case screen(", "case answerCard(", "case diagnosisAnswerCard(",
+    ]
+
+    @Test("I3: DoorBPhase declares exactly the expected cases (.screen, .answerCard, .diagnosisAnswerCard)")
+    func doorBPhaseHasExactlyTheExpectedCases() throws {
         let source = try Self.readShell()
         guard let body = Self.balancedBraceBlock(after: "enum DoorBPhase: Equatable {", in: source) else {
             Issue.record("could not locate DoorBPhase's body")
@@ -337,65 +361,88 @@ struct DoorExpeditionScreensStructuralTests {
         }
         let cases = body.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { $0.hasPrefix("case ") }
-        #expect(cases.count == 2, "expected exactly 2 DoorBPhase cases, found: \(cases)")
-        #expect(cases.contains { $0.hasPrefix("case screen(") })
-        #expect(cases.contains { $0.hasPrefix("case answerCard(") })
+        let expected = Self.expectedDoorBPhaseCasePrefixes
+        #expect(cases.count == expected.count, "expected \(expected.count) DoorBPhase cases, found: \(cases)")
+        for prefix in expected {
+            #expect(
+                cases.filter { $0.hasPrefix(prefix) }.count == 1,
+                "expected exactly one \(prefix) case: \(cases)")
+        }
     }
 
-    @Test("negative control: a planted third DoorBPhase case is caught")
-    func plantedThirdDoorBPhaseCaseIsCaught() {
+    @Test("negative control: a planted extra DoorBPhase case is caught")
+    func plantedExtraDoorBPhaseCaseIsCaught() {
         let fixture = """
             enum DoorBPhase: Equatable {
                 case screen(DoorBScreen)
                 case answerCard(DoorBAnswerAdvance)
+                case diagnosisAnswerCard(DoorAProbeAnswerAdvance)
                 case autoAdvancing
             }
             """
-        let body = Self.balancedBraceBlock(after: "enum DoorBPhase: Equatable {", in: fixture)
-        let cases = body!.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { $0.hasPrefix("case ") }
-        #expect(cases.count == 3, "planted third DoorBPhase case was not detected: \(cases)")
-    }
-
-    @Test(
-        "I3: continueAfterAnswer has exactly one call site (DoorBRunScreen.continueTapped), reachable only from the answer card's continue control"
-    )
-    func continueAfterAnswerHasExactlyOneCallSite() throws {
-        let shell = try Self.readShell()
-        #expect(
-            Self.matchCount(of: #"DoorFacade\.continueAfterAnswer\("#, in: shell) == 1,
-            "continueAfterAnswer must have exactly one call site, in DoorBRunScreen.continueTapped")
-        guard
-            let continueTapped = Self.balancedBraceBlock(
-                after:
-                    "private func continueTapped(_ advance: DoorBAnswerAdvance, current: DoorBRunSnapshot) {",
-                in: shell)
-        else {
-            Issue.record("could not locate continueTapped's body")
+        guard let body = Self.balancedBraceBlock(after: "enum DoorBPhase: Equatable {", in: fixture) else {
+            Issue.record("fixture setup failed")
             return
         }
-        #expect(continueTapped.contains("DoorFacade.continueAfterAnswer("))
+        let cases = body.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { $0.hasPrefix("case ") }
+        #expect(
+            cases.count == Self.expectedDoorBPhaseCasePrefixes.count + 1,
+            "planted extra DoorBPhase case was not detected: \(cases)")
+    }
+
+    /// Each answer-card `DoorBPhase` arm, the one `DoorFacade` continue entry that alone leaves it, the action
+    /// method that makes that call, and the call its continue control makes (I3): 04.8's Door B card and 04.9's
+    /// Door A probe card (§4.6). A later answer-card phase adds one entry.
+    private static let expectedAnswerCardRoutes:
+        [(arm: String, facadeCall: String, action: String, onContinue: String)] = [
+            (
+                arm: "case .answerCard(let advance):", facadeCall: "DoorFacade.continueAfterAnswer(",
+                action:
+                    "private func continueTapped(_ advance: DoorBAnswerAdvance, current: DoorBRunSnapshot) {",
+                onContinue: "continueTapped(advance, current: current)"
+            ),
+            (
+                arm: "case .diagnosisAnswerCard(let advance):",
+                facadeCall: "DoorFacade.continueAfterProbeAnswer(",
+                action:
+                    "private func continueDiagnosisTapped(_ advance: DoorAProbeAnswerAdvance, current: DoorBRunSnapshot) {",
+                onContinue: "continueDiagnosisTapped(advance, current: current)"
+            ),
+        ]
+
+    @Test(
+        "I3: each answer-card phase is left only via its one DoorFacade continue call, reached only from that phase's ExpeditionAnswerCardView continue control"
+    )
+    func answerCardPhasesAreLeftOnlyViaTheirContinueCall() throws {
+        let shell = try Self.readShell()
         guard let content = Self.balancedBraceBlock(after: "switch current.phase {", in: shell) else {
             Issue.record("could not locate DoorBRunScreen's phase switch")
             return
         }
-        guard
-            let answerCardArm = Self.caseBranch(startingWith: "case .answerCard(let advance):", in: content)
-        else {
-            Issue.record("could not locate the .answerCard case arm")
-            return
+        for route in Self.expectedAnswerCardRoutes {
+            #expect(
+                shell.components(separatedBy: route.facadeCall).count - 1 == 1,
+                "\(route.facadeCall) must have exactly one call site, in its continue action")
+            guard let action = Self.balancedBraceBlock(after: route.action, in: shell) else {
+                Issue.record("could not locate the body of \(route.action)")
+                continue
+            }
+            #expect(action.contains(route.facadeCall))
+            guard let arm = Self.caseBranch(startingWith: route.arm, in: content) else {
+                Issue.record("could not locate the \(route.arm) arm")
+                continue
+            }
+            #expect(arm.contains("ExpeditionAnswerCardView("), "\(route.arm) must render the answer card")
+            #expect(arm.contains(route.onContinue), "\(route.arm)'s onContinue must call \(route.onContinue)")
+            for next in [
+                "ExpeditionItemView(", "ExpeditionSummaryView(", "HypothesisCardView(",
+                "DiagnosisReturnView(",
+                "diagnosisContent(",
+            ] {
+                #expect(!arm.contains(next), "\(route.arm) must not itself render the next screen (\(next))")
+            }
         }
-        #expect(
-            answerCardArm.contains("ExpeditionAnswerCardView("),
-            "the .answerCard phase must render ExpeditionAnswerCardView, not skip to the next screen")
-        #expect(
-            answerCardArm.contains("continueTapped(advance, current: current)"),
-            "the answer card's onContinue closure must call continueTapped")
-        #expect(
-            !answerCardArm.contains("ExpeditionItemView(")
-                && !answerCardArm.contains("ExpeditionSummaryView("),
-            "the .answerCard arm must not itself render the next item or summary — only continueTapped can advance"
-        )
     }
 
     @Test(
@@ -472,16 +519,28 @@ struct DoorExpeditionScreensStructuralTests {
 
     // MARK: - I14: each Door action/composition method makes exactly one DoorFacade call
 
-    @Test("I14: each of DoorBRunScreen's four action methods makes exactly one DoorFacade call")
+    /// Every `DoorBRunScreen` action method, by its exact signature text through the opening `{`, each making
+    /// exactly one textual `DoorFacade` call (I14): 04.8's four, plus 04.9's five (§4.6). `returnFromDiagnosis`'s
+    /// one call is `resumeAfterDiagnosis`, in its non-standalone arm; its standalone arm makes none (04.5 AC8),
+    /// asserted separately. A later action adds one entry.
+    private static let expectedDoorBRunScreenActionMarkers = [
+        "private func submit(_ value: String, current: DoorBRunSnapshot) {",
+        "private func continueTapped(_ advance: DoorBAnswerAdvance, current: DoorBRunSnapshot) {",
+        "private func startAnother(current: DoorBRunSnapshot) {",
+        "private func backToMap(current: DoorBRunSnapshot) {",
+        "private func decideProbe(_ offer: ProbeOffer, accept: Bool, current: DoorBRunSnapshot) {",
+        "private func answerProbeItem(_ probe: ProbeInProgress, submitted: String, current: DoorBRunSnapshot) {",
+        "private func continueDiagnosisTapped(_ advance: DoorAProbeAnswerAdvance, current: DoorBRunSnapshot) {",
+        "private func decideFurtherLevel(_ offer: FurtherLevelOffer, accept: Bool, current: DoorBRunSnapshot) {",
+        "private func returnFromDiagnosis(outcome: DiagnosisOutcome, current: DoorBRunSnapshot) {",
+    ]
+
+    @Test(
+        "I14: each listed DoorBRunScreen action method makes exactly one DoorFacade call; the standalone diagnosis return makes none"
+    )
     func doorBRunScreenActionsMakeExactlyOneCallEach() throws {
         let shell = try Self.readShell()
-        let markers = [
-            "private func submit(_ value: String, current: DoorBRunSnapshot) {",
-            "private func continueTapped(_ advance: DoorBAnswerAdvance, current: DoorBRunSnapshot) {",
-            "private func startAnother(current: DoorBRunSnapshot) {",
-            "private func backToMap(current: DoorBRunSnapshot) {",
-        ]
-        for marker in markers {
+        for marker in Self.expectedDoorBRunScreenActionMarkers {
             guard let body = Self.balancedBraceBlock(after: marker, in: shell) else {
                 Issue.record("could not locate body for \(marker)")
                 continue
@@ -489,6 +548,14 @@ struct DoorExpeditionScreensStructuralTests {
             let count = Self.matchCount(of: Self.doorFacadeCallPattern, in: body)
             #expect(count == 1, "expected exactly one DoorFacade call in \(marker), found \(count)")
         }
+        guard let standalone = Self.balancedBraceBlock(after: "if current.isStandaloneDiagnosis {", in: shell)
+        else {
+            Issue.record("could not locate returnFromDiagnosis's standalone arm")
+            return
+        }
+        #expect(
+            Self.matchCount(of: Self.doorFacadeCallPattern, in: standalone) == 0,
+            "the standalone map_check_here return calls no DoorFacade entry (04.5 AC8, 04.9 AC8)")
     }
 
     @Test("negative control: a planted second DoorFacade call inside submit(_:current:) is caught")
@@ -645,7 +712,7 @@ struct DoorExpeditionScreensStructuralTests {
     // MARK: - @State discipline
 
     @Test(
-        "@State discipline: zero @State properties across all six App/Sources/Doors files (pure render layer)"
+        "@State discipline: zero @State properties across every App/Sources/Doors file (pure render layer)"
     )
     func doorsFilesHoldNoStateProperties() throws {
         let contents = try Self.readAllDoors()
@@ -687,32 +754,46 @@ struct DoorExpeditionScreensStructuralTests {
         #expect(stateLines.count == 2, "planted second @State property was not detected: \(stateLines)")
     }
 
-    // MARK: - MathView usage: exactly three call sites, each field-routed correctly
+    // MARK: - MathView usage: exactly the expected call sites, each routing a latex field
 
-    @Test("MathView: exactly three call sites across App/Sources/Doors — prompt, choice label, latex answer")
-    func mathViewHasExactlyThreeCallSitesInDoors() throws {
+    /// Every `MathView(latex:)` call site in `App/Sources/Doors` after task 04.9, each routing a latex field
+    /// (`contracts/data-model.md` § Text): 04.8's prompt, choice label and latex answer; 04.9's worked-example
+    /// step (§4.3). `why`, hint prose and every plain field never reach `MathView`. A later site adds one entry.
+    private static let expectedMathViewSites = [
+        "MathView(latex: content.promptLatex)", "MathView(latex: choice.latex)",
+        "MathView(latex: content.correctAnswerDisplay)", "MathView(latex: step)",
+    ]
+
+    @Test("MathView: the App/Sources/Doors call sites are exactly the expected set, each field-routed")
+    func mathViewCallSitesAreExactlyTheExpectedSet() throws {
         let combined = try Self.combinedDoorsSource()
         let count = Self.matchCount(of: #"MathView\(latex:"#, in: combined)
-        #expect(count == 3, "expected exactly 3 MathView(latex:) call sites, found \(count)")
-        #expect(combined.contains("MathView(latex: content.promptLatex)"))
-        #expect(combined.contains("MathView(latex: choice.latex)"))
-        #expect(combined.contains("MathView(latex: content.correctAnswerDisplay)"))
+        let expected = Self.expectedMathViewSites
+        #expect(
+            count == expected.count, "expected \(expected.count) MathView(latex:) call sites, found \(count)")
+        for site in expected {
+            #expect(combined.components(separatedBy: site).count - 1 == 1, "expected exactly one \(site)")
+        }
+        let remediation = try Self.readDoor("RemediationView.swift")
+        #expect(
+            remediation.contains("ForEach(example.stepsLatex, id: \\.self) { step in"),
+            "`step` must be bound from WorkedExample.stepsLatex, never from a plain-text field")
     }
 
-    @Test("negative control: a planted fourth MathView(latex:) call site (why, rendered as latex) is caught")
-    func plantedFourthMathViewCallSiteIsCaught() {
-        let fixture = """
-            MathView(latex: content.promptLatex)
-            MathView(latex: choice.latex)
-            MathView(latex: content.correctAnswerDisplay)
-            MathView(latex: content.why)
-            """
+    @Test("negative control: a planted extra MathView(latex:) call site (why, rendered as latex) is caught")
+    func plantedExtraMathViewCallSiteIsCaught() {
+        let fixture = (Self.expectedMathViewSites + ["MathView(latex: content.why)"]).joined(separator: "\n")
         #expect(
-            DoorExpeditionScreensStructuralTests.matchCount(of: #"MathView\(latex:"#, in: fixture) == 4,
+            Self.matchCount(of: #"MathView\(latex:"#, in: fixture) == Self.expectedMathViewSites.count + 1,
             "planted extra MathView call site was not detected")
     }
 
     // MARK: - Copy: student text comes only from Core-supplied values or the known chrome literals
+
+    /// The App-authored chrome labels permitted in `App/Sources/Doors`: 1–2 words each, never a `Core`-supplied
+    /// string. 04.8: "Continue", "Submit" (04.8 §4.6); 04.9: "Yes", "Not now" (04.9 §4.2, §4.4, §6). A later task
+    /// that adds a chrome label adds one entry here.
+    private static let doorsChromeAllowList: Set<String> = ["Continue", "Submit", "Yes", "Not now"]
 
     @Test("Copy: every Text(\"…\")/Button(\"…\") string literal in Doors is in the known chrome allow-list")
     func doorsStringLiteralsAreOnlyKnownChrome() throws {
@@ -728,9 +809,19 @@ struct DoorExpeditionScreensStructuralTests {
             guard let match, let range = Range(match.range(at: 1), in: combined) else { return }
             found.insert(String(combined[range]))
         }
-        let allowList: Set<String> = ["Continue", "Submit"]
+        let allowList = Self.doorsChromeAllowList
         #expect(
             found == allowList, "unexpected App-authored chrome literal(s): \(found.subtracting(allowList))")
+        for label in allowList {
+            #expect(label.split(separator: " ").count <= 2, "chrome label \"\(label)\" exceeds 2 words")
+        }
+        for copy in [
+            DoorADiagnosisCopy.costLine, DoorADiagnosisCopy.refutedLine, DoorADiagnosisCopy.cappedLine,
+            DoorADiagnosisCopy.furtherLevelQuestion,
+        ] {
+            #expect(
+                !combined.contains("\"\(copy)\""), "Core copy duplicated as an App string literal: \(copy)")
+        }
     }
 
     @Test("negative control: a planted App-authored chrome literal outside the allow-list is caught")
@@ -748,8 +839,15 @@ struct DoorExpeditionScreensStructuralTests {
             found.insert(String(fixture[range]))
         }
         #expect(
-            !found.subtracting(["Continue", "Submit"]).isEmpty,
+            !found.subtracting(Self.doorsChromeAllowList).isEmpty,
             "planted foreign chrome literal was not detected")
+        #expect(
+            "Include in my next expedition".split(separator: " ").count > 2,
+            "a 4-word label was not caught by the 2-word bound")
+        let plantedCoreCopy = "Text(\"\(DoorADiagnosisCopy.costLine)\")"
+        #expect(
+            plantedCoreCopy.contains("\"\(DoorADiagnosisCopy.costLine)\""),
+            "planted Core copy literal was not detected")
     }
 
     // MARK: - Glossary: no Session identifiers, no "attempt"

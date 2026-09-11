@@ -11,10 +11,12 @@ final class MapStateHolder {
 }
 
 /// The Door B render phase `DoorRunHolder` presents: either a screen `DoorFacade` returned, or the pending
-/// answer card `DoorFacade.answer` returned, until the continue control's tap replaces it (I3).
+/// answer card `DoorFacade.answer`/`DoorFacade.answerProbeItem` returned, until the continue control's tap
+/// replaces it (I3).
 enum DoorBPhase: Equatable {
     case screen(DoorBScreen)
     case answerCard(DoorBAnswerAdvance)
+    case diagnosisAnswerCard(DoorAProbeAnswerAdvance)
 }
 
 /// One Door B run's presentation state (§1: never named `*Session*`, `contracts/domain-glossary.md:29`).
@@ -24,6 +26,12 @@ struct DoorBRunSnapshot {
     let runState: DoorRunState
     let phase: DoorBPhase
     let writeFailureCode: String?
+    /// True only for a diagnosis event opened via `.diagnosisStarted` (a standalone `map_check_here` event with
+    /// no suspended expedition). False for every expedition run, including one that later reveals a diagnosis
+    /// screen via the D27 hand-off. A provenance tag this file itself sets once, at construction — never a
+    /// re-derivation of `DoorRunState.expedition` (which is Core-internal and unreadable from `App/Sources`,
+    /// §6 default 1).
+    let isStandaloneDiagnosis: Bool
 }
 
 /// The App's ephemeral `@Observable` holder over the current Door B run, mirroring `MapStateHolder`'s own
@@ -122,9 +130,12 @@ struct AppShell: View {
             doorHolder.replace(
                 with: DoorBRunSnapshot(
                     runState: outcome.runState, phase: .screen(outcome.screen),
-                    writeFailureCode: outcome.writeFailureCode))
-        case .diagnosis:
-            break  // EPIC 04 task 04.9 replaces this with a real screen.
+                    writeFailureCode: outcome.writeFailureCode, isStandaloneDiagnosis: false))
+        case .diagnosisStarted(let outcome):
+            doorHolder.replace(
+                with: DoorBRunSnapshot(
+                    runState: outcome.runState, phase: .screen(.diagnosis(outcome.screen)),
+                    writeFailureCode: outcome.writeFailureCode, isStandaloneDiagnosis: true))
         }
     }
 
@@ -211,9 +222,9 @@ private struct MapScreen: View {
     }
 }
 
-/// The Door B (expedition) run screen: a pure phase switcher over `DoorRunHolder.current`, composing this
-/// task's own `App/Sources/Doors` views. Every state-changing action calls exactly one `DoorFacade` entry
-/// point (I14). Diagnosis (Door A) renders `EmptyView()` — EPIC 04 task 04.9's scope.
+/// The Door B (expedition) run screen: a pure phase switcher over `DoorRunHolder.current`, composing 04.8's and
+/// 04.9's `App/Sources/Doors` views. Every state-changing action calls exactly one `DoorFacade` entry point
+/// (I14), except the standalone terminal's return, which needs none (04.5 AC8).
 private struct DoorBRunScreen: View {
     let holder: DoorRunHolder
     let mapHolder: MapStateHolder
@@ -238,8 +249,8 @@ private struct DoorBRunScreen: View {
                 content: item, keypadInput: $viewState.keypadInput,
                 onSubmitNumeric: { submitted in submit(submitted, current: current) },
                 onSubmitChoice: { submitted in submit(submitted, current: current) })
-        case .screen(.diagnosis):
-            EmptyView()  // EPIC 04 task 04.9 replaces this.
+        case .screen(.diagnosis(let diagnosisScreen)):
+            diagnosisContent(for: diagnosisScreen, current: current)
         case .screen(.summary(let summary)):
             ExpeditionSummaryView(
                 summary: summary,
@@ -253,6 +264,53 @@ private struct DoorBRunScreen: View {
             ExpeditionAnswerCardView(content: advance.answerCard) {
                 continueTapped(advance, current: current)
             }
+        case .diagnosisAnswerCard(let advance):
+            ExpeditionAnswerCardView(content: advance.answerCard) {
+                continueDiagnosisTapped(advance, current: current)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func writeFailureBanner(_ current: DoorBRunSnapshot) -> some View {
+        if let code = current.writeFailureCode, let coreError = CoreError(rawValue: code),
+            let text = CoreErrorText.text(for: coreError)
+        {
+            Text(text)
+        }
+    }
+
+    @ViewBuilder
+    private func diagnosisContent(for screen: DoorADiagnosisScreen, current: DoorBRunSnapshot) -> some View {
+        VStack {
+            writeFailureBanner(current)
+            switch screen {
+            case .hypothesis(let content, let offer):
+                HypothesisCardView(content: content) { accept in
+                    decideProbe(offer, accept: accept, current: current)
+                }
+            case .probeItem(let content, let probe):
+                ExpeditionItemView(
+                    content: content, keypadInput: $viewState.keypadInput,
+                    onSubmitNumeric: { submitted in
+                        answerProbeItem(probe, submitted: submitted, current: current)
+                    },
+                    onSubmitChoice: { submitted in
+                        answerProbeItem(probe, submitted: submitted, current: current)
+                    })
+            case .furtherLevelOffer(let remediation, let offer, let decision):
+                DiagnosisReturnView(
+                    content: .furtherLevelOffer(remediation: remediation, offer: offer),
+                    onFurtherLevelDecision: { accept in
+                        decideFurtherLevel(decision, accept: accept, current: current)
+                    },
+                    onReturn: {})
+            case .terminal(let terminalContent):
+                DiagnosisReturnView(
+                    content: .terminal(terminalContent),
+                    onFurtherLevelDecision: { _ in },
+                    onReturn: { returnFromDiagnosis(outcome: terminalContent.outcome, current: current) })
+            }
         }
     }
 
@@ -260,14 +318,17 @@ private struct DoorBRunScreen: View {
         let (advance, runState, failure) = DoorFacade.answer(current.runState, submitted: value, today: today)
         viewState.keypadInput = ""
         holder.replace(
-            with: DoorBRunSnapshot(runState: runState, phase: .answerCard(advance), writeFailureCode: failure)
-        )
+            with: DoorBRunSnapshot(
+                runState: runState, phase: .answerCard(advance), writeFailureCode: failure,
+                isStandaloneDiagnosis: false))
     }
 
     private func continueTapped(_ advance: DoorBAnswerAdvance, current: DoorBRunSnapshot) {
         let (screen, runState) = DoorFacade.continueAfterAnswer(advance, runState: current.runState)
         holder.replace(
-            with: DoorBRunSnapshot(runState: runState, phase: .screen(screen), writeFailureCode: nil))
+            with: DoorBRunSnapshot(
+                runState: runState, phase: .screen(screen), writeFailureCode: nil,
+                isStandaloneDiagnosis: false))
     }
 
     private func startAnother(current: DoorBRunSnapshot) {
@@ -276,7 +337,9 @@ private struct DoorBRunScreen: View {
                 mapState: current.runState.map, today: today)
             viewState.startAnotherErrorText = nil
             holder.replace(
-                with: DoorBRunSnapshot(runState: runState, phase: .screen(screen), writeFailureCode: failure))
+                with: DoorBRunSnapshot(
+                    runState: runState, phase: .screen(screen), writeFailureCode: failure,
+                    isStandaloneDiagnosis: false))
         } catch let error as CoreError {
             viewState.startAnotherErrorText = CoreErrorText.text(for: error)
         } catch {
@@ -288,5 +351,57 @@ private struct DoorBRunScreen: View {
         let (mapState, _) = DoorFacade.backToMap(current.runState, today: today)
         mapHolder.replace(with: mapState)
         onDismiss()
+    }
+
+    private func decideProbe(_ offer: ProbeOffer, accept: Bool, current: DoorBRunSnapshot) {
+        let (advance, runState, failure) = DoorFacade.decideProbe(
+            offer, accept: accept, runState: current.runState, today: today)
+        holder.replace(
+            with: DoorBRunSnapshot(
+                runState: runState, phase: .screen(.diagnosis(advance.screen)), writeFailureCode: failure,
+                isStandaloneDiagnosis: current.isStandaloneDiagnosis))
+    }
+
+    private func answerProbeItem(_ probe: ProbeInProgress, submitted: String, current: DoorBRunSnapshot) {
+        let (advance, runState, failure) = DoorFacade.answerProbeItem(
+            probe, submitted: submitted, runState: current.runState, today: today)
+        viewState.keypadInput = ""
+        holder.replace(
+            with: DoorBRunSnapshot(
+                runState: runState, phase: .diagnosisAnswerCard(advance), writeFailureCode: failure,
+                isStandaloneDiagnosis: current.isStandaloneDiagnosis))
+    }
+
+    private func continueDiagnosisTapped(_ advance: DoorAProbeAnswerAdvance, current: DoorBRunSnapshot) {
+        let screen = DoorFacade.continueAfterProbeAnswer(advance, runState: current.runState)
+        holder.replace(
+            with: DoorBRunSnapshot(
+                runState: current.runState, phase: .screen(.diagnosis(screen)), writeFailureCode: nil,
+                isStandaloneDiagnosis: current.isStandaloneDiagnosis))
+    }
+
+    private func decideFurtherLevel(_ offer: FurtherLevelOffer, accept: Bool, current: DoorBRunSnapshot) {
+        let (advance, runState, failure) = DoorFacade.decideFurtherLevel(
+            offer, accept: accept, runState: current.runState, today: today)
+        holder.replace(
+            with: DoorBRunSnapshot(
+                runState: runState, phase: .screen(.diagnosis(advance.screen)), writeFailureCode: failure,
+                isStandaloneDiagnosis: current.isStandaloneDiagnosis))
+    }
+
+    private func returnFromDiagnosis(outcome: DiagnosisOutcome, current: DoorBRunSnapshot) {
+        if current.isStandaloneDiagnosis {
+            // 04.5 AC8: no `resumeAfterDiagnosis` call exists or is needed for a standalone `map_check_here`
+            // event — `current.runState.map` already carries the last state 04.5's Door A calls persisted.
+            mapHolder.replace(with: current.runState.map)
+            onDismiss()
+        } else {
+            let (advance, runState, failure) = DoorFacade.resumeAfterDiagnosis(
+                current.runState, outcome: outcome, today: today)
+            holder.replace(
+                with: DoorBRunSnapshot(
+                    runState: runState, phase: .screen(advance.screen), writeFailureCode: failure,
+                    isStandaloneDiagnosis: false))
+        }
     }
 }

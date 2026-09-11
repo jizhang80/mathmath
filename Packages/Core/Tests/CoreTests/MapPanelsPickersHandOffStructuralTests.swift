@@ -212,13 +212,14 @@ struct MapPanelsPickersHandOffStructuralTests {
             .filter { $0.hasPrefix("case ") }
     }
 
-    /// The exact `HandOffDestination` case texts after task 04.8 (§4.8). Task 04.9 replaces
-    /// `"diagnosis(event: DiagnosisEvent)"` with `"diagnosisStarted(DoorAStartOutcome)"` in this list.
+    /// The exact `HandOffDestination` case texts after task 04.8 (§4.8). Updated by task 04.9.
     private static let expectedHandOffCases = [
-        "diagnosis(event: DiagnosisEvent)", "doorBStarted(DoorBStartOutcome)", "included(map: MapState)",
+        "diagnosisStarted(DoorAStartOutcome)", "doorBStarted(DoorBStartOutcome)", "included(map: MapState)",
     ]
 
-    @Test("AC9 (03.11, re-scoped by 04.8 AC6): HandOffDestination has exactly the three expected cases")
+    @Test(
+        "AC9 (03.11, re-scoped by 04.8 AC6 / 04.9 AC4): HandOffDestination has exactly the three expected cases"
+    )
     func handOffDestinationHasExactlyThreeCases() throws {
         let source = try Self.readReal("MapActionsView.swift")
         let cases = Self.handOffDestinationCaseLines(in: source)
@@ -240,7 +241,7 @@ struct MapPanelsPickersHandOffStructuralTests {
     func plantedFourthCaseIsCaught() {
         let fixture = """
             enum HandOffDestination {
-                case diagnosis(event: DiagnosisEvent)
+                case diagnosisStarted(DoorAStartOutcome)
                 case doorBStarted(DoorBStartOutcome)
                 case included(map: MapState)
                 case somethingElse
@@ -254,18 +255,17 @@ struct MapPanelsPickersHandOffStructuralTests {
 
     // MARK: - AC2/AC3/AC4 (03.11, re-scoped by 04.8 AC6): one façade call and one success handOff per button
 
-    /// Every façade call in `MapActionsView.swift` after task 04.8 (§4.8), one per action button. Task 04.9
-    /// replaces `"MapFacade.checkHere("` with `"DoorFacade.checkHere("` in this list.
+    /// Every façade call in `MapActionsView.swift` after task 04.8 (§4.8), one per action button. Updated by
+    /// task 04.9.
     private static let expectedActionFacadeCalls = [
-        "MapFacade.checkHere(", "MapFacade.include(", "DoorFacade.startUnitExpedition(",
+        "DoorFacade.checkHere(", "MapFacade.include(", "DoorFacade.startUnitExpedition(",
         "DoorFacade.startExpedition(",
     ]
 
     /// Each success-path `handOff(` shape after task 04.8, as a regex (`\s*`: swift-format may wrap after
-    /// `handOff(`), with its site count. Task 04.9 replaces the `.diagnosis(event: event)` key with
-    /// `#"handOff\(\s*\.diagnosisStarted\(\s*DoorAStartOutcome\("#` (count 1).
+    /// `handOff(`), with its site count. Updated by task 04.9.
     private static let expectedHandOffCallPatterns: [String: Int] = [
-        #"handOff\(\s*\.diagnosis\(event: event\)\)"#: 1,
+        #"handOff\(\s*\.diagnosisStarted\(\s*DoorAStartOutcome\("#: 1,
         #"handOff\(\s*\.included\(map: newMap\)\)"#: 1,
         #"handOff\(\s*\.doorBStarted\("#: 2,
     ]
@@ -273,7 +273,7 @@ struct MapPanelsPickersHandOffStructuralTests {
     private static let facadeCallPattern = #"\b(MapFacade|DoorFacade)\.\w+\("#
 
     @Test(
-        "AC2/AC3/AC4 (03.11, re-scoped by 04.8 AC6): MapActionsView.swift makes exactly one façade call and one success-path handOff per action button"
+        "AC2/AC3/AC4 (03.11, re-scoped by 04.8 AC6 / 04.9 AC4): MapActionsView.swift makes exactly one façade call and one success-path handOff per action button"
     )
     func mapActionsViewCallsExactlyOneFacadeEntryPerButton() throws {
         let code = Self.codeOnlyLines(in: try Self.readReal("MapActionsView.swift"))
@@ -288,6 +288,8 @@ struct MapPanelsPickersHandOffStructuralTests {
             !code.contains("MapFacade.unitExpedition("),
             "Unit expedition must call DoorFacade.startUnitExpedition, never MapFacade.unitExpedition (04.8 AC6)"
         )
+        #expect(
+            !code.contains("MapFacade.checkHere("), "Check me here must call DoorFacade.checkHere (04.9 AC4)")
         let handOffTotal = code.components(separatedBy: "handOff(").count - 1
         let expectedTotal = Self.expectedHandOffCallPatterns.values.reduce(0, +)
         #expect(
