@@ -9,7 +9,7 @@ domain doc's narrative; it fixes the names, shapes, rules and codes every EPIC m
 
 | Contract | Status | Enforcement rung (wired) | Covers |
 |---|---|---|---|
-| [`domain-glossary.md`](domain-glossary.md) | **LOCK-FIRST** | lint: grep gate for banned synonyms (wrap-epic (f)) | one term per concept across doors, graph, content, runtime, pipeline |
+| [`domain-glossary.md`](domain-glossary.md) | **LOCK-FIRST** | lint: grep gate for banned synonyms (wrap-epic (f)); test: `GlossaryIdentifierGateTests` parses every banned list and scans Swift identifiers in `Core`, `Rendering` and `App/Sources` against a per-term sense allowlist (pipeline: DEFERRED D-19) | one term per concept across doors, graph, content, runtime, pipeline |
 | [`data-model.md`](data-model.md) + [`schemas/`](schemas/) | **LOCK-FIRST** | schema: JSON Schema 2020-12 per bundle file, validated by `pipeline/tests/test_contracts.py` against `contracts/examples/` and every file under `data/`; type system: `Core` `Codable` types mirror the schemas (EPIC-time decode test) | ids, versioning, node/edge/region/course/unit/landmark/bundle, student state |
 | [`graph-constraints.md`](graph-constraints.md) | **LOCK-FIRST** | runtime contract test: `core-cli validate` (L0) on every bundle, in the pipeline build step and at app load | L0-1 … L0-10, the in-degree outlier rule, trail-segment path rule |
 | [`content-policy.md`](content-policy.md) | **LOCK-FIRST** | lint: grep gates (no `verbatim` field, `paraphrase` present, `source_url` on landmarks, `[SOURCED]`/`[ESTIMATE]`, no time estimates — pre-commit + wrap-epic (f)); schema: `source_ref`/`expectation_codes` at-least-one | I6, I11, I15, licensing by tier (D2, D18, D43) |
