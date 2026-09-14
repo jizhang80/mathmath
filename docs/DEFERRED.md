@@ -218,3 +218,20 @@ level"); `data/demo` carries three tiers per `hint_tree` entry (schema minItems/
 **Configuration:** Demo, Tier 0, iOS app.
 **Revisit trigger:** Demo observations, or EPIC 12 (M3 screens on real data).
 **Hypothesis (unverified):** none.
+
+### D-19 — Glossary identifier gate over the Python pipeline and `data/` JSON keys
+**Observed:** the glossary identifier gate (`Packages/Core/Tests/CoreTests/GlossaryIdentifierGateTests.swift`,
+domain-glossary v1.0.2) scans Swift identifiers only. Measured on 2026-09-14 with the same rule (59 banned
+phrases parsed from the glossary; camel/snake word split; last word inflected): 48 distinct Python
+identifiers under `pipeline/` hit a banned term (`path`, `parent`, `module`, `attempt`, `example`, `fail`,
+`position`, `task`, `unknown`), and 8 distinct JSON keys across `data/` and `contracts/schemas/` hit one
+(`strand`, `strands`, `position`, `unknown`, `worked_examples`, `tier1_available`, `task`,
+`downstream_fail_given_upstream_fail`). Every one of those JSON keys is fixed by a locked schema, and
+the pipeline's `attempt` is a transport retry count that `tasks/arbitration/arbiter-03-audit-f1-attempt.md`
+ruling 2 already rules not in violation.
+**Configuration:** pipeline Python 3 under `uv` (pyright strict, ruff, pytest); JSON keys governed by
+`contracts/schemas/` (JSON Schema 2020-12).
+**Revisit trigger:** a pipeline EPIC that adds Python identifiers naming glossary concepts, or an audit
+finding of glossary drift in `pipeline/` or in a schema key.
+**Hypothesis (unverified):** a pytest gate over the Python AST (`ast.Name`/`attr`/`arg`) and schema keys
+with its own allowlist, reading the same glossary lists.
