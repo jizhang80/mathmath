@@ -665,7 +665,7 @@ struct AppShellStructuralTests {
     // MARK: - AC12: ci.yml's swift job gains a pinned setup-uv step (0.12.12) between build and smoke
 
     @Test(
-        "AC12: ci.yml's swift job runs a pinned astral-sh/setup-uv@v6 (0.12.12) step after the App build and before the smoke step"
+        "AC12: ci.yml's swift job runs a pinned astral-sh/setup-uv@v10.1.0 (0.12.12) step after the App build and before the smoke step"
     )
     func ciYmlSwiftJobHasPinnedSetupUvBetweenBuildAndSmoke() throws {
         let source = try String(
@@ -680,7 +680,7 @@ struct AppShellStructuralTests {
         let swiftJobBlock = String(source[swiftJobRange.upperBound..<pythonJobRange.lowerBound])
         guard let buildRange = swiftJobBlock.range(of: "App build on the simulator"),
             let setupUvRange = swiftJobBlock.range(
-                of: "astral-sh/setup-uv@v6", range: buildRange.upperBound..<swiftJobBlock.endIndex),
+                of: "astral-sh/setup-uv@v10.1.0", range: buildRange.upperBound..<swiftJobBlock.endIndex),
             let versionRange = swiftJobBlock.range(
                 of: "version: \"0.12.12\"", range: setupUvRange.upperBound..<swiftJobBlock.endIndex),
             let smokeRange = swiftJobBlock.range(
@@ -699,13 +699,13 @@ struct AppShellStructuralTests {
         let fixture = """
             - name: App build on the simulator
               run: xcodebuild build
-            - uses: astral-sh/setup-uv@v6
+            - uses: astral-sh/setup-uv@v10.1.0
             - name: Simulator smoke
               run: scripts/sim-smoke.sh
             """
         guard let buildRange = fixture.range(of: "App build on the simulator"),
             let setupUvRange = fixture.range(
-                of: "astral-sh/setup-uv@v6", range: buildRange.upperBound..<fixture.endIndex)
+                of: "astral-sh/setup-uv@v10.1.0", range: buildRange.upperBound..<fixture.endIndex)
         else {
             Issue.record("fixture setup failed")
             return
