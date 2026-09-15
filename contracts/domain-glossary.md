@@ -1,10 +1,18 @@
 # Contract: Domain glossary (LOCK-FIRST)
 
-**Contract version:** v1.0.1 · Source: `docs/domains/*.md`, `docs/idea.md` (D1–D49); v1.0.1 clarifies Remediation for nodes without an Explanation and the two none-of-these tokens (arbiter-04 Q-B; arbiter-04-hint-fallback-reconciliation)
+**Contract version:** v1.0.2 · Source: `docs/domains/*.md`, `docs/idea.md` (D1–D49); v1.0.1 clarifies Remediation for nodes without an Explanation and the two none-of-these tokens (arbiter-04 Q-B; arbiter-04-hint-fallback-reconciliation); v1.0.2 states that bans are sense-scoped and names the identifier gate (no term or identifier change)
 
 > One agreed term per concept. Every EPIC, type, JSON key, screen label and doc uses the same word. Code
 > identifiers are the term in `PascalCase` (types) / `camelCase` (Swift members) / `snake_case` (JSON,
 > Python). **Banned synonyms** are listed so the grep gate can catch drift.
+>
+> A ban is sense-scoped: it forbids the word as a name for the concept its entry defines, or in the
+> qualified sense the entry states ("unknown" as a state, "fail" for an item). The same word in another
+> entry's own sense (**Backtrack level**, **Position indicator**, node positions under **Layout**,
+> **Official link**, **Strand**, a probe **fail**) or in a platform API name is not drift; "attempt" has
+> no legitimate sense in code identifiers (arbiter-03-audit-f1). `CoreTests/GlossaryIdentifierGateTests`
+> scans Swift identifiers against every list below and records each legitimate sense in a per-term
+> allowlist.
 
 ## Map and graph (Door C)
 
