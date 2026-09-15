@@ -3,7 +3,7 @@
 DerivedData/
 *.xcuserstate
 xcuserdata/
-App/mathmath.xcodeproj/project.xcworkspace/xcuserdata/
+/App/mathmath.xcodeproj/project.xcworkspace/
 App/mathmath.xcworkspace/xcuserdata/
 *.swiftpm/xcode/
 .swiftpm/
