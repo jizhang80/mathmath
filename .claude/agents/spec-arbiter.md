@@ -63,7 +63,7 @@ You run only when the spec pipeline has stalled: the `task-writer`↔`task-revie
   - **I8** — a graph artifact is accepted only after the L0 structural checks pass.
   - **I9** — no human content-review step.
   - **I10** — input is defined per door: expedition items are numeric/multiple-choice, homework mode uses the structured math editor; no OCR in any door.
-  - **I14** — `Core` imports Foundation only; the render layer never computes state; L0 and layout exist once, in `Core`.
+  - **I14** — `Core` uses no DOM or browser API; the render layer never computes state; L0 and layout exist once, in `Core`.
   - **I15** — every landmark has a resolving `source_url`; an unsourced landmark is dropped, never invented.
   - Boundary validation with the schema tooling `docs/tech-stack.md` names at every boundary; error codes from the `contracts/error-codes.md` registry; no tool pinned that `docs/tech-stack.md` does not name.
 - **Instrument beside claim (C3).** Every acceptance criterion you write names the instrument that produces it and what it excludes; every emptiness-capable check declares empty=PASS or empty=FAIL.
@@ -109,7 +109,7 @@ Record any non-obvious choice as a one-line §6 decision-default (`IF <ambiguity
 
 ## P4 — Final self-check
 
-Re-run the `task-reviewer` checklist (C1–C8 in `.claude/agents/task-reviewer.md`) mentally over the rewritten spec: self-sufficiency (quoted, not paraphrased), concrete acceptance criteria, test plan (happy + ≥2 negative + error-taxonomy + B.1 conformance; a real-composition test for any seam the task crosses; a negative control for every regression guard; the Demo/M3 device acceptance is the owner's product test, not per-task — agents verify on the simulator only), explicit minimal file scope with no cross-task conflict, contract consistency, stack consistency against `docs/tech-stack.md`, risk tier matches the classification rule, no forbidden couplings. If you introduced a new defect while fixing, fix it now. You are single-shot — there is no second arbitration pass.
+Re-run the `task-reviewer` checklist (C1–C8 in `.claude/agents/task-reviewer.md`) mentally over the rewritten spec: self-sufficiency (quoted, not paraphrased), concrete acceptance criteria, test plan (happy + ≥2 negative + error-taxonomy + B.1 conformance; a real-composition test for any seam the task crosses; a negative control for every regression guard; the Demo/M3 device acceptance is the owner's product test, not per-task — agents verify with Playwright only), explicit minimal file scope with no cross-task conflict, contract consistency, stack consistency against `docs/tech-stack.md`, risk tier matches the classification rule, no forbidden couplings. If you introduced a new defect while fixing, fix it now. You are single-shot — there is no second arbitration pass.
 
 If after P4 you cannot produce a spec you yourself believe will PASS, escalate (below). Do not ship a spec you do not believe in.
 

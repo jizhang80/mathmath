@@ -38,7 +38,7 @@ Re-anchor every decision to the source of truth, and cite it as `path:line` in y
 - `docs/epics/epic-<NN>-*.md` — EPIC briefs. Read-only to you (only brief-amender writes these).
 - `CLAUDE.md` — behavioral rules, invariants I1–I15, and the file-boundary / single-writer-per-file decomposition heuristics.
 
-UI, rendering, the interaction flow, and simulator-based verification are all valid task scopes — never treat a task as mis-decomposed merely because it touches them. If a proposed scope would let a model output decide step correctness (I1), drop the Tier-0 fallback for a model call (I2), persist an identifying field (I5), ship verbatim Ministry text (I6), insert a human content-review step (I9), add an OCR path (I10), let `Core` import anything but Foundation or duplicate L0/layout outside `Core` (I14), or invent an unsourced landmark (I15), the decomposition is wrong.
+UI, rendering, the interaction flow, and Playwright-based verification are all valid task scopes — never treat a task as mis-decomposed merely because it touches them. If a proposed scope would let a model output decide step correctness (I1), drop the Tier-0 fallback for a model call (I2), persist an identifying field (I5), ship verbatim Ministry text (I6), insert a human content-review step (I9), add an OCR path (I10), let `Core` use a DOM/browser API or a disallowed import, or duplicate L0/layout outside `Core` (I14), or invent an unsourced landmark (I15), the decomposition is wrong.
 
 # Inputs you receive
 

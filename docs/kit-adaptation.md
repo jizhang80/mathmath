@@ -13,6 +13,11 @@
 > (`PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5`). §0 and §1 below are updated to the v2 identity and
 > point at `CLAUDE.md` for invariants; §4–§7 still describe the *web* port done on 2026-09-08 and are
 > re-anchored at Phase 5 (stack lock) together with every agent definition and command — see §9.
+>
+> **2026-10-06 — v2.8 (web first, native frozen).** The product moved back to the web (`AMENDMENT-v2.8.md`).
+> §0's identity paragraph is superseded by the one now in every agent definition; agents, commands and
+> gates were re-anchored to the web stack locked in `docs/tech-stack.md` (2026-10-06). §4–§7 describe the
+> 2026-09-08 web port and are history; §9 records the current phase status.
 
 ---
 
@@ -185,8 +190,9 @@ prompts versioned, outputs schema-validated, multi-run intersection for graph ed
 | 1 CLAUDE.md | ✅ this session |
 | 2 Idea capture | ✅ `docs/idea.md` re-cut 2026-09-09 as the consolidated extract of `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` |
 | 3 Domain decomposition | ✅ v1 ten domains ratified 2026-09-08; **v2 re-cut 2026-09-09**: `map` and `expedition` added, `tutoring-session` → `diagnosis`, `parent-view` removed (D38), `platform` / `telemetry` / `runtime-tiers` rewritten for native iOS, `verification` moved to M5, the rest edited. **v2 open questions ratified by owner 2026-09-09 (all defaults)** — `docs/plans/phase3b-open-questions-v2.md` |
-| 4 UI/prototype | v1 web prototype (25 pages) is **superseded** for student and parent surfaces; per v2.2 §D the **native Demo is the Phase 4 artifact for Doors B and C** (built as one EPIC after Phase 5). `student-session-*` pages remain reference for the M5 homework mode; `owner-*` reports remain valid; `parent*` pages void |
+| 4 UI/prototype | **v2.8:** the web design system (`docs/design-system/`) is reused by the web Demo where it fits, and the **web Demo is the Phase 4 artifact for Doors B and C**. The native Demo (EPICs 01–04) is frozen (D50). `student-session-*` pages remain reference for the M5 homework mode; `owner-*` reports remain valid; `parent*` pages void |
 | 5 Tech stack lock | ✅ 2026-09-09 — `docs/tech-stack.md` (Swift 6 / SwiftUI / `Core` package / SwiftMath 1.7.3 / Foundation Models; Python 3.14 + uv + ruff + pyright + SymPy + anthropic SDK; GitHub Actions macos-26; pre-commit; `main` ruleset; Cloudflare for content + no-IP telemetry endpoint at M3). Scaffold: `App/`, `Packages/Core`, `pipeline/`, `scripts/gate.sh`, CI. Agents and commands re-anchored per v2.4 §2 (see change log) |
+| 5 Tech stack re-lock | ✅ 2026-10-06 — `docs/tech-stack.md` (TypeScript 6.0 strict, pnpm 12 workspace `web/core` + `web/app`, React 19 + Vite 8 + vite-plugin-pwa, Ajv over `contracts/schemas` with generated types, KaTeX, Vitest 5, Playwright Chromium + WebKit; pipeline unchanged). `scripts/gate.sh` replaced (native gates → `scripts/gate-native.sh`), CI `Web` job added; agents and commands re-anchored to the web stack |
 | 6 Contracts | ✅ signed off 2026-09-09 — `contracts/README.md` set: domain-glossary, data-model (+ 9 JSON Schemas + examples), graph-constraints (L0-1…L0-10, L0-T), content-policy, telemetry (+ schema), runtime-tiers, error-codes (+ registry JSON), interaction-contract (discovery, v0.9), ai-usage, deployment-model. Enforcement wired: `pipeline/tests/test_contracts.py` (schemas, examples, `data/**`, identifier blocklist, string constraints, error-registry round-trip, no `verbatim`); remaining rungs are EPIC-time and listed per contract |
 | 7 EPIC plan | 7a `docs/epic-plan.md` drafted 2026-09-09 (EPICs 01–13 + M5 queue; Demo = EPICs 01–04); EPIC 01 brief at `docs/epics/`; ✅ signed off 2026-09-09; 7b via `/run-epic 01` from an Opus session |
 

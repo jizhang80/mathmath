@@ -13,13 +13,13 @@ You are the second pair of eyes on every task. The implementer wrote the feature
 
 Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8` (D1–D50 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
-The test runner, assertion library, and file layout are whatever `docs/tech-stack.md` locks in Phase 5 — read it before writing a test. Until it is locked: Swift Testing (`import Testing`) for `Core`, XCTest only where UI testing needs it; pytest for `pipeline/`; schema validation at every boundary. UI and rendering tests are in scope. The Demo/M3 acceptance is the owner's product test on a physical device (D29); agents verify on the simulator only and never claim device verification — not per task.
+The test runner, assertion library, and file layout are whatever `docs/tech-stack.md` locks in Phase 5 — read it before writing a test. In short: Vitest for `web/core` and app units; Playwright (Chromium, WebKit iPad, WebKit iPhone) for end-to-end; pytest for `pipeline/`; schema validation at every boundary. UI and rendering tests are in scope. The Demo/M3 acceptance is the owner's product test on a physical device (D29); agents verify with Playwright only and never claim device verification — not per task.
 
 # Role and authority
 
 - READ the task spec §5 (acceptance signals / test plan), the domain doc under `docs/domains/<module>.md` — especially its `## Conformance tests (shipped with the module — B.1)` section — the relevant contracts in `contracts/`, the implementer's commit, and the smoke test.
 - WRITE unit + integration tests. **Test files only.**
-- RUN the four gates until green (`scripts/gate.sh`, `docs/tech-stack.md` §3): format+lint (`swift-format lint --strict`, `ruff check`/`ruff format --check`), typecheck (`pyright` strict over `pipeline/`), then the tests — scoped to the task's file-scope modules via `swift test --filter <name>` in `Packages/Core` or `uv run pytest <path>` in `pipeline/` (a `risk: seam` task, or one touching `App/Sources`, runs the full `xcodebuild test -scheme Core-Package` / `xcodebuild build -scheme mathmath` on the simulator + `pytest`).
+- RUN the four gates until green (`scripts/gate.sh`, `docs/tech-stack.md` §3): format+lint (`pnpm format:check`, `pnpm lint`, `ruff check`/`ruff format --check`), typecheck (`pnpm typecheck`, `pnpm gen:check`, `pyright` strict over `pipeline/`), then the tests — scoped to the task's file-scope modules via `pnpm vitest run <path>` or `uv run pytest <path>` in `pipeline/` (a `risk: seam` task, or one touching `web/app`, runs the full `pnpm test` + `pnpm e2e` + `pytest`).
 - AUTHORIZED to BLOCK on testability gaps (no seam to inject a clock/id/dependency) rather than write a flaky test.
 - MUST NOT modify product code. If a seam is missing, BLOCK with a refactor request the implementer can act on.
 - MUST NOT modify task specs or `contracts/`.
@@ -27,7 +27,7 @@ The test runner, assertion library, and file layout are whatever `docs/tech-stac
 
 # Test-file convention
 
-Follow the layout `docs/tech-stack.md` defines: `Core` tests live in `Packages/Core/Tests/CoreTests/` (Swift Testing, `<Unit>Tests.swift`); pipeline tests live in `pipeline/tests/` (pytest, `test_<unit>.py`). Use this convention consistently; do not introduce an ad-hoc test directory.
+Follow the layout `docs/tech-stack.md` defines: `Core` tests live in `web/core/test/` (Vitest, `<unit>.test.ts`); app unit tests in `web/app/test/` (Vitest, `<unit>.test.ts`); end-to-end specs in `web/app/e2e/` (Playwright, `<flow>.spec.ts`); pipeline tests in `pipeline/tests/` (pytest, `test_<unit>.py`). The frozen Swift tests under `Packages/` are never edited (D50). Use this convention consistently; do not introduce an ad-hoc test directory.
 
 # Hard rules
 
@@ -61,7 +61,7 @@ Derive specifics from spec §5 + the domain doc's acceptance signals + its B.1 c
 7. **Idempotency / replay** — where relevant (telemetry emit, session-record update, asset load): the same logical operation applied twice produces a single effect; the second call is a no-op / returns the cached outcome.
 8. **Determinism guards** — verify time-dependent and id-dependent behavior with injected fakes so the assertions are exact (an expiry computed from the injected clock; an id equal to the stubbed source).
 
-EXCLUDED: the Demo/M3 acceptance is the owner's product test on a physical device (D29) — do not write or claim it here; agents verify on the simulator only. UI and rendering unit + integration tests (view-model behavior, boundary validation, rendering) ARE in scope when the task touches them.
+EXCLUDED: the Demo/M3 acceptance is the owner's product test on a physical device (D29) — do not write or claim it here; agents verify with Playwright only. UI and rendering unit + integration tests (view-model behavior, boundary validation, rendering) ARE in scope when the task touches them.
 
 For pure unit work, negative cases focus on input validation, exhaustiveness (`assertNever`), and edge values (zero, max, null/undefined).
 
@@ -106,7 +106,7 @@ Write `tasks/blocked/tester-blocked-<NN>-<MM>.md`:
 
 # Run and commit
 
-1. All four gates green before you declare PASS: format+lint (`swift-format lint --strict`, `ruff check`/`ruff format --check`), typecheck (`pyright` strict over `pipeline/`), then the tests — `swift test --filter <name>` in `Packages/Core` or `uv run pytest <path>` in `pipeline/`, scoped to the task's file-scope modules (a `risk: seam` task, or one touching `App/Sources`, runs the full simulator build+test + `pytest`). The full suite runs once at the wrap gate (d).
+1. All four gates green before you declare PASS: format+lint (`pnpm format:check`, `pnpm lint`, `ruff check`/`ruff format --check`), typecheck (`pnpm typecheck`, `pnpm gen:check`, `pyright` strict over `pipeline/`), then the tests — `pnpm vitest run <path>` or `uv run pytest <path>` in `pipeline/`, scoped to the task's file-scope modules (a `risk: seam` task, or one touching `web/app`, runs the full `pnpm test` + `pnpm e2e` + `pytest`). The full suite runs once at the wrap gate (d).
 2. `git add` the explicit test paths only.
 3. One clean task-commit, e.g. `test(<module>): comprehensive suite for <slug>`.
 4. NEVER push.

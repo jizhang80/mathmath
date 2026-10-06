@@ -40,7 +40,7 @@ Your only job is to author ONE EPIC brief at `docs/epics/epic-<NN>-<slug>.md` so
 2. `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8` and `docs/idea.md` — project intent, locked decisions D1–D50 (D30, D37 unassigned), and non-goals.
 3. `docs/domains/<module>.md` — the dominant module for this EPIC. Mine: **Purpose & consumers**, **Public contract surface** (operations), **Acceptance signals**, **Build sequencing & dependencies**, **Conformance tests (B.1)**, **Contract pointers**, and resolved/open questions.
 4. `contracts/*.md` — every locked-in contract the EPIC must conform to (populated in Phase 6; the planned set is listed in `contracts/README.md`).
-5. `docs/tech-stack.md` — the concrete toolchain and application file layout (locked in bootstrap Phase 5). Until it exists: Swift 6 strict concurrency in `Packages/Core`/`App/Sources`, Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`, tests via the runner it names. Never pin a tool this file does not name; if the obvious scope requires one, raise it in §9.
+5. `docs/tech-stack.md` — the concrete toolchain and application file layout (locked in bootstrap Phase 5). In short: TypeScript strict in `web/core` (renderer-free) and `web/app` (React + Vite PWA); Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; Vitest, Playwright and pytest as runners; the native code under `Packages/` and `App/` is frozen (D50) and never scoped. Never pin a tool this file does not name; if the obvious scope requires one, raise it in §9.
 6. `docs/DEFERRED.md` — explicitly out-of-scope items and their revisit triggers.
 7. Prior acceptance reports `docs/audits/epic-*-acceptance.md` (if any) — for "ready for EPIC <N>" signals and recurring outstanding items.
 8. `CLAUDE.md` — RULES and invariants I1–I15.
@@ -104,7 +104,7 @@ Each with a default proposal so the EPIC can proceed, and a revisit trigger. If 
 - Read only existing repo files, **relative paths only** — never an absolute path.
 - Never invent scope not grounded in `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8`, `docs/domains/*`, or `contracts/*`.
 - Conform to every contract in `contracts/`.
-- Never scope work that violates an invariant: a model deciding step correctness (I1), a model call without a confidence threshold and Tier-0 fallback (I2), an identifying field (I5), verbatim Ministry text (I6), a human content-review step (I9), an OCR/handwriting input path (I10), backtracking deeper than 2 levels in a session (I4), a `Core` import beyond Foundation or a second L0/layout implementation outside `Core` (I14), a landmark without a resolving `source_url` (I15).
+- Never scope work that violates an invariant: a model deciding step correctness (I1), a model call without a confidence threshold and Tier-0 fallback (I2), an identifying field (I5), verbatim Ministry text (I6), a human content-review step (I9), an OCR/handwriting input path (I10), backtracking deeper than 2 levels in a session (I4), a DOM/browser API or disallowed import in `Core` or a second L0/layout implementation outside `Core` (I14), a landmark without a resolving `source_url` (I15).
 - Never pin a tool that `docs/tech-stack.md` does not name.
 - Never bring a `docs/DEFERRED.md` item in-scope unless its revisit trigger has fired; if you do, cite the trigger.
 - Respect the EPIC size cap — split an oversized module into sequenced slices rather than over-scoping one brief. Split at the seams the domain doc already names.

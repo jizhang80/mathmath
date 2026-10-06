@@ -15,7 +15,7 @@ Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8` (D1–D50 locked
 
 # Authority
 
-- READ `contracts/**`, `docs/domains/**`, `CLAUDE.md`, `docs/tech-stack.md`, the application source at the locations `docs/tech-stack.md` defines (`Packages/Core`, `App/Sources`, `pipeline/`), the shipped **graph and content artifacts** under `data/**` (spine, node, edge, learning-object, landmark bundles under version control), and the batch's acceptance reports `docs/audits/epic-<NN>-acceptance.md`.
+- READ `contracts/**`, `docs/domains/**`, `CLAUDE.md`, `docs/tech-stack.md`, the application source at the locations `docs/tech-stack.md` defines (`web/core`, `web/app`, `pipeline/`; the frozen native code under `Packages/` and `App/` is out of scope, D50), the shipped **graph and content artifacts** under `data/**` (spine, node, edge, learning-object, landmark bundles under version control), and the batch's acceptance reports `docs/audits/epic-<NN>-acceptance.md`.
 - The `contracts/` directory is the SOURCE OF TRUTH — every contract in `contracts/` binds (Phase 6; planned set in `contracts/README.md`).
 - WRITE exactly one report at `docs/audits/cross-epic-<batch>.md` (`<batch>` = the EPIC range, e.g. `01-03`, `04-06`).
 - RETURN `GREEN` or `RED` with a finding count. RED blocks the next EPIC until the Lead resolves findings.
@@ -68,16 +68,16 @@ Run each as a command and cite output. A check is GREEN only when its command co
 - No path guesses a diagnosis when the threshold is not met. `empty = FAIL` if no model call sites are found in an EPIC batch that shipped a Tier-1 adapter.
 
 ## CC7 — Input path discipline (I10, I3, I4)
-- Input is defined per door — expedition items are numeric or multiple-choice; homework mode (M5 desktop only) uses the structured math editor: ZERO OCR, handwriting, camera, or image-upload code paths in any door. `empty = PASS`.
+- Input is defined per door — expedition items are numeric or multiple-choice; homework mode (M5, desktop-first) uses the structured math editor: ZERO OCR, handwriting, camera, or image-upload code paths in any door. `empty = PASS`.
 - No path withholds an answer (I3); no session backtracks more than 2 levels (I4) — check the expedition/diagnosis modules against the interaction contract.
 
 ## CC8 — Logging discipline
-- No `print(` in `Packages/Core/Sources` or `pipeline/src` outside CLI entry points (`os.Logger` in Swift library code; ruff T20 bans `print` outside CLI entry points in Python).
+- No `console.` in `web/core/src` or `web/app/src` outside `web/core/src/cli.ts` (ESLint `no-console`), and no `print(` in `pipeline/src` outside CLI entry points (ruff T20).
 - Grep log call sites for secret- or person-identifying field names (`password`, `token`, `apiKey`, `secret`, `credential`, plus `email`, `phone`, `name`); none are logged. `empty = PASS`.
 
 ## CC9 — Source hygiene
-- ZERO `TODO`, `FIXME`, `XXX`, `not implemented`, `(WIP)`, `coming soon` in shipped source; ZERO `try!`/`as!`/force-unwrap in Swift; ZERO bare `# type: ignore` (without a reason) in Python. `empty = PASS`.
-- `scripts/gate.sh` is green (swift-format lint --strict; ruff check/format --check; pyright strict; `swift build`/`xcodebuild test -scheme Core-Package` on the simulator; `xcodebuild build -scheme mathmath` on the simulator; `pytest`); cite the output.
+- ZERO `TODO`, `FIXME`, `XXX`, `not implemented`, `(WIP)`, `coming soon` in shipped source; ZERO `any`, non-null assertion `!`, or reasonless `@ts-ignore`/`@ts-expect-error`/`eslint-disable` in TypeScript; ZERO bare `# type: ignore` (without a reason) in Python. `empty = PASS`.
+- `scripts/gate.sh` is green (Prettier, ESLint, ruff; `tsc`, `pnpm gen:check`, pyright strict; Vitest, pytest; Vite build + Playwright on Chromium, WebKit iPad and WebKit iPhone); cite the output.
 
 ## CC10 — Data-model conformance
 - Identifier policy, timestamp policy, node/edge schema, store names and shipped-asset versioning match the data-model contract. No ad-hoc access outside the defined store/asset layer.
@@ -94,12 +94,12 @@ Run each as a command and cite output. A check is GREEN only when its command co
 ## CC13 — Contract, domain-doc and toolchain parity
 - Every contract referenced by the batch's specs resolves, and every domain doc under `docs/domains/**` still matches the shipped module (operations, acceptance signals, B.1 conformance tests).
 - **Every tool, library and runner used in source appears in `docs/tech-stack.md`.** A pin absent from that file is RED. `empty = FAIL` if `docs/tech-stack.md` is missing while source pins any tool.
-- Every artifact this batch shipped (the `Core` build, the App build, the `core-cli` binary, the content-generation CLI, the L0 checker, any runbook command) is exercised by a gate in the EPIC that shipped it; cite the acceptance report's artifact list.
+- Every artifact this batch shipped (the `Core` package, the app build and its service worker, the `Core` CLI, the content-generation CLI, the L0 checker, any runbook command) is exercised by a gate in the EPIC that shipped it; cite the acceptance report's artifact list.
 
 ## CC14 — `Core` import boundary (I14, D42)
-- `Packages/Core` imports Foundation only — grep every `import` statement under `Packages/Core/Sources` for anything but `Foundation` (and its own internal modules). ZERO occurrences. `empty = FAIL` if `Packages/Core/Sources` has no files to scan (the instrument is broken).
-- The `Core`-import-boundary test (`CoreTests`) exists and is green; L0 and layout have exactly one implementation, in `Core` — grep `App/Sources` and `pipeline/src` for a second L0 or layout implementation. ZERO occurrences.
-- The render layer (`App/Sources`) never computes graph/expedition/diagnosis state — it reads `Core`'s output only.
+- `web/core/tsconfig.json` has no DOM lib and no ambient `types`; every `import … from` under `web/core/src` (excluding `cli.ts`) is a relative module, a `contracts/schemas` JSON or a library `docs/tech-stack.md` allows in `Core`. ZERO other occurrences. `empty = FAIL` if `web/core/src` has no files to scan (the instrument is broken).
+- The `Core` import-boundary test (`web/core/test/boundary.test.ts`) exists and is green; L0 and layout have exactly one implementation, in `Core` — grep `web/app/src` and `pipeline/src` for a second L0 or layout implementation. ZERO occurrences.
+- The render layer (`web/app/src`) never computes graph/expedition/diagnosis state — it reads `Core`'s output only.
 
 ## CC15 — Landmark sourcing (I15)
 - Every landmark in any `data/**` bundle carries a non-empty `source_url` field that resolves (structurally present; content-check is out of scope for a grep-based audit — note this exclusion). ZERO landmarks missing the field. `empty = FAIL` on the landmark scan once any landmark-bearing bundle ships.
