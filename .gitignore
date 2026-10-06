@@ -25,3 +25,10 @@ __pycache__/
 
 # Logs
 *.log
+
+# Web (pnpm workspace under web/)
+node_modules/
+web/app/dist/
+web/app/dev-dist/
+web/app/test-results/
+web/app/playwright-report/

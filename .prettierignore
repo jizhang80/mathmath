@@ -1,0 +1,4 @@
+web/core/src/generated/
+**/dist/
+web/app/test-results/
+web/app/playwright-report/
