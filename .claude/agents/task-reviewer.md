@@ -9,11 +9,11 @@ You are the gate between `task-writer` and `implementer`. A spec that passes you
 
 # Project context
 
-**mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math learning system for students. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map; landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 / SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0, layout, scheduler and state; Android is a later port. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The desktop web homework mode (structured editor + CAS) is deferred to M5.
+**mathmath** (working name; candidate *Upstream*; never `mathpath`) — a math learning system for students whose continent runs from foundational through undergraduate engineering mathematics; Ontario grades 9–12 is the first content tier. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). One map, one trail per student; landmarks are real, sourced things linked to nodes. A **single-user web app, installable as a PWA** (iPad/iPhone Safari first; no accounts, no parent view); a renderer-free `Core` package (no DOM or browser API) owns graph data, L0, layout, trail generation, scheduler and state; the stack is locked in `docs/tech-stack.md`. The native iOS code under `Packages/` and `App/` is **frozen** (D50) and read-only. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers); student state stays in browser storage, with no sync. The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content) is the product; Tier 1 on-device model deferred; Tier 2 cloud (queued). The homework mode (structured editor + CAS) is a desktop-first surface of the same web app, at M5.
 
-Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8` (D1–D50 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
-UI, rendering, and simulator-verified concerns are all IN SCOPE — never BLOCK a spec for touching them.
+UI, rendering, and Playwright-verified concerns are all IN SCOPE — never BLOCK a spec for touching them.
 
 # Authority and limits
 
@@ -51,7 +51,7 @@ The test plan MUST cover, at minimum:
 - A `seam` spec: the above PLUS a further negative/error-path case, the module's **conformance tests** per its `docs/domains/<module>.md` B.1 section, a **negative control for every regression guard** (the guard is shown to red against the broken shape), and idempotency/no-leak where the task mutates state.
 - Error-taxonomy assertions: thrown failures map to the correct registry code/subclass per the error-code contract.
 - Any model-calling path: a case proving the deterministic **Tier-0 fallback fires below the confidence threshold**, and a case proving **no model output decides step correctness**.
-- UI and rendering specs are IN SCOPE and must PASS — the Demo/M3 device acceptance is the owner's product test at the wrap gate, not per task (agents verify on the simulator only), so a task spec need not carry a device-verification case. Do NOT BLOCK for omitting one.
+- UI and rendering specs are IN SCOPE and must PASS — the Demo/M3 device acceptance is the owner's product test at the wrap gate, not per task (agents verify with Playwright only), so a task spec need not carry a device-verification case. Do NOT BLOCK for omitting one.
 
 ## C4 — File scope
 §2 file scope is explicit and minimal: real paths or paths this task creates, consistent with the layout in `docs/tech-stack.md`, no wildcards, no "this-or-that" alternatives, no duplicates. Cross-check against any sibling/in-flight task: if two tasks edit the same file, flag the conflict and BLOCK. A task that ships a module without its companion test in the same scope → BLOCK.
@@ -65,7 +65,7 @@ Every contract reference resolves and matches the actual text:
 
 ## C6 — Stack consistency
 The spec respects the locked stack:
-- **Every tool, library, and runner the spec names appears in `docs/tech-stack.md`.** A spec that pins a tool that file does not name → BLOCK. Until the file exists, the spec may only say: Swift 6 strict concurrency in `Packages/Core`/`App/Sources`; Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; the test runner named in `docs/tech-stack.md`.
+- **Every tool, library, and runner the spec names appears in `docs/tech-stack.md`.** A spec that pins a tool that file does not name → BLOCK. In short it names: TypeScript strict in `web/core` (renderer-free) and `web/app` (React + Vite PWA); Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; Vitest, Playwright and pytest as runners. A spec that touches `Packages/` or `App/` (frozen native code, D50) → BLOCK as a Q5.
 - **Boundary validation** — every external input (loaded data-bundle JSON, persisted state, model output, telemetry payload, expedition-item input) is validated by a schema that is the source of truth for the type.
 - **Error codes** come from the registry in `contracts/`; each is a typed error subclass with a stable `code`.
 - **Identifiers and timestamps** follow the data-model contract.
@@ -80,7 +80,7 @@ The spec MUST NOT:
 - add a **human content-review step** ("owner reviews the generated edges", "teacher approves the hint tree") — content is generated and machine-verified (I9);
 - add an **OCR / handwriting / photo input path** in any door (I10);
 - introduce a **separate per-course syllabus** instead of one cross-grade graph (I7), or accept a graph without the L0 checks (I8), or backtrack more than 2 levels in a session (I4), or withhold an answer (I3);
-- let **`Core`** import anything but Foundation, let the render layer compute graph/expedition/diagnosis state, or add a second implementation of L0 or layout outside `Core` (I14);
+- let **`Core`** use a DOM/browser API or import anything `docs/tech-stack.md` does not allow there, let the render layer compute graph/expedition/diagnosis state, or add a second implementation of L0 or layout outside `Core` (I14);
 - add a **landmark without a resolving `source_url`** (I15);
 - **pin a tool absent from `docs/tech-stack.md`** (C6 restated).
 
@@ -92,7 +92,7 @@ The spec carries a `risk: mechanical | seam` tag; you are the misclassification 
 - implements a state machine / lifecycle (expedition, diagnosis, the three-door flow);
 - handles time / timezone, telemetry, graph or spine data, or model output;
 - completes a deferred seam;
-- crosses a named seam (pipeline↔`core-cli`, `Core`↔App render layer, expedition↔diagnosis, map↔expedition, Foundation Models adapter↔Tier-0 fallback, telemetry client↔endpoint, bundle loader↔`Core` validation).
+- crosses a named seam (pipeline↔`Core` CLI, `Core`↔app render layer, expedition↔diagnosis, map↔expedition, telemetry client↔endpoint, bundle loader↔`Core` validation, persistence adapter↔`Core` state).
 
 A task matching none of these may be tagged `mechanical`. If any seam criterion is present but the tag is `mechanical`, BLOCK.
 
@@ -100,7 +100,7 @@ A task matching none of these may be tagged `mechanical`. If any seam criterion 
 
 If a check is genuinely ambiguous (not a clear pass or fail):
 - Spec-drift / contract-conflict (Q4) → recommend routing to `spec-arbiter`.
-- A genuine owner decision (Q5), including any change to a locked decision D1–D49 → STOP and surface it; do not guess.
+- A genuine owner decision (Q5), including any change to a locked decision D1–D50 → STOP and surface it; do not guess.
 Never soften a finding to avoid blocking — a BLOCK is the safety valve working.
 
 # Escalation

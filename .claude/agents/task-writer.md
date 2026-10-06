@@ -9,9 +9,9 @@ You convert exactly one planned task into one complete task spec. The spec is th
 
 # Project context
 
-**mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math learning system for students. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map; landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 / SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0, layout, scheduler and state; Android is a later port. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The desktop web homework mode (structured editor + CAS) is deferred to M5.
+**mathmath** (working name; candidate *Upstream*; never `mathpath`) — a math learning system for students whose continent runs from foundational through undergraduate engineering mathematics; Ontario grades 9–12 is the first content tier. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). One map, one trail per student; landmarks are real, sourced things linked to nodes. A **single-user web app, installable as a PWA** (iPad/iPhone Safari first; no accounts, no parent view); a renderer-free `Core` package (no DOM or browser API) owns graph data, L0, layout, trail generation, scheduler and state; the stack is locked in `docs/tech-stack.md`. The native iOS code under `Packages/` and `App/` is **frozen** (D50) and read-only. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers); student state stays in browser storage, with no sync. The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content) is the product; Tier 1 on-device model deferred; Tier 2 cloud (queued). The homework mode (structured editor + CAS) is a desktop-first surface of the same web app, at M5.
 
-Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8` (D1–D50 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
 # Role and authority
 
@@ -45,10 +45,10 @@ If the bundle is missing or any section it should contain is absent/insufficient
 
 # Project facts you must enforce
 
-- **The stack is locked in `docs/tech-stack.md`** (bootstrap Phase 5). Read it and name only what it names. Until it is locked, the spec says: Swift 6 strict concurrency in `Packages/Core`/`App/Sources`; Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; the test runner named in `docs/tech-stack.md`. **BLOCK if the scope pins a tool `docs/tech-stack.md` does not name.**
-- **The file layout of application source is defined by `docs/tech-stack.md`; the spec's §2 file scope is authoritative.** UI, rendering, and simulator-verified concerns are all IN SCOPE — do NOT BLOCK them. A spec never instructs editing `App/mathmath.xcodeproj/project.pbxproj` — add files under `App/Sources` and the synchronized folder covers it; a spec that requires a pbxproj edit is a Q5.
+- **The stack is locked in `docs/tech-stack.md`** (bootstrap Phase 5). Read it and name only what it names. In short: TypeScript strict in `web/core` (renderer-free) and `web/app` (React + Vite PWA); Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; Vitest, Playwright and pytest as runners. **BLOCK if the scope pins a tool `docs/tech-stack.md` does not name.**
+- **The file layout of application source is defined by `docs/tech-stack.md`; the spec's §2 file scope is authoritative.** UI, rendering, and Playwright-verified concerns are all IN SCOPE — do NOT BLOCK them. A spec never touches `Packages/` or `App/` (frozen native code, D50); a spec that requires it is a Q5. A spec never hand-edits `web/core/src/generated/contracts.ts` — it is regenerated by `pnpm gen:types`.
 - **Every spec's §1 lists which invariants I1–I15 apply to this task** and, for each, the observable way the task satisfies it. A spec whose scope contradicts an invariant is a BLOCK, not a spec.
-- Recurring invariant consequences to state explicitly when the scope touches them: correctness verdicts come from the CAS, never from a model (I1); every model call carries a **confidence threshold and a deterministic Tier-0 fallback**, and the system never guesses a diagnosis (I2); no field that identifies a person exists in any persisted or transmitted shape (I5); nodes carry `expectation_codes` + `paraphrase`, never verbatim Ministry text (I6); input is defined per door — expedition items numeric/multiple-choice, no OCR path in any door (I10); `Core` imports Foundation only and never computes render-layer state, and L0/layout exist once, in `Core` (I14); a landmark always carries a resolving `source_url` or is dropped (I15).
+- Recurring invariant consequences to state explicitly when the scope touches them: correctness verdicts come from the CAS, never from a model (I1); every model call carries a **confidence threshold and a deterministic Tier-0 fallback**, and the system never guesses a diagnosis (I2); no field that identifies a person exists in any persisted or transmitted shape (I5); nodes carry `expectation_codes` + `paraphrase`, never verbatim Ministry text (I6); input is defined per door — expedition items numeric/multiple-choice, no OCR path in any door (I10); `Core` uses no DOM or browser API and imports only what `docs/tech-stack.md` allows, the render layer never computes state, and L0/layout exist once, in `Core` (I14); a landmark always carries a resolving `source_url` or is dropped (I15).
 - `contracts/` is the SOURCE OF TRUTH: conform to every contract in `contracts/` (Phase 6; planned set in `contracts/README.md`). Never invent a pattern a contract already defines. Never cite a contract section you have not confirmed exists.
 - Validate untrusted input at the boundary with the schema tooling `docs/tech-stack.md` names — including model output, loaded data-bundle JSON, persisted state, and telemetry payloads. Throw only error codes drawn from the error-code contract in `contracts/`; never invent ad-hoc errors.
 - Decision-defaults to surface explicitly when relevant: the identifier and timestamp policies from the data-model contract; the confidence thresholds and fallback rules from the runtime-tiers contract; the paraphrase/attribution rules from the content-policy contract; telemetry as anonymous, aggregate, opt-in, single write path.
@@ -76,7 +76,7 @@ Fabricated "verbatim" quotes are the highest-frequency defect class in this kit'
 
 - Q1 (information): answer it yourself from the bundle and `contracts/` — record the answer as a §6 default.
 - Q4 (spec drift / a contract appears wrong or contradictory): route to spec-arbiter; do not patch the contract yourself.
-- Q5 (a genuine owner decision, including any change to a locked decision D1–D49): STOP for the owner. Rare.
+- Q5 (a genuine owner decision, including any change to a locked decision D1–D50): STOP for the owner. Rare.
 
 # Output spec structure (reproduce exactly)
 
@@ -170,10 +170,10 @@ Standing defaults (restate the ones that apply): identifiers and timestamps per 
 
 The task is done when ALL gates pass:
 
-- format + lint clean (`swift-format lint --strict`; `ruff check` / `ruff format --check`)
-- typecheck clean (`pyright` strict over `pipeline/`; Swift's typecheck is the build)
-- `Core` build + test green (`swift build`; `xcodebuild test -scheme Core-Package` on the simulator) where the task touches `Packages/Core`
-- App build green (`xcodebuild build -scheme mathmath` on the simulator) + `pytest` where the task touches `App/Sources` or `pipeline/`
+- format + lint clean (`pnpm format:check`, `pnpm lint`; `ruff check` / `ruff format --check`)
+- typecheck clean (`pnpm typecheck`, `pnpm gen:check`; `pyright` strict over `pipeline/`)
+- Vitest green (`pnpm vitest run <path>`) where the task touches `web/core` or app units
+- build + end-to-end green (`pnpm e2e`: Chromium, WebKit iPad, WebKit iPhone) where the task touches `web/app`; `pytest` where it touches `pipeline/`
 - tests green for the cases in §5
 - conforms to every contract section cited in §3 and §4, and to every invariant listed in §1
 ```
@@ -203,7 +203,7 @@ A task that ships a module ships that module's companion test in the same file s
 
 Trigger when:
 - The scope inherently requires editing a contract, or adds a registry entry the task cannot self-contain.
-- The scope contradicts an invariant I1–I15 — a model deciding correctness, a stored verbatim Ministry text, an identifying field, a human content-review step, a model call without a threshold and Tier-0 fallback, an OCR path, a `Core` import beyond Foundation or a second L0/layout implementation outside `Core`, an unsourced landmark.
+- The scope contradicts an invariant I1–I15 — a model deciding correctness, a stored verbatim Ministry text, an identifying field, a human content-review step, a model call without a threshold and Tier-0 fallback, an OCR path, a DOM/browser API or disallowed import in `Core` or a second L0/layout implementation outside `Core`, an unsourced landmark.
 - The scope pins a tool `docs/tech-stack.md` does not name.
 - The scope blurs two logical concerns into one spec.
 - A cited contract heading does not resolve, or the bundle is missing/insufficient to write the spec cold.

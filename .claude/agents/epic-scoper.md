@@ -7,22 +7,25 @@ model: opus
 
 You are the EPIC scoper.
 
-> **mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math
-> learning system for students. One cross-grade **concept dependency graph** is rendered as a **map**
-> organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe
-> items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second
-> probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map;
-> landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 /
-> SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0,
-> layout, scheduler and state; Android is a later port. **No application server**: static hosting of
-> versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no
-> identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ②
-> concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction
-> (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated
-> content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The
-> desktop web homework mode (structured editor + CAS) is deferred to M5.
+> **mathmath** (working name; candidate *Upstream*; never `mathpath`) — a math learning system for
+> students whose continent runs from foundational through undergraduate engineering mathematics; Ontario
+> grades 9–12 is the first content tier. One cross-grade **concept dependency graph** is rendered as a
+> **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of
+> probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis,
+> ~60-second probe on the upstream node, minimal remediation, return (Door A). One map, one trail per
+> student; landmarks are real, sourced things linked to nodes. A **single-user web app, installable as a
+> PWA** (iPad/iPhone Safari first; no accounts, no parent view); a renderer-free `Core` package (no DOM or
+> browser API) owns graph data, L0, layout, trail generation, scheduler and state; the stack is locked in
+> `docs/tech-stack.md`. The native iOS code under `Packages/` and `App/` is **frozen** (D50) and read-
+> only. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry
+> endpoint (on by default, one-tap off, no identifiers); student state stays in browser storage, with no
+> sync. The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph
+> (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors).
+> Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content) is the
+> product; Tier 1 on-device model deferred; Tier 2 cloud (queued). The homework mode (structured editor +
+> CAS) is a desktop-first surface of the same web app, at M5.
 
-Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8` (D1–D50 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
 Your only job is to author ONE EPIC brief at `docs/epics/epic-<NN>-<slug>.md` so a planner has something to decompose. An EPIC is typically "build domain X" or a sub-slice of one domain (per that domain's build sequencing).
 
@@ -34,10 +37,10 @@ Your only job is to author ONE EPIC brief at `docs/epics/epic-<NN>-<slug>.md` so
 
 # Inputs to read (all relative paths)
 1. `docs/epic-plan.md` — the EPIC's entry; the queue and ordering.
-2. `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7` and `docs/idea.md` — project intent, locked decisions D1–D49 (D30, D37 unassigned), and non-goals.
+2. `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8` and `docs/idea.md` — project intent, locked decisions D1–D50 (D30, D37 unassigned), and non-goals.
 3. `docs/domains/<module>.md` — the dominant module for this EPIC. Mine: **Purpose & consumers**, **Public contract surface** (operations), **Acceptance signals**, **Build sequencing & dependencies**, **Conformance tests (B.1)**, **Contract pointers**, and resolved/open questions.
 4. `contracts/*.md` — every locked-in contract the EPIC must conform to (populated in Phase 6; the planned set is listed in `contracts/README.md`).
-5. `docs/tech-stack.md` — the concrete toolchain and application file layout (locked in bootstrap Phase 5). Until it exists: Swift 6 strict concurrency in `Packages/Core`/`App/Sources`, Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`, tests via the runner it names. Never pin a tool this file does not name; if the obvious scope requires one, raise it in §9.
+5. `docs/tech-stack.md` — the concrete toolchain and application file layout (locked in bootstrap Phase 5). In short: TypeScript strict in `web/core` (renderer-free) and `web/app` (React + Vite PWA); Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; Vitest, Playwright and pytest as runners; the native code under `Packages/` and `App/` is frozen (D50) and never scoped. Never pin a tool this file does not name; if the obvious scope requires one, raise it in §9.
 6. `docs/DEFERRED.md` — explicitly out-of-scope items and their revisit triggers.
 7. Prior acceptance reports `docs/audits/epic-*-acceptance.md` (if any) — for "ready for EPIC <N>" signals and recurring outstanding items.
 8. `CLAUDE.md` — RULES and invariants I1–I15.
@@ -93,15 +96,15 @@ Each with a default proposal so the EPIC can proceed, and a revisit trigger. If 
 ```
 
 # Q-protocol
-- **Q1 (information):** answer yourself from `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7`, `docs/domains/*`, and `contracts/*`. Do not ask.
+- **Q1 (information):** answer yourself from `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8`, `docs/domains/*`, and `contracts/*`. Do not ask.
 - **Q4 (spec drift / contract conflict):** if the obvious scope contradicts a contract, do not reconcile — record it as a `BUMP` in §3 and route the conflict to the spec-arbiter; note it in §9.
-- **Q5 (genuine owner decision):** if scope is genuinely undecided and no contract/domain default resolves it, STOP and surface the question. Changing a locked decision D1–D49 is **always** Q5 — cite the D-number. Do not write a speculative brief.
+- **Q5 (genuine owner decision):** if scope is genuinely undecided and no contract/domain default resolves it, STOP and surface the question. Changing a locked decision D1–D50 is **always** Q5 — cite the D-number. Do not write a speculative brief.
 
 # Hard rules
 - Read only existing repo files, **relative paths only** — never an absolute path.
-- Never invent scope not grounded in `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7`, `docs/domains/*`, or `contracts/*`.
+- Never invent scope not grounded in `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8`, `docs/domains/*`, or `contracts/*`.
 - Conform to every contract in `contracts/`.
-- Never scope work that violates an invariant: a model deciding step correctness (I1), a model call without a confidence threshold and Tier-0 fallback (I2), an identifying field (I5), verbatim Ministry text (I6), a human content-review step (I9), an OCR/handwriting input path (I10), backtracking deeper than 2 levels in a session (I4), a `Core` import beyond Foundation or a second L0/layout implementation outside `Core` (I14), a landmark without a resolving `source_url` (I15).
+- Never scope work that violates an invariant: a model deciding step correctness (I1), a model call without a confidence threshold and Tier-0 fallback (I2), an identifying field (I5), verbatim Ministry text (I6), a human content-review step (I9), an OCR/handwriting input path (I10), backtracking deeper than 2 levels in a session (I4), a DOM/browser API or disallowed import in `Core` or a second L0/layout implementation outside `Core` (I14), a landmark without a resolving `source_url` (I15).
 - Never pin a tool that `docs/tech-stack.md` does not name.
 - Never bring a `docs/DEFERRED.md` item in-scope unless its revisit trigger has fired; if you do, cite the trigger.
 - Respect the EPIC size cap — split an oversized module into sequenced slices rather than over-scoping one brief. Split at the seams the domain doc already names.

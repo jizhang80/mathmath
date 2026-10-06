@@ -1,26 +1,27 @@
 #!/bin/sh
-# The four gates (R-1) for mathmath, as locked in docs/tech-stack.md. Agents run this before every commit;
-# CI runs the same steps. Exit non-zero on the first failure.
+# The four gates (R-1) for mathmath, as locked in docs/tech-stack.md §3 (web stack, AMENDMENT-v2.8).
+# Agents run this before every commit; CI runs the same steps. Exit non-zero on the first failure.
+# The frozen native code has its own gate, scripts/gate-native.sh (D50).
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SIM="$("$ROOT/scripts/pick-simulator.sh")"
-echo "simulator destination: $SIM"
+cd "$ROOT"
 
 echo "== 1/4 format + lint =="
-xcrun swift-format lint --strict --recursive --configuration "$ROOT/.swift-format" "$ROOT/Packages" "$ROOT/App/Sources"
-( cd "$ROOT/pipeline" && uv run ruff check . && uv run ruff format --check . )
+pnpm format:check
+pnpm lint
+( cd pipeline && uv run ruff check . && uv run ruff format --check . )
 
-echo "== 2/4 typecheck =="
-( cd "$ROOT/pipeline" && uv run pyright )
+echo "== 2/4 typecheck + contract types =="
+pnpm typecheck
+pnpm gen:check
+( cd pipeline && uv run pyright )
 
-echo "== 3/4 Core: build + test on the iOS simulator (D29) =="
-( cd "$ROOT/Packages/Core" && swift build -c release --product core-cli )
-( cd "$ROOT/Packages/Core" && xcodebuild test -quiet -scheme Core-Package -destination "$SIM" CODE_SIGNING_ALLOWED=NO )
-( cd "$ROOT/Packages/Rendering" && xcodebuild test -quiet -scheme Rendering -destination "$SIM" CODE_SIGNING_ALLOWED=NO )
+echo "== 3/4 unit + integration tests =="
+pnpm test
+( cd pipeline && uv run pytest -q )
 
-echo "== 4/4 App build on the simulator + pipeline tests =="
-xcodebuild build -quiet -workspace "$ROOT/App/mathmath.xcworkspace" -scheme mathmath -destination "$SIM" -configuration Debug -derivedDataPath "$ROOT/.build/DerivedData" CODE_SIGNING_ALLOWED=NO
-"$ROOT/scripts/sim-smoke.sh"
-( cd "$ROOT/pipeline" && uv run pytest -q )
+echo "== 4/4 build + end-to-end (Chromium, WebKit iPad, WebKit iPhone — D29) =="
+pnpm build
+pnpm e2e
 
 echo "gates green"

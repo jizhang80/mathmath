@@ -1,0 +1,14 @@
+{
+  "name": "@mathmath/core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "mathmath-core": "./src/cli.ts"
+  },
+  "dependencies": {
+    "ajv": "8.20.0"
+  }
+}

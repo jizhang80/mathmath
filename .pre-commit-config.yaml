@@ -16,6 +16,12 @@ repos:
         files: ^pipeline/
   - repo: local
     hooks:
+      - id: prettier-check
+        name: prettier --check (web workspace)
+        entry: pnpm exec prettier --check
+        language: system
+        files: ^(web/|eslint\.config\.js|vitest\.config\.ts|tsconfig.*\.json|package\.json|pnpm-workspace\.yaml)
+        exclude: ^web/core/src/generated/
       - id: swift-format-lint
         name: swift-format lint (Xcode toolchain)
         entry: xcrun swift-format lint --strict --configuration .swift-format

@@ -9,11 +9,11 @@ You execute exactly ONE task spec end-to-end with no human in the loop. The spec
 
 # Project context
 
-**mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math learning system for students. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map; landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 / SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0, layout, scheduler and state; Android is a later port. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The desktop web homework mode (structured editor + CAS) is deferred to M5.
+**mathmath** (working name; candidate *Upstream*; never `mathpath`) — a math learning system for students whose continent runs from foundational through undergraduate engineering mathematics; Ontario grades 9–12 is the first content tier. One cross-grade **concept dependency graph** is rendered as a **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second probe on the upstream node, minimal remediation, return (Door A). One map, one trail per student; landmarks are real, sourced things linked to nodes. A **single-user web app, installable as a PWA** (iPad/iPhone Safari first; no accounts, no parent view); a renderer-free `Core` package (no DOM or browser API) owns graph data, L0, layout, trail generation, scheduler and state; the stack is locked in `docs/tech-stack.md`. The native iOS code under `Packages/` and `App/` is **frozen** (D50) and read-only. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no identifiers); student state stays in browser storage, with no sync. The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content) is the product; Tier 1 on-device model deferred; Tier 2 cloud (queued). The homework mode (structured editor + CAS) is a desktop-first surface of the same web app, at M5.
 
-Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8` (D1–D50 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
-**Stack.** The concrete toolchain is locked in `docs/tech-stack.md` (bootstrap Phase 5). Read that file for every version, library, and runner before you write a line. Until it exists: Swift 6 strict concurrency in `Packages/Core`/`App/Sources`; Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; the test runner named in `docs/tech-stack.md`. **BLOCK** if the spec pins a tool `docs/tech-stack.md` does not name.
+**Stack.** The concrete toolchain is locked in `docs/tech-stack.md` (bootstrap Phase 5). Read that file for every version, library, and runner before you write a line. In short: TypeScript strict in `web/core` (renderer-free) and `web/app` (React + Vite PWA); Python 3.14 with pyright strict/Pydantic at boundaries in `pipeline/`; Vitest, Playwright and pytest as runners. The native code under `Packages/` and `App/` is frozen (D50) — never touch it. **BLOCK** if the spec pins a tool `docs/tech-stack.md` does not name.
 
 **Layout.** The file layout of application source is defined by `docs/tech-stack.md`; the spec's §2 file scope is authoritative. Write only inside it.
 
@@ -38,22 +38,23 @@ When the spec, the bundle, and the contracts are all silent on a decision → BL
 
 - **I1 — Step correctness is decided by CAS, never by a language model.** No code path lets a model output decide whether a step is right. If the spec asks for one, BLOCK.
 - **I2 — Tier 0 alone must be a usable product.** Every model call has a confidence threshold and a deterministic Tier-0 fallback (offer candidates for the student to pick, give the generic hint). The system **never guesses a diagnosis**. A model-calling component written without a named threshold and fallback is a BLOCK.
-- **I5 — No PII, no accounts.** Telemetry is anonymous, aggregate, opt-in, account-less. NEVER add a field that identifies a person (name, email, phone, address, student id, IP) to any persisted, transmitted, or logged shape.
+- **I5 — No PII, no accounts.** Telemetry is anonymous, aggregate, on by default with one-tap off, carries no identifier of any kind, and is account-less. NEVER add a field that identifies a person (name, email, phone, address, student id, IP) to any persisted, transmitted, or logged shape.
 - **I6 — No verbatim Ministry curriculum text is stored or shipped.** Nodes carry expectation codes plus the project's own `paraphrase` and link out to the official page. Never introduce a `verbatim` field or paste curriculum prose into an artifact.
-- **I10 — Input is defined per door.** Expedition items are numeric or multiple-choice; homework mode (M5 desktop only) uses a structured math editor. No OCR/handwriting path in any door — ever, including "just a stub".
+- **I10 — Input is defined per door.** Expedition items are numeric or multiple-choice; homework mode (M5, desktop-first) uses a structured math editor. No OCR/handwriting path in any door — ever, including "just a stub".
 - **File-scope discipline.** Touch ONLY the files listed in the spec's §2 scope. Clean up only the orphans your own change creates; never refactor or "improve" adjacent code.
-- **I14 — `Core` boundary.** `Packages/Core` imports Foundation only — never SwiftUI, never App types. The render layer never computes graph/expedition/diagnosis state; it reads `Core`'s output. L0 and layout exist once, in `Core` — never a second implementation in the App or the pipeline.
-- **Boundary validation.** Validate ALL external input at the boundary with the schema tooling named in `docs/tech-stack.md` (Pydantic in `pipeline/`, `Codable`/manual validation in Swift). Untrusted input includes model output, loaded data-bundle JSON, persisted state, and telemetry payloads.
+- **I14 — `Core` boundary.** `web/core` library modules use no DOM or browser API and import only relative modules, the contract schemas and the libraries `docs/tech-stack.md` allows there (its tsconfig has no DOM lib; `web/core/test/boundary.test.ts` asserts the imports) — never React, never app code. The render layer never computes graph/expedition/diagnosis state; it reads `Core`'s output. L0 and layout exist once, in `Core` — never a second implementation in the App or the pipeline.
+- **Boundary validation.** Validate ALL external input at the boundary with the schema tooling named in `docs/tech-stack.md` (Pydantic in `pipeline/`; Ajv against `contracts/schemas/` via `@mathmath/core`'s `validateContract` in TypeScript — types come from the generated `contracts.ts`, never hand-written mirrors). Untrusted input includes model output, loaded data-bundle JSON, persisted state, and telemetry payloads.
 - **Errors.** Throw ONLY error codes defined by the error-code contract in `contracts/`. NEVER emit a free-form code string. If the registry lacks a code you need, BLOCK — adding a code is a contract bump.
 - **Contracts are exact.** Identifier policy, timestamp policy, node/edge schema, tier thresholds, and telemetry event shape are as the contracts define them. Do not invent variants.
 - **I15 — Landmarks.** A landmark must be a real, named, verifiable thing with a resolving `source_url`. If you cannot source it, drop it — never invent one.
-- **No secrets, no PII in logs.** Use `os.Logger` in Swift library code (never `print`) and the project logger named in `docs/tech-stack.md` for the pipeline (ruff T20 bans `print` outside CLI entry points). NEVER log a secret or identifying field.
+- **No secrets, no PII in logs.** No `console` in TypeScript outside `web/core/src/cli.ts` and `web/core/scripts/` (ESLint `no-console`); in the pipeline, ruff T20 bans `print` outside CLI entry points. NEVER log a secret or identifying field.
 - **Simplicity First.** Write the minimum code that satisfies the acceptance criteria. No speculative abstractions, no configurability that was not asked for, no error handling for impossible scenarios.
 - **English only** in code, comments, and the commit message. No time estimates anywhere.
-- NEVER write `TODO`, `FIXME`, `XXX`, `not implemented`, `(WIP)`, or `coming soon` in source. NEVER use `try!`/`as!`/a force-unwrap in Swift (swift-format's NeverForceUnwrap enforces this) or a bare `# type: ignore` in Python without a reason.
+- NEVER write `TODO`, `FIXME`, `XXX`, `not implemented`, `(WIP)`, or `coming soon` in source. NEVER use `any`, a non-null assertion `!`, `@ts-ignore`/`@ts-expect-error` without a reason, or an `eslint-disable` without a reason in TypeScript, or a bare `# type: ignore` in Python without a reason.
 - NEVER skip the smoke test. NEVER declare a task DONE if any gate is not green.
 - NEVER spawn subagents. NEVER call AskUserQuestion — if you cannot proceed, BLOCK.
-- NEVER edit `App/mathmath.xcodeproj/project.pbxproj` — it is a hand-authored, file-system-synchronized project; add files under `App/Sources` and the folder membership follows automatically. A spec requiring a pbxproj edit is a Q5 — BLOCK and say so.
+- NEVER edit anything under `Packages/` or `App/` — the native code is frozen (D50). A spec requiring such an edit is a Q5 — BLOCK and say so.
+- NEVER hand-edit `web/core/src/generated/contracts.ts` — run `pnpm gen:types`; it is regenerated from `contracts/schemas/`.
 - If the spec contradicts any hard rule above, the hard rule wins and you BLOCK with reason "spec contradicts hard rule X".
 
 # Smoke-test scope (your test responsibility)
@@ -67,28 +68,28 @@ Run, in order, and loop until all are green. These are `scripts/gate.sh` (`docs/
 First, the whole-repo static gates (all green):
 
 ```bash
-swift-format lint --strict Packages App/Sources   # format + lint (Swift)
-ruff check pipeline && ruff format --check pipeline  # format + lint (Python)
-pyright pipeline                                   # typecheck (Python; Swift's typecheck is the build below)
+pnpm format:check && pnpm lint                     # format + lint (TypeScript)
+(cd pipeline && uv run ruff check . && uv run ruff format --check .)  # format + lint (Python)
+pnpm typecheck && pnpm gen:check                   # typecheck + generated contract types up to date
+(cd pipeline && uv run pyright)                    # typecheck (Python)
 ```
 
 Then the tests scoped to the task's §2 file-scope modules:
 
 ```bash
-swift test --filter <name>            # in Packages/Core, for a Core-scoped task
+pnpm vitest run <path>                # for a web/core- or web/app-unit-scoped task
 uv run pytest <path>                  # in pipeline/, for a pipeline-scoped task
 ```
 
-A `risk: seam` task, or any task touching `App/Sources`, runs the full build+test instead of the scoped run:
+A `risk: seam` task, or any task touching `web/app`, runs the full build + end-to-end instead of the scoped run:
 
 ```bash
-swift build -c release --product core-cli
-xcodebuild test -scheme Core-Package -destination "$(scripts/pick-simulator.sh)"
-xcodebuild build -scheme mathmath -destination "$(scripts/pick-simulator.sh)"
-pytest    # pipeline/, full suite
+pnpm test                             # Vitest, full
+pnpm e2e                              # Vite build + Playwright: Chromium, WebKit iPad, WebKit iPhone
+(cd pipeline && uv run pytest -q)     # pipeline, full suite
 ```
 
-The only failures you may fix-and-rerun are format/lint/typecheck failures caused by your own newly-written code. For any runtime test failure you do NOT own a fix for, BLOCK. FORBIDDEN: re-running a failing test hoping it is flaky; editing the test to make it pass; editing the test-runner, lint, or pyright/swift-format configuration to mask a failure; skipping a failing test; declaring a failure a "known issue" and proceeding. You verify on the iOS simulator only — NEVER claim physical-device verification (D29); that is the owner's at the wrap-gate.
+The only failures you may fix-and-rerun are format/lint/typecheck failures caused by your own newly-written code. For any runtime test failure you do NOT own a fix for, BLOCK. FORBIDDEN: re-running a failing test hoping it is flaky; editing the test to make it pass; editing the test-runner, lint, tsc, or pyright configuration to mask a failure; skipping a failing test; declaring a failure a "known issue" and proceeding. You verify with Playwright (Chromium and WebKit) only — NEVER claim physical-device verification (D29); that is the owner's at the wrap-gate.
 
 # Q-protocol (when you hit a question)
 
@@ -96,7 +97,7 @@ The only failures you may fix-and-rerun are format/lint/typecheck failures cause
 - **Q2 — retry:** if a verification step fails, you may retry it once.
 - **Q3 — permission:** you run with `bypassPermissions`; proceed without asking.
 - **Q4 — spec drift:** the spec contradicts a contract or reality. Do NOT improvise forward — BLOCK and route to the spec-arbiter via a blocked note.
-- **Q5 — genuine owner decision:** rare (any change to a locked decision D1–D49 is Q5). STOP.
+- **Q5 — genuine owner decision:** rare (any change to a locked decision D1–D50 is Q5). STOP.
 
 # BLOCK protocol
 

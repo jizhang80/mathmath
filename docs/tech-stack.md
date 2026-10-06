@@ -1,118 +1,164 @@
-# Tech stack — locked (bootstrap Phase 5)
+# Tech stack — locked (bootstrap Phase 5, re-lock for v2.8)
 
-Date: 2026-09-09. Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5` (D24, D29, D31–D36,
-D41, D42); `docs/idea.md`. Preferences input: `claude-tech-stack-preferences.md` — its principle layer
-(strict typing, explicit state, thin runtime, boundary validation, observability at the review surface)
-is binding; its web-tool layer is overridden by D32/D33 for the iOS app and by D41 for the pipeline.
-**Every pin below was validated on this date**; the citation is the validation. Agents BLOCK on any spec
-that pins a tool this file does not name (CLAUDE.md).
+Date: 2026-10-06. Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8` (D24, D29, D31–D36, D41, D42,
+D50); `docs/idea.md`. **The harness chose this stack; the owner verifies at requirement level only** (D32 as
+revised by v2.8 §3). Preferences input: `claude-tech-stack-preferences.md` — its principle layer (strict typing,
+explicit state, thin runtime, boundary validation, observability at the review surface) is binding; its tool
+layer is a prior, checked here against current releases. **Every pin below was validated on this date**: the
+version is the npm registry's latest on 2026-10-06 unless the row says why not. Agents BLOCK on any spec that
+pins a tool this file does not name (CLAUDE.md). A tool change after this lock is recorded in the change log
+below; it is not a Q5.
+
+The stack locked on 2026-09-09 for the native iOS app (Swift 6, SwiftUI, SwiftMath, Foundation Models, iCloud)
+is **frozen with the native code** (D50). It is preserved in git history at commit `d9c8780`, and its gate is
+`scripts/gate-native.sh`.
+
+## 0. How the choice was made
+
+The selection criterion is **which stack Claude builds with the fewest correction rounds, whose failures
+surface where the owner looks, and that covers the known future needs**:
+
+- the M5 homework mode (structured math editor + CAS) in the same app;
+- an optional app-store wrapper later (D-23);
+- no server (D36).
+
+Five consequences follow:
+
+1. **One language, TypeScript strict, for `Core` and the UI** (v2.8 §3a). TypeScript is the preferences doc's
+   strongest tier for Claude. One language means `Core` cannot drift from the UI, and the D42 single
+   implementation is literally one module that the browser and the pipeline both run.
+2. **Compile-time failure over runtime failure.** We use maximal `tsc` strictness and type-aware lint. `Core`'s
+   renderer-free boundary (I14) is enforced by the compiler: its tsconfig has no DOM library and no Node types.
+3. **The contracts stay the single source of truth.** TypeScript types are *generated* from
+   `contracts/schemas/*.json`, the same files the Python pipeline validates against. Runtime validation uses
+   those same JSON Schemas. A hand-written Zod mirror would be a second source that can drift, so we use none.
+4. **The smallest runtime that does the job.** The app is a static single-page app with no framework server.
+   No router or state library is installed until a screen needs one; React's own state suffices for the shell.
+5. **Safari is the review surface.** End-to-end tests run on WebKit with the iPad and iPhone profiles, as well
+   as on Chromium. WebKit is the closest an agent gets to the owner's device check (D29).
 
 ## 1. Choices
 
 | Slot | Choice | Version / pin | Rationale | Validation |
 |---|---|---|---|---|
-| Student app language | **Swift 6** (language mode 6, strict concurrency `complete`) | toolchain: Swift 6.3.3 (Xcode 26.6, 17F113) on this Mac; package `swift-tools-version: 6.2` so any Xcode 26.x builds it | D32; strict typing + compile-time failure surface (preferences meta-principle) | Local: `swift --version`, `xcodebuild -version` 2026-09-09. Xcode 26.6 ships Swift 6.3 and iOS 26.5 SDK [SOURCED: https://developer.apple.com/news/releases/?id=06252026a] |
-| UI | **SwiftUI**; map on **`Canvas`**; first-party **SpriteKit** only if a few-hundred-node map demands it (D24/D32) | OS frameworks | D32 | — (OS-provided) |
-| Deployment target | **iOS / iPadOS 18.0** | `IPHONEOS_DEPLOYMENT_TARGET = 18.0`; `Core` platforms `.iOS(.v18)`, `.macOS(.v15)` | D34 as amended (v2.4 §5) | Simulator runtimes installed locally: iOS 18.3, 18.6, 26.0–26.4 (`xcrun simctl list runtimes`) |
-| Shared logic | Swift Package **`Core`** (library) + **`core-cli`** (executable) — Foundation only | `Packages/Core` | D33, D42, I14 | `CoreTests` asserts the import boundary (empty scan = FAIL, C3); `swift test` green 2026-09-09 |
-| Math display | **SwiftMath**, imported only by the `Packages/Rendering` package | **1.7.3 exact** (`Package.swift` `exact:` and the app's `XCRemoteSwiftPackageReference`) | D32 — the one third-party app dependency; WKWebView + KaTeX fallback per item is designed in the Demo rendering spike | Latest release 1.7.3 (2026-08-03) [SOURCED: https://github.com/mgriebling/SwiftMath/releases]; `swift-tools-version 5.7`, iOS 11+/macOS 12+, no dependencies [SOURCED: https://github.com/mgriebling/SwiftMath/blob/main/Package.swift]; resolved and linked into the app build 2026-09-09 |
-| Persistence | **`Codable` JSON** in Application Support; state types in `Core` | OS APIs | D32 as amended (v2.4 §1); SwiftData removed | — |
-| Sync | **iCloud** (Drive document container or CloudKit) — chosen at M3 | OS APIs | D36; platform Q1 | Deferred to M3 by ruling |
-| Tier 1 | **Foundation Models** framework, `@Generable` guided generation | OS framework, iOS 26+ | D32, D34 | Runs in the iOS 26+ simulator when the host Mac has Apple Intelligence enabled [SOURCED: https://developer.apple.com/forums/thread/787199; https://developer.apple.com/forums/thread/815397]; macOS 26 required for development [SOURCED: https://azamsharp.com/2025/06/18/the-ultimate-guide-to-the-foundation-models-framework.html]. This Mac: M4 Pro, macOS 26.6.2 |
-| Swift tests | **Swift Testing** (`import Testing`) for `Core`; XCTest only where UI testing needs it | Xcode-bundled | first-party; expressive `#expect` | `Testing.framework` present in the iOS platform of Xcode 26.6 (local `ls`) |
-| Swift formatting | **swift-format** (Apple, bundled in the Xcode toolchain) | 6.3.0 (`xcrun swift-format --version`) | first-party; no SwiftLint (would be a third-party tool with no recorded need) | Local run green 2026-09-09; config `.swift-format` |
-| App project | Hand-authored **`App/mathmath.xcodeproj`** (objectVersion 77) with a **file-system-synchronized** `Sources` group; **`App/mathmath.xcworkspace`** = project + `Packages/Core` | Xcode 26 format | Agents add files under `App/Sources` and `Packages/Core` **without editing the pbxproj**; no XcodeGen/Tuist | `xcodebuild -list` shows schemes `Core`, `core-cli`, `mathmath`; simulator build green 2026-09-09 |
-| Pipeline language | **Python 3.14** | `.python-version` = 3.14; local 3.14.7 | D41; strict typing via pyright strict + Pydantic (preferences: "with strict types, approaches TS") | 3.14.7 released 2026-08-05, bugfix status [SOURCED: https://www.python.org/downloads/] |
-| Python env / build | **uv** | 0.12.12 (Homebrew; `uv_build` backend pinned `>=0.12.12,<0.13`) | one tool for venv, lock, run | [SOURCED: https://pypi.org/pypi/uv/json] |
-| Python deps | **anthropic** ≥ 1.4,<2 · **pydantic** ≥ 2.13,<3 · **sympy** ≥ 1.14,<2 (exact pins in `pipeline/uv.lock`) | resolved 2026-09-09: anthropic 1.4.0, pydantic 2.13.5, sympy 1.14.0 | Claude API for generation (D12); boundary validation; CAS answer re-derivation (I1) | [SOURCED: https://pypi.org/pypi/anthropic/json (1.4.0, Python ≥ 3.10); https://pypi.org/pypi/pydantic/json (2.13.5, 2026-08-28); https://pypi.org/pypi/sympy/json (1.14.0)] |
-| Python lint/format | **ruff** (check + format) | ≥ 0.16 (0.16.6 today) | replaces flake8/black/isort | [SOURCED: https://pypi.org/pypi/ruff/json] |
-| Python typecheck | **pyright** strict | ≥ 1.1 (lock pins the resolved release) | preferences: strict `mypy`/`pyright` | PyPI metadata fetch returned a stale summary (1.1.413 / 2024); the lock file records the actually resolved version — re-check at the first pipeline EPIC [ESTIMATE: current release is newer] |
-| Python tests | **pytest** | ≥ 8 | — | — |
-| Generation model | **`claude-opus-5`** for content generation runs; `claude-haiku-4-5` only where a spec names a mechanical extraction task | Claude API via the `anthropic` SDK; adaptive thinking; streaming for long outputs | quality > tokens (I13); model IDs per the Claude API reference in force 2026-09-09 | Claude API skill reference (cached 2026-06-24 table) |
-| CI | **GitHub Actions**, `macos-26` runners (arm64) | `.github/workflows/ci.yml` | D29: simulator gate in CI; the pipeline job also runs on macOS because its seam test invokes `core-cli` | macos-26 GA since 2026-02-26, multiple Xcode 26 versions on the image [SOURCED: https://github.blog/changelog/2026-02-26-macos-26-is-now-generally-available-for-github-hosted-runners/; https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md] |
-| Hooks | **pre-commit** with `conventional-pre-commit` (commit-msg), `ruff-pre-commit`, local `swift-format lint`, local I11 time-estimate grep | pre-commit 4.6.2; hook revs in `.pre-commit-config.yaml` (via `pre-commit autoupdate` 2026-09-09) | C8: commit-message and formatting checks pre-commit | [SOURCED: https://pre-commit.com/hooks.html; https://github.com/swiftlang/swift-format/blob/main/.pre-commit-hooks.yaml] |
-| Branch protection | GitHub **ruleset** on `main`: PR required, CI checks `Swift (Core + App, iOS simulator)` and `Python pipeline` required, no force-push, no deletion | repo `jizhang80/mathmath` (public) | bootstrap Phase 5 step 5 | applied via `gh api` 2026-09-09 — see §5 |
-| Static content host | **Cloudflare Pages** serving versioned content JSON (`data/` bundles) — set up at M3 | free tier | D36 (a); same vendor as the endpoint | HTTP request logs are not retained by default on Cloudflare [SOURCED: https://developers.cloudflare.com/logs/logpull/enabling-log-retention/] |
-| Telemetry endpoint | **Cloudflare Worker** (append-only POST) writing to **R2** — set up at M3 | free tier | D36 (b), serverless, append-only | **No-IP constraint (v2.5 §2):** `[observability.logs] invocation_logs = false` in wrangler config (Workers Logs are on by default for new Workers, retained 3–7 days otherwise) [SOURCED: https://developers.cloudflare.com/workers/observability/logs/workers-logs/]; enable the **"Remove visitor IP headers"** managed transform so the Worker never receives `CF-Connecting-IP` [SOURCED: https://developers.cloudflare.com/fundamentals/reference/http-headers/]; zone HTTP logs not retained by default (Logpull off) [SOURCED: as above]. Telemetry W5 verifies all three at the wrap-gate |
-| Distribution | Direct Xcode install, development signing, registered devices; TestFlight later | Apple Developer Program (exists) | D35 as amended | — |
+| Language | **TypeScript**, `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` + `erasableSyntaxOnly` | **6.0.3 exact** — not 7.0.2 (the `latest` tag) | Strongest Claude tier; failures at compile time. **Not 7.x:** TypeScript 7.0 (the Go-native compiler, GA 2026-07-08) ships no stable programmatic API, so typescript-eslint's type-aware rules cannot run on it. Its peer range is `>=4.8.4 <6.1.0`, and the TS 7 support request was closed "not planned" pending 7.1. | `npm view typescript-eslint peerDependencies` 2026-10-06 [SOURCED: https://ecorpit.com/typescript-7-migration-readiness-eslint-astro-blockers-2026/; https://www.digitalapplied.com/blog/typescript-7-native-compiler-early-adopter-migration-readiness] |
+| Runtime (tooling, CLI) | **Node.js 24 LTS**, running `.ts` directly (built-in type stripping) | `>=24.12.0` (`engines`; CI pins 24.12.0) | The `Core` CLI and scripts run with no build step and no `tsx`. `erasableSyntaxOnly` keeps every file strippable. | Local `node v24.12.0`; `node web/core/src/cli.ts` runs (2026-10-06) |
+| Package manager / monorepo | **pnpm workspaces** (`web/*`), pinned via `packageManager` + corepack | **pnpm 12.9.1** | Preferences pick; strict `node_modules` stops phantom imports. 12.x has been out since 2026-08-26, with nine minors since. | `npm view pnpm time` 2026-10-06; install and every gate green locally on 12.9.1 |
+| Workspace location | **`web/`** (`web/core`, `web/app`) | — | **Not `packages/`**: macOS's default filesystem is case-insensitive, so `packages/` would collide with the frozen `Packages/` (D50). | — |
+| Shared logic | **`@mathmath/core`** — renderer-free; library modules import only relative modules, the contract schemas and Ajv; `src/cli.ts` is the Node entry point | `web/core` | D33, D42, I14. The compile-time half of the boundary is `web/core/tsconfig.json` (`lib: ES2024`, `types: []`); the import half is `web/core/test/boundary.test.ts` (empty = FAIL, with a negative control) | Negative controls run 2026-10-06: `document` in `Core` fails `tsc`, and `console.log` fails ESLint |
+| Contract types | **json-schema-to-typescript** generates `web/core/src/generated/contracts.ts` from `contracts/schemas/` | **16.0.0** exact (dev) | Types come from the contracts, never hand-written. `pnpm gen:check` fails on a stale file (gate 2) | Generated over all 9 schemas, and the result typechecks (2026-10-06) |
+| Boundary validation | **Ajv** (JSON Schema 2020-12, `allErrors`, `strict` except `strictRequired`) | **8.20.0** exact | Validates against the same JSON Schemas as the pipeline. `strictRequired` is off because the contracts use `anyOf: [{required: …}]` (I8), which is valid 2020-12 but trips Ajv's extra lint. | All 7 `data/demo` files validate; the negative control (a node with neither `expectation_codes` nor `source_ref`) is rejected (2026-10-06) |
+| UI | **React** + **react-dom** | **19.3.0** exact | The largest corpus, so Claude's most reliable UI library. Explicit state; no framework server (D36). | npm latest 2026-10-02 |
+| Build / dev server | **Vite** + **@vitejs/plugin-react** | **8.3.3** / **6.1.2** exact | Static single-page app output; the preferences pick for a single-page app | npm latest 2026-10-06; `vite build` green |
+| PWA (offline, installable) | **vite-plugin-pwa** (Workbox `generateSW`) | **2.0.0** exact | v2.8 §3e: offline after first load, plus a manifest for Add to Home Screen. Using the plugin avoids hand-written service-worker and build config, a weak zone for Claude per the preferences doc. | Peer range now includes `vite ^8.0.0`; the earlier peer conflict is resolved [SOURCED: https://github.com/vite-pwa/vite-plugin-pwa/issues/923]; build emits `sw.js` + `manifest.webmanifest` |
+| Map rendering | **SVG** rendered by React; pan/zoom by **d3-zoom** (+ d3-selection). Escalate to Canvas 2D, then **PixiJS** (WebGL), only on measured frame-budget failure | d3-zoom 3.0.0, d3-selection 3.0.0, pixi.js 8.22.0 — **installed by the first task that needs them** | D24: no third-party game engine. SVG nodes are DOM, so end-to-end tests can find, tap and assert them; Canvas would hide the map from the review surface. d3-zoom handles touch pinch on Safari. | npm 2026-10-06. d3-zoom 3.0.0 has been stable since 2021 with no newer release. The few-hundred-node budget is re-measured at the Demo [ESTIMATE: SVG holds for the Demo's ~20 nodes; full-continent counts are measured before M5] |
+| Math display | **KaTeX** | **0.19.0** exact | The web standard for LaTeX rendering; synchronous; no fallback renderer needed | npm latest 2026-10-01 |
+| Student-state storage | **IndexedDB** via **idb**, plus `navigator.storage.persist()` and file export/import | idb 8.0.4 — **installed by the first persistence task** | v2.8 §9. Installed home-screen web apps are not subject to Safari's 7-day script-storage cap. The Storage API, including `persist()`, is supported since Safari 17 / iOS 17. D-22 measures both at the Demo. | [SOURCED: https://webkit.org/?p=14403; https://developer.mozilla.org/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria] |
+| Unit / integration tests | **Vitest** | **5.0.3** exact | The preferences pick; native ESM + TS. Greenfield, so Vitest 5's breaking changes need no migration | Released 2026-09-03; requires Node ≥ 22.12 and Vite ≥ 6.4, both met [SOURCED: https://blog.openreplay.com/vitest-5-changes/] |
+| End-to-end tests | **Playwright**, projects `chromium`, `webkit-ipad` (iPad gen 7), `webkit-iphone` (iPhone 15) | **@playwright/test 1.63.0** exact; WebKit 26.6 build | D29 as revised: the agent gate includes WebKit and Chromium | 6/6 green locally 2026-10-06 |
+| Lint | **ESLint** flat config + **typescript-eslint** `strictTypeChecked` + **eslint-plugin-react-hooks**; `no-console` (off only for `cli.ts` and `scripts/`) | eslint 10.12.0, typescript-eslint 8.71.1, react-hooks 7.1.1, @eslint/js 10.0.1, globals 17.13.0 | Type-aware rules catch floating promises and unsafe `any`, which are silent at runtime | npm latest 2026-10-06; clean run |
+| Format | **Prettier**, `printWidth` 110, scoped to `web/` and the root config files (docs and Markdown are not reformatted) | **3.9.9** exact | One formatter, no debates | npm latest 2026-09-23 |
+| Pipeline | **Python 3.14 + uv + ruff + pyright strict + pytest; anthropic, pydantic, sympy** — unchanged from 2026-09-09 | `pipeline/uv.lock` | D41. Until the web `Core` gains L0 and layout, `mathmath_pipeline.core_cli` still runs the Swift `core-cli` via `swift run` (v2.8 §5); the switch to `node web/core/src/cli.ts` is recorded here when it happens | 190 tests green 2026-10-06 |
+| Generation model | **`claude-opus-5`** for content generation runs; `claude-haiku-4-5` only where a spec names a mechanical extraction task | Claude API via the `anthropic` SDK | Quality > tokens (I13). Unchanged; pinned by `contracts/ai-usage.md`, and changing it is a contract change. | — |
+| CI | **GitHub Actions**: `Web (Core + app, Chromium + WebKit)` on `ubuntu-latest`; `Python pipeline` on `macos-26` (unchanged; its seam test builds the Swift `core-cli`); `Swift (Core + App, iOS simulator)` unchanged (frozen code, D50) | `.github/workflows/ci.yml`; actions/setup-node v7 | Linux runners are enough for Playwright WebKit, and cheaper than macOS | actions/setup-node latest tag `v7.0.0` (2026-10-06) |
+| Hooks | **pre-commit**: conventional commits, ruff, Prettier check (web), swift-format (frozen code), I11 time-estimate grep | `.pre-commit-config.yaml` | C8 | — |
+| Branch protection | GitHub ruleset on `main`: PR required, required CI checks, no force-push, no deletion | `scripts/branch-ruleset.json` | The `Web` check is added to the required set when the owner approves the ruleset change (§6) | — |
+| Demo hosting | **GitHub Pages**, deployed from Actions — set up by the Demo's distribution task | free for public repos | D35 as revised: testers need a URL. The repo is public and already on GitHub, so no new account is needed. The Demo sends no telemetry, so the no-IP constraint (which binds the telemetry endpoint) does not apply. | — |
+| Content host + telemetry (M3) | **Cloudflare** static assets + **Worker** → **R2**, with the no-IP configuration — unchanged from the 2026-09-09 lock | free tier | D36. The no-IP controls: Workers Logs off, the "Remove visitor IP headers" managed transform, no Logpull. | [SOURCED: https://developers.cloudflare.com/workers/observability/logs/workers-logs/; https://developers.cloudflare.com/fundamentals/reference/http-headers/] |
 
-**Not chosen, and why:** SwiftData (conflicts with D33 — v2.4 §1); SwiftLint / XcodeGen / Tuist (third-party
-tooling without a recorded need; swift-format and a synchronized-folder project cover the need); TypeScript
-anywhere before M5 (v2.4 §2); AWS Lambda + S3 for telemetry (equally viable; Cloudflare chosen for one vendor
-and documented log-off controls — revisit at M3 if the no-IP verification fails); Chrome Prompt API / WebLLM
-(D34).
+**Not chosen, and why:**
+
+- **Next.js:** a server framework for a product with no server (D36).
+- **TanStack Router, Zustand:** not needed by a map with overlay screens; added with a recorded reason when a
+  task needs one.
+- **Tailwind / shadcn:** the Phase 4 design system (`docs/design-system/tokens.css`, `components.css`) is
+  already plain CSS custom properties, so plain CSS reuses it verbatim with no dependency.
+- **Zod:** would duplicate `contracts/schemas` (see §0.3).
+- **Swift compiled to Wasm:** heavy toolchain risk and no reuse benefit once native is frozen.
+- **Flutter web:** weaker Claude tier, and its canvas rendering hides the UI from DOM tests.
+- **Svelte / Solid:** smaller corpus.
+- **Biome:** no type-aware rules.
+- **TypeScript 7:** see the Language row; revisit when typescript-eslint supports it.
 
 ## 2. Repository layout
 
 ```
 /
-├── App/
-│   ├── mathmath.xcodeproj/         # hand-authored; synchronized `Sources` group — never edited by agents
-│   ├── mathmath.xcworkspace/       # project + Packages/Core (gives xcodebuild the Core scheme)
-│   └── Sources/                    # SwiftUI app: views, adapters (Foundation Models, persistence, sync)
-├── Packages/Core/                  # Swift package: Core (lib), CoreCLI → core-cli (exe), CoreTests
-├── Packages/Rendering/             # Swift package over SwiftMath: MathView + RenderCheck (rendering spike; LO W1 5b)
-├── pipeline/                       # Python (uv): src/mathmath_pipeline, tests; calls core-cli (D42)
-├── data/                           # JSON bundles: Demo hand-written; later pipeline output (+ L0 report)
-├── scripts/gate.sh                 # the four gates (§3); scripts/check-no-time-estimates.sh (I11)
-├── .github/workflows/ci.yml        # macos-26: Swift job + Python job
-├── .pre-commit-config.yaml · .swift-format · .gitignore
-└── docs/ contracts/ tasks/ modules/ (unchanged)
+├── web/
+│   ├── core/                      # @mathmath/core — renderer-free (I14): src/ (library), src/cli.ts (Node entry, D42),
+│   │                              #   src/generated/contracts.ts (generated), scripts/gen-types.ts, test/
+│   └── app/                       # @mathmath/app — React + Vite PWA: src/, e2e/ (Playwright), vite/playwright config
+├── package.json · pnpm-workspace.yaml · pnpm-lock.yaml · tsconfig.base.json · tsconfig.json
+├── eslint.config.js · vitest.config.ts · .prettierrc.json · .prettierignore
+├── pipeline/                      # Python (uv), unchanged; calls Core's CLI (D42)
+├── data/                          # JSON bundles: Demo hand-written; later pipeline output
+├── contracts/schemas/             # single source of truth for data shapes (TS types generated from here)
+├── scripts/gate.sh                # the four gates (§3); scripts/gate-native.sh = frozen native gates
+├── Packages/ App/                 # FROZEN native iOS code (D50) — read-only
+└── .github/workflows/ci.yml · .pre-commit-config.yaml · docs/ contracts/ tasks/ modules/
 ```
 
-Ownership by domain (a spec's §2 file scope is authoritative): `Packages/Core` — concept-graph (types, L0,
-query), map (layout, `MapViewModel`), expedition (`StudentState`, scheduler, transitions), diagnosis
-(hypothesis machine), platform (state merge); `App/Sources` — all rendering, Foundation Models adapter
-(runtime-tiers), persistence/sync/bundle loading (platform), telemetry client; `pipeline/` —
-curriculum-spine, content-generation, learning-objects validation, telemetry aggregation (W4).
+Ownership by domain (a spec's §2 file scope is authoritative):
+
+- **`web/core`:** concept-graph (types, L0, query), map (layout, the map view model), expedition (`StudentState`,
+  scheduler, transitions), diagnosis (hypothesis machine), platform (state merge, export/import format).
+- **`web/app`:** all rendering, persistence adapter (IndexedDB), bundle loading, service worker, telemetry
+  client.
+- **`pipeline/`:** curriculum-spine, content-generation, learning-objects validation, telemetry aggregation (W4).
 
 ## 3. Gates (R-1) — `scripts/gate.sh`
 
-1. **Format + lint:** `swift-format lint --strict` over `Packages` and `App/Sources`; `ruff check` and
+1. **Format + lint:** `pnpm format:check` (Prettier); `pnpm lint` (ESLint, zero warnings); `ruff check` +
    `ruff format --check` over `pipeline`.
-2. **Typecheck:** `pyright` (strict) over `pipeline`. (Swift's typecheck is the build in gate 3.)
-3. **Core:** `swift build -c release --product core-cli`; `xcodebuild test -scheme Core-Package` and
-   `-scheme Rendering` on the iOS simulator (D29 — the agent gate is the simulator, never a device).
-4. **App + pipeline:** `xcodebuild build -scheme mathmath` on the simulator; `pytest`.
+2. **Typecheck + contract types:** `pnpm typecheck` (`tsc` over every tsconfig); `pnpm gen:check` (generated
+   contract types up to date); `pyright` strict over `pipeline`.
+3. **Unit + integration tests:** `pnpm test` (Vitest); `pytest` over `pipeline`.
+4. **Build + end-to-end:** `pnpm build` (Vite + PWA); `pnpm e2e` (Playwright: Chromium, WebKit iPad, WebKit
+   iPhone).
 
-CI runs the same steps; `scripts/pick-simulator.sh` chooses the newest available iPhone simulator
-(override with `MATHMATH_SIM="platform=iOS Simulator,name=…,OS=…"`).
-Physical-device verification is the owner's, at the wrap-gate, recorded in the acceptance report (D29).
+Scoped runs for a task: `pnpm vitest run <path>`, `pnpm --filter @mathmath/app exec playwright test <spec>`,
+`uv run pytest <path>`.
+
+CI runs the same steps. Physical-device verification (iPad and iPhone Safari, installed to the home screen) is
+the owner's, at the wrap-gate, recorded in the acceptance report (D29).
 
 ## 4. Deployment model
 
-Single deployment, no per-client instances. Student app: iOS/iPadOS via direct install (Demo, M3, M4),
-TestFlight external testing before release, App Store at release. Content: static JSON on Cloudflare Pages
-with an offline snapshot bundled in the app (D36). Telemetry: one Cloudflare Worker + R2 bucket, no read
-API, no IP retention (§1). No application server, no containers, no Dockerfile.
+There is a single deployment and no per-client instances.
 
-## 5. Setup performed 2026-09-09
+- **Student app:** a static build (`web/app/dist`). During the Demo it is served on GitHub Pages; from M3 it is
+  served with the content on Cloudflare. It is installed via Add to Home Screen, with no app store (D35).
+- **Content:** versioned static JSON with an offline snapshot cached by the service worker (D36).
+- **Telemetry (M3):** one Cloudflare Worker + R2 bucket, no read API, no IP retention.
 
-- `Packages/Core`, `App/`, `pipeline/`, `scripts/`, CI workflow, `.pre-commit-config.yaml`, `.swift-format`
-  created; `uv.lock` generated; `pre-commit install --hook-type pre-commit --hook-type commit-msg`.
-- Gates run green locally (`scripts/gate.sh`) — Core tests and the app build on the iOS 26.4 simulator;
-  ruff, pyright strict and pytest on Python 3.14.7; the Python↔`core-cli` seam test (C1) passes.
-- Branch ruleset on `main` defined in `scripts/branch-ruleset.json`, applied with `scripts/apply-branch-ruleset.sh`
-  (idempotent) immediately after this commit is pushed. **Consequence for the process:** nothing lands on
-  `main` without a PR whose two CI jobs are green — `wrap-epic` merges through `gh pr create` →
-  `gh pr checks --watch` → `gh pr merge --merge`; owner planning sessions do the same for docs.
-- `xcodebuild -downloadPlatform iOS` run once on this Mac: Xcode 26.6 ships the iOS 26.5 SDK but not the
-  26.5 simulator runtime, and without it xcodebuild refuses every iOS simulator destination. CI images carry
-  their matching runtime.
-- Homebrew installed on this Mac for Phase 5: `uv 0.12.12`, `pre-commit 4.6.2`.
+There is no application server, no containers and no Dockerfile.
+
+## 5. Setup performed 2026-10-06
+
+- Created the pnpm workspace (`web/core`, `web/app`); `pnpm install` on pnpm 12.9.1 (corepack enabled for pnpm on
+  this Mac); Playwright Chromium and WebKit engines downloaded to the user cache.
+- `Core`: contract-type generation, Ajv boundary validation, the `schema` CLI command
+  (`node web/core/src/cli.ts schema data/demo` → all files ok), and the I14 boundary test.
+- `app`: a toolchain shell that validates the demo bundle through `Core` and renders the node count. It is
+  placeholder content, replaced by the Demo EPICs.
+- `scripts/gate.sh` replaced by the web gates; the native gates moved verbatim to `scripts/gate-native.sh`.
+  Every gate ran green locally: Prettier, ESLint, ruff, `tsc`, gen-check, pyright, Vitest 12/12, pytest 190,
+  Vite build, Playwright 6/6.
+- CI gained the `Web` job; the `Swift` and `Python pipeline` jobs are unchanged.
 
 ## 6. Open at lock (not blocking)
 
-- **Apple Intelligence on this Mac** — M4′ needs it enabled (System Settings) for the simulator path;
-  not verifiable from the CLI. Owner confirms before M4′.
-- **Cloudflare account** — created at M3, when the endpoint and static host are first needed.
-- **iCloud container / entitlement** — M3 (platform Q1).
-- **Xcode on CI** — the workflow selects the newest `Xcode_26*.app` on the runner; if the image lags this
-  Mac's 26.6, the package's `swift-tools-version: 6.2` keeps it buildable [ESTIMATE: image carries ≥ 26.2 per
-  the runner-images changelog].
+- **Branch ruleset:** add `Web (Core + app, Chromium + WebKit)` to the required checks. Optionally make the frozen
+  `Swift` check non-required and path-filtered to `Packages/**`, `App/**`. This is a repository-settings change
+  and waits for the owner's approval.
+- **GitHub Pages** is enabled by the Demo's distribution task (a repository setting; the owner approves it then).
+- **Cloudflare account:** created by the owner at M3.
+- **Switch the pipeline from the Swift `core-cli` to the web `Core` CLI** when `Core` gains L0 and layout (v2.8 §5).
+- **TypeScript 7:** revisit when typescript-eslint's peer range admits it.
 
 ## Change log
 
 | Date | Change |
 |---|---|
 | 2026-09-09 | Locked (v2 native iOS stack; D32/D33/D41/D42). |
+| 2026-10-06 | Re-locked for AMENDMENT-v2.8: web stack chosen by the harness (§0–§1); native stack frozen with the native code (D50); gates, CI and layout replaced. |
