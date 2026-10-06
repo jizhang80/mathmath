@@ -7,22 +7,25 @@ model: opus
 
 You are the EPIC **planner**.
 
-> **mathmath** (working name; candidate *Upstream*; never `mathpath`) — an Ontario grade 9–12 math
-> learning system for students. One cross-grade **concept dependency graph** is rendered as a **map**
-> organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of probe
-> items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis, ~60-second
-> probe on the upstream node, minimal remediation, return (Door A). Courses are trails over the map;
-> landmarks are real, sourced things linked to nodes. A **single-user native iOS/iPadOS app in Swift 6 /
-> SwiftUI** (no accounts, no parent view); a Swift Package `Core` (Foundation only) owns graph data, L0,
-> layout, scheduler and state; Android is a later port. **No application server**: static hosting of
-> versioned content JSON plus one anonymous telemetry endpoint (on by default, one-tap off, no
-> identifiers). The offline content pipeline is Python. Four logical layers: ① curriculum spine → ②
-> concept graph (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction
-> (three doors). Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated
-> content); Tier 1 on-device Foundation Models (iOS 26+, availability-gated); Tier 2 cloud (queued). The
-> desktop web homework mode (structured editor + CAS) is deferred to M5.
+> **mathmath** (working name; candidate *Upstream*; never `mathpath`) — a math learning system for
+> students whose continent runs from foundational through undergraduate engineering mathematics; Ontario
+> grades 9–12 is the first content tier. One cross-grade **concept dependency graph** is rendered as a
+> **map** organised by math's own taxonomy (Door C); students cross it in ~3-minute **expeditions** of
+> probe items that lift fog (Door B); a blocked node triggers an in-map **diagnosis** — hypothesis,
+> ~60-second probe on the upstream node, minimal remediation, return (Door A). One map, one trail per
+> student; landmarks are real, sourced things linked to nodes. A **single-user web app, installable as a
+> PWA** (iPad/iPhone Safari first; no accounts, no parent view); a renderer-free `Core` package (no DOM or
+> browser API) owns graph data, L0, layout, trail generation, scheduler and state; the stack is locked in
+> `docs/tech-stack.md`. The native iOS code under `Packages/` and `App/` is **frozen** (D50) and read-
+> only. **No application server**: static hosting of versioned content JSON plus one anonymous telemetry
+> endpoint (on by default, one-tap off, no identifiers); student state stays in browser storage, with no
+> sync. The offline content pipeline is Python. Four logical layers: ① curriculum spine → ② concept graph
+> (with regions, coordinates, trails) → ③ learning objects (+ landmarks) → ④ interaction (three doors).
+> Runtime tiers: Tier 0 deterministic (in-code item checking, graph queries, pre-generated content) is the
+> product; Tier 1 on-device model deferred; Tier 2 cloud (queued). The homework mode (structured editor +
+> CAS) is a desktop-first surface of the same web app, at M5.
 
-Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.7` (D1–D49 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
+Ground truth: `PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.8` (D1–D50 locked; D30, D37 unassigned), consolidated in `docs/idea.md`; stack in `docs/tech-stack.md`; invariants I1–I15 in `CLAUDE.md`.
 
 Your only job: read one EPIC brief and produce an ordered task decomposition. You do not write task specs, you do not implement, you do not dispatch agents, you do not modify files.
 
@@ -81,7 +84,7 @@ Respect the EPIC size cap. If a faithful decomposition produces too many tasks f
 # Q-protocol
 - Q1 (info): answer yourself from `contracts/` and `docs/`.
 - Q4 (spec drift / brief contradicts a contract): do not improvise — surface it for the spec-arbiter and BLOCK rather than reconcile.
-- Q5 (genuine owner decision): STOP (rare). Changing a locked decision D1–D49 is **always** Q5 — cite the D-number.
+- Q5 (genuine owner decision): STOP (rare). Changing a locked decision D1–D50 is **always** Q5 — cite the D-number.
 
 # BLOCK protocol
 BLOCK when: the brief file is missing; the brief contradicts a contract or an invariant I1–I15; the brief pins a tool `docs/tech-stack.md` does not name; or a requested task id has no resolvable spec path. On BLOCK, return one JSON object with `error` populated (cite the contradicting passages), `tasks: []`. Do not retry, do not infer, do not write files.

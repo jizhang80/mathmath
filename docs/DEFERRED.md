@@ -21,6 +21,10 @@
 >
 > Re-cut 2026-09-09 for the v2 pivot (`PROJECT-BRIEF-v2.md` + `AMENDMENT-v2.1`–`v2.5`). Entry ids D-n are
 > ledger ids, unrelated to the brief's decision numbers Dn.
+>
+> **2026-10-06 — v2.8 (web first, native frozen).** D-1 to D-7 are re-stated for the web platform. D-12 to
+> D-19 record observations made on the frozen native Demo (D50); their configuration is the Swift code, and
+> any web EPIC that consumes one re-measures it on the web build first. D-20 to D-23 are new.
 
 ---
 
@@ -28,7 +32,7 @@
 
 **Observed:** scoped out in `PROJECT-BRIEF-v2.md` §9 / §12 — documentation and code are English, and no
 locale set is defined for the UI. No hardcoded-string lint rung is wired.
-**Configuration:** native iOS app (D31–D34), English UI only.
+**Configuration:** web app (D31 as revised by v2.8), English UI only.
 **Revisit trigger:** a French-language user request, or the M5 coverage-expansion scope review.
 **Hypothesis (unverified):** none.
 
@@ -37,37 +41,37 @@ locale set is defined for the UI. No hardcoded-string lint rung is wired.
 **Observed:** queued, not built (D15). Rationale changed by `AMENDMENT-v2.1.md` A4 from "fallback when
 Tier 1 fails" to "possible attractor if in-product AI conversation proves part of the appeal"; `AMENDMENT-v2.3.md`
 §D records that Tier 2 now carries two costs — inference and an API-key proxy server (D36).
-**Configuration:** no application server (D36); Tier 1 = on-device Foundation Models (D32, D34).
-**Revisit trigger:** Demo observations (tester feedback on in-product AI conversation), or M4′ failing its
-top-1 ≥ 80 % bar [ESTIMATE: owner-set] — the latter revisits the architecture, not a patch (D15).
+**Configuration:** no application server (D36); Tier 1 deferred (v2.8 §8, D-20), so Tier 0 is the only runtime tier.
+**Revisit trigger:** Demo observations (tester feedback on in-product AI conversation), or the D-20 re-entry
+decision.
 **Hypothesis (unverified):** none.
 
-### D-3 — Android port
+### D-3 — Android
 
-**Observed:** `AMENDMENT-v2.2.md` D31 — native iOS first; Android is a second codebase built after iOS
-ships, with `core` ported from the Swift package and JSON data formats shared (D33). Tier 1 on Android via
-ML Kit GenAI / AICore where available, decided at that time (D34).
-**Configuration:** iOS/iPadOS 18+ app (D34); `Core` renderer-free and Foundation-only (I14).
-**Revisit trigger:** iOS release after M5 (`AMENDMENT-v2.3.md` §B).
+**Observed:** `AMENDMENT-v2.8.md` §1 — the student product is a web app; Android users reach it in the browser.
+A native or wrapped Android app is part of the app-store question in D-23.
+**Configuration:** web app; primary targets iPad and iPhone Safari, desktop Chrome/Safari supported (D34).
+Android Chrome is not a stated target and has no test path of its own.
+**Revisit trigger:** D-23, or a tester on Android.
 **Hypothesis (unverified):** none.
 
-### D-4 — Door A homework mode (structured editor + CAS step verification), desktop web
+### D-4 — Door A homework mode (structured editor + CAS step verification)
 
-**Observed:** `AMENDMENT-v2.2.md` D34 and §C — the homework flow is removed from M3 and built at M5 as a
-desktop web app (Pyodide + SymPy, MathLive); its design is preserved in `docs/domains/verification.md`
-and the homework-mode variant in `docs/domains/diagnosis.md`; the v1 prototype's `student-session-*`
-pages are its reference. TypeScript is retained only for it (`AMENDMENT-v2.4.md` §2).
-**Configuration:** iOS app checks numeric and multiple-choice items in code (I1, I10); no CAS on device.
+**Observed:** `AMENDMENT-v2.2.md` §C removed the homework flow from M3 and placed it at M5;
+`AMENDMENT-v2.8.md` §6 makes it a desktop-first surface of the same web app instead of a separate app. Its
+design is preserved in `docs/domains/verification.md` and the homework-mode variant in
+`docs/domains/diagnosis.md`; the v1 prototype's `student-session-*` pages are its reference.
+**Configuration:** the web app checks numeric and multiple-choice items in code (I1, I10); no CAS in the client.
 **Revisit trigger:** M5 scope.
 **Hypothesis (unverified):** none.
 
-### D-5 — Firefox (all doors); Chrome Prompt API; Chromebook
+### D-5 — Firefox (all doors); Chromebook
 
-**Observed:** `AMENDMENT-v2.1.md` §9 amendment excludes Firefox for all doors; `AMENDMENT-v2.2.md` D34
-takes the Chrome Prompt API off the critical path (Tier 1 is Foundation Models on iOS). Chromebook and
-Safari constraints now apply only to the M5 desktop homework mode's Tier 1, designed at M5.
-**Configuration:** native iOS app for all student surfaces in MVP.
-**Revisit trigger:** M5 (homework mode's desktop baseline and Tier 1 choice).
+**Observed:** `AMENDMENT-v2.1.md` §9 amendment excludes Firefox for all doors. `AMENDMENT-v2.8.md` §6 names
+Safari on iOS/iPadOS 18+ and current desktop Chrome/Safari as the baseline; Firefox and Chromebook are not
+named. Any browser on-device model API is part of D-20.
+**Configuration:** web app; CI end-to-end tests run under the WebKit and Chromium engines only (D29).
+**Revisit trigger:** M5 (homework mode's desktop baseline), or a tester on an unlisted browser.
 **Hypothesis (unverified):** none.
 
 ### D-6 — Parent view
@@ -79,10 +83,11 @@ and the former M5 milestone void. The v1 design is in git history (`docs/domains
 **Revisit trigger:** none scheduled — an owner decision (Q5) only.
 **Hypothesis (unverified):** none.
 
-### D-7 — Game Center leaderboards and achievements
+### D-7 — Leaderboards and achievements
 
-**Observed:** `AMENDMENT-v2.3.md` D39 — if ever built, use Game Center; no self-built accounts or ranking
-service; not built now.
+**Observed:** `AMENDMENT-v2.3.md` D39, revised by `AMENDMENT-v2.8.md` §11 — Game Center is unavailable on
+the web; not built now; if ever built, the mechanism is decided then, with no self-built accounts or ranking
+service.
 **Configuration:** streaks, region completion and trail progress emerge from local state (D23).
 **Revisit trigger:** decided during operation from telemetry (D40 day-N return, expedition completion).
 **Hypothesis (unverified):** none.
@@ -235,3 +240,40 @@ ruling 2 already rules not in violation.
 finding of glossary drift in `pipeline/` or in a schema key.
 **Hypothesis (unverified):** a pytest gate over the Python AST (`ast.Name`/`attr`/`arg`) and schema keys
 with its own allowlist, reading the same glossary lists.
+
+### D-20 — Tier 1 on-device model (M4′ spike, M4 integration)
+
+**Observed:** `AMENDMENT-v2.8.md` §8 — Foundation Models is unavailable to a web app; Tier 1, the M4′ spike
+and M4 are deferred. Tier 0 remains the product (I2). The M4′ design (six-way error enum, synthetic
+round-trip data, top-1 ≥ 80 % go line [ESTIMATE: owner-set]) is preserved in `docs/domains/runtime-tiers.md`
+and `docs/epic-plan.md` EPICs 05–06 as written on 2026-09-10.
+**Configuration:** web app, Tier 0 only; no runtime server (D36).
+**Revisit trigger:** an on-device model API available in the target Safari versions, or a native wrapper
+decided under D-23.
+**Hypothesis (unverified):** none.
+
+### D-21 — Cross-device sync of student state
+
+**Observed:** `AMENDMENT-v2.8.md` §9 — Apple-managed identity is unavailable to a web app and accounts remain
+queued, so no sync is provided. State lives in browser storage with a persistent-storage request and file
+export/import. Introducing sync is a Q5.
+**Configuration:** web app, no accounts (I5), no application server (D36).
+**Revisit trigger:** a tester reporting lost or split progress across devices, or D-23.
+**Hypothesis (unverified):** none.
+
+### D-22 — Safari storage eviction (installed vs. not installed)
+
+**Observed:** `AMENDMENT-v2.8.md` §9 names the risk that Safari may evict storage for a site that is not
+installed to the home screen. Not yet measured on this app.
+**Configuration:** web app on iPad/iPhone Safari, state in browser storage with a persistent-storage request.
+**Revisit trigger:** the web Demo — measure, installed and not installed, whether state survives and what
+the persistent-storage request returns; record the result here.
+**Hypothesis (unverified):** none.
+
+### D-23 — Native app-store presence (iOS, Android)
+
+**Observed:** `AMENDMENT-v2.8.md` §1–§2 — the native iOS code is frozen (D50); an app-store presence is
+decided later, and wrapping the web app is one option, not a commitment.
+**Configuration:** the frozen Swift code under `Packages/` and `App/` (EPICs 01–04); the web app is the product.
+**Revisit trigger:** an owner decision (Q5) after the web Demo or M3.
+**Hypothesis (unverified):** none.
